@@ -1,0 +1,9 @@
+Backend/myvenv/
+Backend/db.sqlite3
+Backend/media/
+Backend/staticfiles/
+Backend/.tmp/
+Frontend/node_modules/
+Frontend/dist/
+__pycache__/
+*.pyc
