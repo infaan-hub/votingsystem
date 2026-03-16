@@ -50,3 +50,4 @@ The Vite dev server proxies `/api` and `/media` to `http://127.0.0.1:8000`.
 - Live turnout, rankings, and winner summaries
 - React pages for overview, campaigns, voting, login, and results
 - Django admin management and a demo data seed command
+"# votingsystem" 
