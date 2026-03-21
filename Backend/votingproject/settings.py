@@ -10,6 +10,14 @@ def env_list(name, default=""):
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def clean_env_value(name, default=""):
+    value = os.getenv(name, default)
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        value = value[1:-1].strip()
+    return value
+
+
 SECRET_KEY = os.getenv(
     "SECRET_KEY",
     "django-insecure-v5nb1^6=_k@x0wnq_joaj++pgz7094%9b8=_)s=*l2kxtx588t",
@@ -84,7 +92,7 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-database_url = os.getenv("DATABASE_URL", "").strip()
+database_url = clean_env_value("DATABASE_URL", "")
 if database_url and importlib.util.find_spec("dj_database_url"):
     import dj_database_url
 
