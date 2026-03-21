@@ -1151,7 +1151,7 @@ function VoterDashboard({
     { to: "/voter/login", label: "Login" },
     { to: "/voter/register", label: "Register" },
     { to: "/voter/dashboard", label: "Dashboard" },
-    { to: "/voter/campaign", label: "Campaign" },
+    { to: "/voter/compain", label: "Campaign" },
   ];
 
   const localAnnouncements = workspace.announcements.filter(
@@ -1202,7 +1202,7 @@ function VoterDashboard({
               <p className="eyebrow">Selected Election</p>
               <h2>{selectedElection?.title || "No election"}</h2>
             </div>
-            <Link className="inline-link" to="/voter/campaign">
+            <Link className="inline-link" to="/voter/compain">
               View campaigns
             </Link>
           </div>
@@ -1304,7 +1304,7 @@ function VoterCampaignPage({ user, selectedElection, workspace, onLogout }) {
     { to: "/voter/login", label: "Login" },
     { to: "/voter/register", label: "Register" },
     { to: "/voter/dashboard", label: "Dashboard" },
-    { to: "/voter/campaign", label: "Campaign" },
+    { to: "/voter/compain", label: "Campaign" },
   ];
 
   const localCandidates = workspace.candidateProfiles.filter(
@@ -1430,7 +1430,7 @@ function CandidateDashboard({
   const candidateTabs = [
     { to: "/candidate/login", label: "Login" },
     { to: "/candidate/dashboard", label: "Dashboard" },
-    { to: "/candidate/campaigndetails", label: "Campaign" },
+    { to: "/candidate/compaindetails", label: "Campaign" },
   ];
 
   const backendCandidate =
@@ -1487,7 +1487,7 @@ function CandidateDashboard({
               <p className="eyebrow">My Election</p>
               <h2>{selectedElection?.title || "No election selected"}</h2>
             </div>
-            <Link className="inline-link" to="/candidate/campaigndetails">
+            <Link className="inline-link" to="/candidate/compaindetails">
               Add campaign
             </Link>
           </div>
@@ -1592,7 +1592,7 @@ function CandidateCampaignDetails({
   const candidateTabs = [
     { to: "/candidate/login", label: "Login" },
     { to: "/candidate/dashboard", label: "Dashboard" },
-    { to: "/candidate/campaigndetails", label: "Campaign" },
+    { to: "/candidate/compaindetails", label: "Campaign" },
   ];
 
   const localCandidate =
@@ -1949,8 +1949,9 @@ export default function App() {
     <>
       {appError ? <div className="global-banner">{appError}</div> : null}
       <Routes>
+        <Route path="/" element={<Navigate to="/home" replace />} />
         <Route
-          path="/"
+          path="/home"
           element={
             <HomeScreen
               elections={mergedElections}
@@ -1960,7 +1961,6 @@ export default function App() {
             />
           }
         />
-        <Route path="/home" element={<Navigate to="/" replace />} />
         <Route
           path="/admin/login"
           element={<PortalLoginPage user={user} portal="admin" onLogin={handleLogin} />}
@@ -2006,8 +2006,9 @@ export default function App() {
             />
           }
         />
+        <Route path="/voter/dashboad" element={<Navigate to="/voter/dashboard" replace />} />
         <Route
-          path="/voter/campaign"
+          path="/voter/compain"
           element={
             <VoterCampaignPage
               user={user}
@@ -2017,6 +2018,7 @@ export default function App() {
             />
           }
         />
+        <Route path="/voter/campaign" element={<Navigate to="/voter/compain" replace />} />
         <Route
           path="/candidate/login"
           element={<PortalLoginPage user={user} portal="candidate" onLogin={handleLogin} />}
@@ -2036,7 +2038,7 @@ export default function App() {
           }
         />
         <Route
-          path="/candidate/campaigndetails"
+          path="/candidate/compaindetails"
           element={
             <CandidateCampaignDetails
               user={user}
@@ -2048,7 +2050,11 @@ export default function App() {
             />
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/candidate/campaigndetails"
+          element={<Navigate to="/candidate/compaindetails" replace />}
+        />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </>
   );
