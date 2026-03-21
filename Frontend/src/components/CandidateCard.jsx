@@ -9,6 +9,8 @@ export default function CandidateCard({
   footer,
 }) {
   const candidateName = candidate.user?.full_name || candidate.user?.username || "Candidate";
+  const videoUrl = candidate.campaign_video_url || candidate.video_url || "";
+  const videoDuration = candidate.campaign_video_duration || "00:30";
 
   return (
     <article className="candidate-card">
@@ -34,6 +36,12 @@ export default function CandidateCard({
 
       <div className="candidate-body">
         <p>{candidate.manifesto || "No campaign manifesto has been published yet."}</p>
+        {videoUrl ? (
+          <div className="campaign-video">
+            <video controls preload="metadata" src={videoUrl} />
+            <div className="video-meta">Campaign video {videoDuration}</div>
+          </div>
+        ) : null}
       </div>
 
       <div className="candidate-footer">

@@ -11,7 +11,7 @@ export default function Layout({
   const selectedElection =
     elections.find((election) => election.id === selectedElectionId) || elections[0] || null;
   const tabs = [
-    { to: "/", label: "Overview" },
+    { to: "/home", label: "Home" },
     { to: "/campaigns", label: "Campaigns" },
     { to: "/vote", label: "Ballot" },
     { to: "/results", label: "Results" },

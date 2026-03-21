@@ -43,6 +43,19 @@ def _serialize_user(user):
     }
 
 
+def _normalize_vote_error(detail):
+    if isinstance(detail, str) and "already exists" in detail.lower():
+        return "You have already voted for this position in this election."
+    return detail
+
+
+class HealthCheckView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        return Response({"status": "ok"})
+
+
 class AuthLoginView(ObtainAuthToken):
     permission_classes = [permissions.AllowAny]
 
@@ -158,7 +171,16 @@ class CastVoteView(APIView):
         try:
             vote = cast_vote(voter=request.user, candidate=candidate)
         except DjangoValidationError as exc:
-            detail = exc.message_dict or {"detail": exc.messages}
+            if hasattr(exc, "message_dict") and exc.message_dict:
+                detail = exc.message_dict
+                if "__all__" in detail and detail["__all__"]:
+                    detail = {"detail": _normalize_vote_error(detail["__all__"][0])}
+            else:
+                detail = {
+                    "detail": _normalize_vote_error(exc.messages[0])
+                    if exc.messages
+                    else "Vote could not be recorded."
+                }
             return Response(detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(VoteSerializer(vote).data, status=status.HTTP_201_CREATED)
 

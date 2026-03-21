@@ -13,7 +13,7 @@ export default function LoginPage({ onLogin, user }) {
       setIsSubmitting(true);
       setError("");
       await onLogin(formData);
-      navigate("/vote");
+      navigate("/home");
     } catch (loginError) {
       setError(loginError.message);
     } finally {

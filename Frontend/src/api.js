@@ -1,4 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
+const API_BASE =
+  import.meta.env.VITE_API_BASE ??
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8000/api"
+    : "/api");
 
 async function request(path, options = {}) {
   const { method = "GET", body, token, headers = {} } = options;
@@ -14,18 +18,32 @@ async function request(path, options = {}) {
     finalBody = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: finalHeaders,
-    body: finalBody,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: finalHeaders,
+      body: finalBody,
+    });
+  } catch (error) {
+    throw new Error(
+      "Backend server is not reachable. Start Django on http://127.0.0.1:8000.",
+    );
+  }
 
   if (response.status === 204) {
     return null;
   }
 
   const rawText = await response.text();
-  const data = rawText ? JSON.parse(rawText) : null;
+  let data = null;
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { detail: rawText };
+    }
+  }
 
   if (!response.ok) {
     const detail =
@@ -33,6 +51,9 @@ async function request(path, options = {}) {
       data?.candidate?.[0] ||
       data?.voter?.[0] ||
       data?.election?.[0] ||
+      (response.status >= 500
+        ? "Backend server error. Check the Django terminal for the traceback."
+        : null) ||
       "Request failed.";
     throw new Error(detail);
   }
