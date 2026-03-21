@@ -213,6 +213,7 @@ function PhonePage({ eyebrow, title, subtitle, user, accent = "blue", tabs, chil
 }
 
 function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const selectedElection =
     elections.find((entry) => String(entry.id) === String(selectedElectionId)) || elections[0] || null;
 
@@ -224,20 +225,58 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
       accent="blue"
       user={user}
       actions={
-        <div className="hero-actions-grid">
-          <Link className="primary-link" to="/admin/login">
-            Admin
-          </Link>
-          <Link className="ghost-link" to="/voter/login">
-            Voter
-          </Link>
-          <Link className="ghost-link" to="/candidate/login">
-            Candidate
-          </Link>
+        <div className="home-action-wrap">
+          <button
+            className="menu-toggle"
+            type="button"
+            onClick={() => setSidebarOpen((current) => !current)}
+            aria-label="Toggle sidebar"
+            aria-expanded={sidebarOpen}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <div className="hero-actions-grid">
+            <Link className="primary-link" to="/admin/login">
+              Admin
+            </Link>
+            <Link className="ghost-link" to="/voter/login">
+              Voter
+            </Link>
+            <Link className="ghost-link" to="/candidate/login">
+              Candidate
+            </Link>
+          </div>
         </div>
       }
     >
-      <section className="stack-grid">
+      <section className="home-layout">
+        <aside className={`home-sidebar${sidebarOpen ? " open" : ""}`}>
+          <div className="sidebar-card">
+            <p className="eyebrow">Quick Access</p>
+            <Link className="sidebar-link" to="/home">
+              Home
+            </Link>
+            <Link className="sidebar-link" to="/admin/register">
+              Admin Register
+            </Link>
+            <Link className="sidebar-link" to="/admin/login">
+              Admin Login
+            </Link>
+            <Link className="sidebar-link" to="/voter/register">
+              Voter Register
+            </Link>
+            <Link className="sidebar-link" to="/voter/login">
+              Voter Login
+            </Link>
+            <Link className="sidebar-link" to="/candidate/login">
+              Candidate Login
+            </Link>
+          </div>
+        </aside>
+
+        <div className="stack-grid">
         <article className="sheet-card">
           <div className="section-heading">
             <div>
@@ -279,6 +318,7 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
             <p>Track countdown, vote totals, winner status, and campaign video details.</p>
           </Link>
         </section>
+        </div>
       </section>
     </PhonePage>
   );
