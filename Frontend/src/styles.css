@@ -327,6 +327,18 @@ button {
   align-items: start;
 }
 
+.home-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.section-card h2 {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 1.1rem;
+  color: var(--primary-deep);
+}
+
 .home-sidebar {
   overflow: hidden;
   opacity: 0;
@@ -743,6 +755,7 @@ button {
 
 @media (max-width: 980px) {
   .portal-grid,
+  .home-sections-grid,
   .hero-actions-grid,
   .form-grid,
   .stats-grid.two-col,

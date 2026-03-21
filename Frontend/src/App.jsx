@@ -270,8 +270,20 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
             <Link className="sidebar-link" to="/voter/login">
               Voter Login
             </Link>
+            <Link className="sidebar-link" to="/voter/dashboad">
+              Voter Dashboard
+            </Link>
+            <Link className="sidebar-link" to="/voter/compain">
+              Voter Compain
+            </Link>
             <Link className="sidebar-link" to="/candidate/login">
               Candidate Login
+            </Link>
+            <Link className="sidebar-link" to="/candidate/dashboad">
+              Candidate Dashboard
+            </Link>
+            <Link className="sidebar-link" to="/candidate/compaindetails">
+              Candidate Compaindetails
             </Link>
           </div>
         </aside>
@@ -317,6 +329,35 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
             <strong>Watch results and post campaign</strong>
             <p>Track countdown, vote totals, winner status, and campaign video details.</p>
           </Link>
+        </section>
+
+        <section className="home-sections-grid">
+          <article className="sheet-card section-card">
+            <p className="eyebrow">Admin Section</p>
+            <h2>/admin/register, /admin/login, /admin/dashboard</h2>
+            <p className="muted">
+              Admin registers candidates and voters, sets election date and time, updates
+              deadlines, posts election notices, and controls the countdown shown to all users.
+            </p>
+          </article>
+
+          <article className="sheet-card section-card">
+            <p className="eyebrow">Voter Section</p>
+            <h2>/voter/register, /voter/login, /voter/dashboad, /voter/compain</h2>
+            <p className="muted">
+              Voters open their dashboard, see all elections, select one election, and view all
+              candidate compains before voting.
+            </p>
+          </article>
+
+          <article className="sheet-card section-card">
+            <p className="eyebrow">Candidate Section</p>
+            <h2>/candidate/login, /candidate/dashboad, /candidate/compaindetails</h2>
+            <p className="muted">
+              Candidates login after admin registration, view countdown, vote count, winner or
+              looser decision, and add compain details with a 00:30 video visible to voters.
+            </p>
+          </article>
         </section>
         </div>
       </section>
@@ -2081,6 +2122,7 @@ export default function App() {
             />
           }
         />
+        <Route path="/candidate/dashboad" element={<Navigate to="/candidate/dashboard" replace />} />
         <Route
           path="/candidate/compaindetails"
           element={
