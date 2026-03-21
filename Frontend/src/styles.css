@@ -320,6 +320,41 @@ button {
   padding: 1.4rem 0 2rem;
 }
 
+.home-toolbar {
+  display: grid;
+  gap: 1rem;
+}
+
+.home-toolbar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.home-toolbar-copy h2,
+.section-title,
+.info-card h3,
+.contact-copy h3,
+.catalog-empty h3 {
+  margin: 0;
+}
+
+.home-toolbar-kicker,
+.info-card-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--primary);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+.home-toolbar-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.7fr);
+  gap: 1rem;
+}
+
 .home-layout {
   display: grid;
   grid-template-columns: 0 minmax(0, 1fr);
@@ -370,6 +405,23 @@ button {
   background: var(--surface-soft);
   color: var(--primary-deep);
   font-weight: 700;
+}
+
+.sidebar-group {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-note {
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: rgba(74, 87, 209, 0.08);
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .sheet-card,
@@ -499,6 +551,14 @@ button {
   margin-bottom: 0.35rem;
 }
 
+.home-feature-card {
+  cursor: pointer;
+}
+
+.home-feature-card p {
+  margin-bottom: 0.85rem;
+}
+
 .admin-card,
 .voter-card,
 .candidate-card-lite {
@@ -509,6 +569,18 @@ button {
   margin-bottom: 0.8rem;
   color: var(--primary);
   background: rgba(74, 87, 209, 0.09);
+}
+
+.home-route-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(74, 87, 209, 0.08);
+  color: var(--primary-deep);
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .countdown-panel {
@@ -746,6 +818,100 @@ button {
   border: 1px solid var(--line);
 }
 
+.home-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.home-section-heading {
+  margin-top: 0.25rem;
+}
+
+.section-note {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.info-card,
+.contact-card,
+.contact-item,
+.catalog-empty {
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  box-shadow: var(--soft-shadow);
+}
+
+.info-card {
+  padding: 1.15rem;
+}
+
+.info-card p {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+}
+
+.auth-link-card {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.wide-link {
+  width: 100%;
+}
+
+.contact-card {
+  padding: 1.2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 1rem;
+}
+
+.contact-copy p {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+}
+
+.contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.contact-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.contact-item {
+  padding: 1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.contact-item span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.catalog-empty {
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.catalog-empty p {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+}
+
 .loading-screen {
   text-align: center;
   min-height: 240px;
@@ -755,11 +921,17 @@ button {
 
 @media (max-width: 980px) {
   .portal-grid,
+  .info-grid,
   .home-sections-grid,
   .hero-actions-grid,
   .form-grid,
   .stats-grid.two-col,
   .countdown-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-toolbar-controls,
+  .contact-card {
     grid-template-columns: 1fr;
   }
 

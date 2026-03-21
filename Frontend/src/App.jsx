@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   Link,
   NavLink,
@@ -214,14 +214,65 @@ function PhonePage({ eyebrow, title, subtitle, user, accent = "blue", tabs, chil
 
 function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const deferredSearch = useDeferredValue(searchQuery.trim().toLowerCase());
   const selectedElection =
     elections.find((entry) => String(entry.id) === String(selectedElectionId)) || elections[0] || null;
+  const sections = [
+    {
+      title: "Admin Hub",
+      route: "/admin/dashboard",
+      kicker: "Administration",
+      description:
+        "Register candidates, register voters, set election date and time, update deadlines, and post election notices with countdown updates for all dashboards.",
+    },
+    {
+      title: "Voter Hub",
+      route: "/voter/dashboad",
+      kicker: "Voter Section",
+      description:
+        "See all elections, select one election, and open all candidate compains from the voter dashboard flow.",
+    },
+    {
+      title: "Candidate Hub",
+      route: "/candidate/dashboad",
+      kicker: "Candidate Section",
+      description:
+        "Candidates login after admin registration, watch countdown and vote count, see winner or looser decision, and add compain details with video 00:30.",
+    },
+    {
+      title: "Admin Register",
+      route: "/admin/register",
+      kicker: "Start Here",
+      description: "Create admin access for election management.",
+    },
+    {
+      title: "Voter Register",
+      route: "/voter/register",
+      kicker: "Start Here",
+      description: "Create a voter account to access elections and compains.",
+    },
+    {
+      title: "Candidate Compaindetails",
+      route: "/candidate/compaindetails",
+      kicker: "Campaign",
+      description: "Add manifesto and 00:30 campaign video content visible to voters.",
+    },
+  ];
+  const visibleSections = sections.filter((section) => {
+    if (!deferredSearch) {
+      return true;
+    }
+    const text = `${section.title} ${section.route} ${section.description}`.toLowerCase();
+    return text.includes(deferredSearch);
+  });
 
   return (
     <PhonePage
-      eyebrow="Voting System"
-      title="Role Portals"
-      subtitle="Independent system-style pages for admin, voter, and candidate users with a shared election countdown."
+      eyebrow="Election Hub"
+      title="Online Voting System"
+      subtitle="A web-based election hub that enables admins, voters, and candidates to manage and access election workflows from one system."
       accent="blue"
       user={user}
       actions={
@@ -258,18 +309,21 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
             <Link className="sidebar-link" to="/home">
               Home
             </Link>
+            <p className="sidebar-group">Admin Forms</p>
             <Link className="sidebar-link" to="/admin/register">
               Admin Register
             </Link>
             <Link className="sidebar-link" to="/admin/login">
               Admin Login
             </Link>
+            <p className="sidebar-group">Voter Forms</p>
             <Link className="sidebar-link" to="/voter/register">
               Voter Register
             </Link>
             <Link className="sidebar-link" to="/voter/login">
               Voter Login
             </Link>
+            <p className="sidebar-group">Candidate Forms</p>
             <Link className="sidebar-link" to="/voter/dashboad">
               Voter Dashboard
             </Link>
@@ -285,10 +339,50 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
             <Link className="sidebar-link" to="/candidate/compaindetails">
               Candidate Compaindetails
             </Link>
+            <div className="sidebar-note">
+              Candidate register is handled by admin from `/admin/dashboard`.
+            </div>
           </div>
         </aside>
 
         <div className="stack-grid">
+        <header className="home-toolbar sheet-card">
+          <div className="home-toolbar-head">
+            <div className="home-toolbar-copy">
+              <p className="home-toolbar-kicker">Election Hub</p>
+              <h2>Start with /home and move by role</h2>
+              <p className="muted">
+                Search any section, route, or workflow card below, then open the matching page.
+              </p>
+            </div>
+          </div>
+          <div className="home-toolbar-controls">
+            <label className="field home-search">
+              <span>Search sections</span>
+              <input
+                className="input"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search admin, voter, candidate..."
+              />
+            </label>
+            <label className="field">
+              <span>Election</span>
+              <select
+                className="input"
+                value={selectedElectionId ?? ""}
+                onChange={(event) => onSelectElection(event.target.value)}
+              >
+                {elections.map((election) => (
+                  <option key={election.id} value={election.id}>
+                    {election.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </header>
+
         <article className="sheet-card">
           <div className="section-heading">
             <div>
@@ -296,39 +390,107 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
               <h2>Shared schedule</h2>
             </div>
           </div>
-          <label className="field">
-            <span>Current election</span>
-            <select
-              className="input"
-              value={selectedElectionId ?? ""}
-              onChange={(event) => onSelectElection(event.target.value)}
-            >
-              {elections.map((election) => (
-                <option key={election.id} value={election.id}>
-                  {election.title}
-                </option>
-              ))}
-            </select>
-          </label>
           {selectedElection ? <CountdownPanel election={selectedElection} /> : null}
         </article>
 
-        <section className="portal-grid">
-          <Link className="portal-card admin-card" to="/admin/dashboard">
-            <span className="portal-kicker">Admin workspace</span>
-            <strong>Register voters and candidates</strong>
-            <p>Update election timing, publish announcements, and control the shared countdown.</p>
-          </Link>
-          <Link className="portal-card voter-card" to="/voter/dashboard">
-            <span className="portal-kicker">Voter flow</span>
-            <strong>See all elections</strong>
-            <p>Select an election and move to campaign pages before voting time starts.</p>
-          </Link>
-          <Link className="portal-card candidate-card-lite" to="/candidate/dashboard">
-            <span className="portal-kicker">Candidate space</span>
-            <strong>Watch results and post campaign</strong>
-            <p>Track countdown, vote totals, winner status, and campaign video details.</p>
-          </Link>
+        <section className="section-heading home-section-heading">
+          <div>
+            <h2 className="section-title">Home Sections</h2>
+            <p className="section-note">Open any area of the election hub from these cards.</p>
+          </div>
+        </section>
+
+        <div className="portal-grid">
+          {visibleSections.map((section) => (
+            <article
+              className="portal-card home-feature-card"
+              key={section.route}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(section.route)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  navigate(section.route);
+                }
+              }}
+            >
+              <span className="portal-kicker">{section.kicker}</span>
+              <strong>{section.title}</strong>
+              <p>{section.description}</p>
+              <span className="home-route-pill">{section.route}</span>
+            </article>
+          ))}
+        </div>
+
+        {!visibleSections.length ? (
+          <div className="catalog-empty">
+            <h3>No section matches that search.</h3>
+            <p>Try another route name, role, or workflow keyword.</p>
+          </div>
+        ) : null}
+
+        <section className="home-section">
+          <div className="section-heading">
+            <div>
+              <h2 className="section-title">Login And Register Forms</h2>
+              <p className="section-note">
+                All available auth forms are linked from home and repeated in the sidebar.
+              </p>
+            </div>
+          </div>
+          <div className="info-grid">
+            <article className="info-card auth-link-card">
+              <p className="info-card-kicker">Admin Form</p>
+              <h3>Admin Register</h3>
+              <p>Create admin access for the election hub system.</p>
+              <Link className="primary-link wide-link" to="/admin/register">
+                Open /admin/register
+              </Link>
+            </article>
+            <article className="info-card auth-link-card">
+              <p className="info-card-kicker">Admin Form</p>
+              <h3>Admin Login</h3>
+              <p>Login to manage elections, voters, candidates, and deadlines.</p>
+              <Link className="ghost-link wide-link" to="/admin/login">
+                Open /admin/login
+              </Link>
+            </article>
+            <article className="info-card auth-link-card">
+              <p className="info-card-kicker">Voter Form</p>
+              <h3>Voter Register</h3>
+              <p>Create a voter account to access election dashboards and compains.</p>
+              <Link className="primary-link wide-link" to="/voter/register">
+                Open /voter/register
+              </Link>
+            </article>
+            <article className="info-card auth-link-card">
+              <p className="info-card-kicker">Voter Form</p>
+              <h3>Voter Login</h3>
+              <p>Login and open the voter dashboard to select elections.</p>
+              <Link className="ghost-link wide-link" to="/voter/login">
+                Open /voter/login
+              </Link>
+            </article>
+            <article className="info-card auth-link-card">
+              <p className="info-card-kicker">Candidate Form</p>
+              <h3>Candidate Login</h3>
+              <p>Candidate accounts are created by admin, then candidates sign in here.</p>
+              <Link className="primary-link wide-link" to="/candidate/login">
+                Open /candidate/login
+              </Link>
+            </article>
+            <article className="info-card auth-link-card">
+              <p className="info-card-kicker">Admin Only</p>
+              <h3>Candidate Register</h3>
+              <p>
+                Candidates do not self-register. Admin registers them inside
+                `/admin/dashboard`.
+              </p>
+              <Link className="ghost-link wide-link" to="/admin/dashboard">
+                Open /admin/dashboard
+              </Link>
+            </article>
+          </div>
         </section>
 
         <section className="home-sections-grid">
@@ -358,6 +520,82 @@ function HomeScreen({ elections, selectedElectionId, onSelectElection, user }) {
               looser decision, and add compain details with a 00:30 video visible to voters.
             </p>
           </article>
+        </section>
+
+        <section className="home-section">
+          <div className="section-heading">
+            <div>
+              <h2 className="section-title">About Election Hub</h2>
+              <p className="section-note">Core capabilities used across the system.</p>
+            </div>
+          </div>
+          <div className="info-grid">
+            <article className="info-card">
+              <p className="info-card-kicker">Scheduling</p>
+              <h3>Election countdown control</h3>
+              <p>
+                Admin updates election date, time, and deadline once, then all dashboards receive
+                the same countdown.
+              </p>
+            </article>
+            <article className="info-card">
+              <p className="info-card-kicker">Campaigns</p>
+              <h3>Candidate compains and video</h3>
+              <p>
+                Candidates publish slogans, manifesto details, and a 00:30 video that voters can
+                review in the compain page.
+              </p>
+            </article>
+            <article className="info-card">
+              <p className="info-card-kicker">Results</p>
+              <h3>Winner or looser decision</h3>
+              <p>
+                Candidates can see vote count and outcome status while voters and admins track the
+                broader election activity.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="home-section">
+          <div className="section-heading">
+            <div>
+              <h2 className="section-title">Contact and Help</h2>
+              <p className="section-note">Support for account access and election operations.</p>
+            </div>
+          </div>
+          <div className="contact-card">
+            <div className="contact-copy">
+              <p className="info-card-kicker">Support</p>
+              <h3>Talk to Election Hub</h3>
+              <p>
+                Get help with admin setup, voter access, candidate registration, and election
+                timing updates.
+              </p>
+              <div className="contact-actions">
+                <a className="primary-link" href="mailto:support@electionhub.app">
+                  Email Support
+                </a>
+                <a className="ghost-link" href="tel:+255700000000">
+                  Call Now
+                </a>
+              </div>
+            </div>
+            <div className="contact-list">
+              <a className="contact-item" href="mailto:support@electionhub.app">
+                <span>Email</span>
+                <strong>support@electionhub.app</strong>
+              </a>
+              <a className="contact-item" href="tel:+255700000000">
+                <span>Phone</span>
+                <strong>+255 700 000 000</strong>
+              </a>
+              <div className="contact-item">
+                <span>Platform</span>
+                <strong>Election Hub System</strong>
+              </div>
+            </div>
+          </div>
         </section>
         </div>
       </section>
