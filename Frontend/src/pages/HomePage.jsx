@@ -1,162 +1,389 @@
-import { useEffect, useState } from "react";
+import { useDeferredValue, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-import { fetchElectionDetail, fetchStats } from "../api";
 import CountdownPanel from "../components/CountdownPanel";
-import StatCard from "../components/StatCard";
-import { formatDateTime, getScopeLabel } from "../utils";
+import PortalLayout from "../components/PortalLayout";
 
-export default function HomePage({ electionId, token }) {
-  const [detail, setDetail] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [error, setError] = useState("");
+export default function HomePage({
+  elections,
+  selectedElectionId,
+  onSelectElection,
+  user,
+  theme,
+  onToggleTheme,
+}) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const deferredSearch = useDeferredValue(searchQuery.trim().toLowerCase());
+  const selectedElection =
+    elections.find((entry) => String(entry.id) === String(selectedElectionId)) || elections[0] || null;
 
-  useEffect(() => {
-    if (!electionId) {
-      return;
+  const sections = [
+    {
+      title: "Admin Hub",
+      route: "/admin/dashboard",
+      kicker: "Administration",
+      description:
+        "Register candidates, register voters, set election date and time, update deadlines, and post election notices with countdown updates for all dashboards.",
+    },
+    {
+      title: "Voter Hub",
+      route: "/voter/dashboad",
+      kicker: "Voter Section",
+      description:
+        "See all elections, select one election, and open all candidate compains from the voter dashboard flow.",
+    },
+    {
+      title: "Candidate Hub",
+      route: "/candidate/dashboad",
+      kicker: "Candidate Section",
+      description:
+        "Candidates login after admin registration, watch countdown and vote count, see winner or looser decision, and add compain details with video 00:30.",
+    },
+    {
+      title: "Admin Register",
+      route: "/admin/register",
+      kicker: "Start Here",
+      description: "Create admin access for election management.",
+    },
+    {
+      title: "Voter Register",
+      route: "/voter/register",
+      kicker: "Start Here",
+      description: "Create a voter account to access elections and compains.",
+    },
+    {
+      title: "Candidate Compaindetails",
+      route: "/candidate/compaindetails",
+      kicker: "Campaign",
+      description: "Add manifesto and 00:30 campaign video content visible to voters.",
+    },
+  ];
+
+  const visibleSections = sections.filter((section) => {
+    if (!deferredSearch) {
+      return true;
     }
-
-    let ignore = false;
-    async function loadData() {
-      try {
-        const [detailData, statsData] = await Promise.allSettled([
-          fetchElectionDetail(electionId),
-          fetchStats(electionId, token),
-        ]);
-        if (ignore) {
-          return;
-        }
-        if (detailData.status === "fulfilled") {
-          setDetail(detailData.value);
-        }
-        if (statsData.status === "fulfilled") {
-          setStats(statsData.value);
-        } else {
-          setStats(null);
-        }
-        setError("");
-      } catch (loadError) {
-        if (!ignore) {
-          setError(loadError.message);
-        }
-      }
-    }
-
-    loadData();
-    return () => {
-      ignore = true;
-    };
-  }, [electionId, token]);
-
-  if (!electionId) {
-    return <section className="empty-state card">Create an election to get started.</section>;
-  }
+    const text = `${section.title} ${section.route} ${section.description}`.toLowerCase();
+    return text.includes(deferredSearch);
+  });
 
   return (
-    <div className="page-stack">
-      {error ? <div className="status-banner error">{error}</div> : null}
-
-      <section className="hero-grid">
-        <article className="page-intro intro-panel">
-          <p className="eyebrow">Election Overview</p>
-          <h2>{detail?.title || "Loading election..."}</h2>
-          <p className="lead">
-            {detail?.description ||
-              "Campaigns, voting schedules, and result visibility are all managed here."}
-          </p>
-          <div className="intro-mini-grid">
-            <div className="mini-tile">
-              <span>Voting Starts</span>
-              <strong>{formatDateTime(detail?.voting_start_at)}</strong>
-            </div>
-            <div className="mini-tile">
-              <span>Voting Ends</span>
-              <strong>{formatDateTime(detail?.voting_end_at)}</strong>
-            </div>
-            <div className="mini-tile live-tile">
-              <span>Results Mode</span>
-              <strong>{detail?.allow_live_results ? "Visible live" : "Hidden until close"}</strong>
+    <PortalLayout
+      eyebrow="Election Hub"
+      title="Online Voting System"
+      subtitle="A web-based election hub that enables admins, voters, and candidates to manage and access election workflows from one system."
+      accent="blue"
+      user={user}
+      theme={theme}
+      onToggleTheme={onToggleTheme}
+      actions={
+        <div className="home-action-wrap">
+          <button
+            className="menu-toggle"
+            type="button"
+            onClick={() => setSidebarOpen((current) => !current)}
+            aria-label="Toggle sidebar"
+            aria-expanded={sidebarOpen}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <div className="hero-actions-grid">
+            <Link className="primary-link" to="/admin/login">
+              Admin
+            </Link>
+            <Link className="ghost-link" to="/voter/login">
+              Voter
+            </Link>
+            <Link className="ghost-link" to="/candidate/login">
+              Candidate
+            </Link>
+          </div>
+        </div>
+      }
+    >
+      <section className="home-layout">
+        <aside className={`home-sidebar${sidebarOpen ? " open" : ""}`}>
+          <div className="sidebar-card">
+            <p className="eyebrow">Forms</p>
+            <p className="sidebar-group">Admin Forms</p>
+            <Link className="sidebar-link" to="/admin/register">
+              Admin Register
+            </Link>
+            <Link className="sidebar-link" to="/admin/login">
+              Admin Login
+            </Link>
+            <p className="sidebar-group">Voter Forms</p>
+            <Link className="sidebar-link" to="/voter/register">
+              Voter Register
+            </Link>
+            <Link className="sidebar-link" to="/voter/login">
+              Voter Login
+            </Link>
+            <p className="sidebar-group">Candidate Forms</p>
+            <Link className="sidebar-link" to="/candidate/login">
+              Candidate Login
+            </Link>
+            <div className="sidebar-note">
+              Candidate register is handled by admin inside `/admin/dashboard`.
             </div>
           </div>
-        </article>
+        </aside>
 
-        <CountdownPanel election={detail} />
-      </section>
+        <div className="stack-grid">
+          <header className="home-toolbar sheet-card">
+            <div className="home-toolbar-head">
+              <div className="home-toolbar-copy">
+                <p className="home-toolbar-kicker">Election Hub</p>
+                <h2>Start with /home and move by role</h2>
+                <p className="muted">
+                  Search any section, route, or workflow card below, then open the matching page.
+                </p>
+              </div>
+            </div>
+            <div className="home-toolbar-controls">
+              <label className="field home-search">
+                <span>Search sections</span>
+                <input
+                  className="input"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search admin, voter, candidate..."
+                />
+              </label>
+              <label className="field">
+                <span>Election</span>
+                <select
+                  className="input"
+                  value={selectedElectionId ?? ""}
+                  onChange={(event) => onSelectElection(event.target.value)}
+                >
+                  {elections.map((election) => (
+                    <option key={election.id} value={election.id}>
+                      {election.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </header>
 
-      <section className="stats-grid">
-        <StatCard
-          label="Registered Voters"
-          value={stats?.registered_voters ?? "--"}
-          caption="Eligible students and staff in this election."
-          accent="emerald"
-        />
-        <StatCard
-          label="Votes Cast"
-          value={stats?.votes_cast ?? "--"}
-          caption="Total submitted ballots across all positions."
-          accent="orange"
-        />
-        <StatCard
-          label="Turnout"
-          value={stats ? `${stats.turnout_percentage}%` : "--"}
-          caption="Unique voters who have participated."
-          accent="slate"
-        />
-        <StatCard
-          label="Leadership Seats"
-          value={stats?.position_count ?? detail?.positions?.length ?? "--"}
-          caption="Department, section, or worker positions."
-          accent="default"
-        />
-      </section>
+          <article className="sheet-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Election Picker</p>
+                <h2>Shared schedule</h2>
+              </div>
+            </div>
+            {selectedElection ? <CountdownPanel election={selectedElection} /> : null}
+          </article>
 
-      <section className="split-grid">
-        <article className="card section-surface">
-          <div className="section-heading">
+          <section className="section-heading home-section-heading">
             <div>
-              <p className="eyebrow">Announcements</p>
-              <h2>Election board</h2>
+              <h2 className="section-title">Home Sections</h2>
+              <p className="section-note">Open any area of the election hub from these cards.</p>
             </div>
-          </div>
-          <div className="notice-list">
-            {detail?.announcements?.length ? (
-              detail.announcements.map((announcement) => (
-                <article className="notice-item" key={announcement.id}>
-                  <div className="notice-pill">{announcement.announcement_type}</div>
-                  <div>
-                    <h3>{announcement.title}</h3>
-                    <p>{announcement.message}</p>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <p className="muted">No announcements have been posted yet.</p>
-            )}
-          </div>
-        </article>
+          </section>
 
-        <article className="card section-surface">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Leadership Seats</p>
-              <h2>Ballot structure</h2>
-            </div>
-          </div>
-          <div className="position-list">
-            {detail?.positions?.map((position) => (
-              <article className="position-item" key={position.id}>
-                <div>
-                  <h3>{position.name}</h3>
-                  <p className="muted">{getScopeLabel(position)}</p>
-                </div>
-                <div className="position-meta">
-                  <span>{position.voter_group_label}</span>
-                  <strong>{position.candidates?.length || 0} candidates</strong>
-                </div>
+          <div className="portal-grid">
+            {visibleSections.map((section) => (
+              <article
+                className="portal-card home-feature-card"
+                key={section.route}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(section.route)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    navigate(section.route);
+                  }
+                }}
+              >
+                <span className="portal-kicker">{section.kicker}</span>
+                <strong>{section.title}</strong>
+                <p>{section.description}</p>
+                <span className="home-route-pill">{section.route}</span>
               </article>
             ))}
           </div>
-        </article>
+
+          {!visibleSections.length ? (
+            <div className="catalog-empty">
+              <h3>No section matches that search.</h3>
+              <p>Try another route name, role, or workflow keyword.</p>
+            </div>
+          ) : null}
+
+          <section className="home-section">
+            <div className="section-heading">
+              <div>
+                <h2 className="section-title">Login And Register Forms</h2>
+                <p className="section-note">
+                  All available auth forms are linked from home and repeated in the sidebar.
+                </p>
+              </div>
+            </div>
+            <div className="info-grid">
+              <article className="info-card auth-link-card">
+                <p className="info-card-kicker">Admin Form</p>
+                <h3>Admin Register</h3>
+                <p>Create admin access for the election hub system.</p>
+                <Link className="primary-link wide-link" to="/admin/register">
+                  Open /admin/register
+                </Link>
+              </article>
+              <article className="info-card auth-link-card">
+                <p className="info-card-kicker">Admin Form</p>
+                <h3>Admin Login</h3>
+                <p>Login to manage elections, voters, candidates, and deadlines.</p>
+                <Link className="ghost-link wide-link" to="/admin/login">
+                  Open /admin/login
+                </Link>
+              </article>
+              <article className="info-card auth-link-card">
+                <p className="info-card-kicker">Voter Form</p>
+                <h3>Voter Register</h3>
+                <p>Create a voter account to access election dashboards and compains.</p>
+                <Link className="primary-link wide-link" to="/voter/register">
+                  Open /voter/register
+                </Link>
+              </article>
+              <article className="info-card auth-link-card">
+                <p className="info-card-kicker">Voter Form</p>
+                <h3>Voter Login</h3>
+                <p>Login and open the voter dashboard to select elections.</p>
+                <Link className="ghost-link wide-link" to="/voter/login">
+                  Open /voter/login
+                </Link>
+              </article>
+              <article className="info-card auth-link-card">
+                <p className="info-card-kicker">Candidate Form</p>
+                <h3>Candidate Login</h3>
+                <p>Candidate accounts are created by admin, then candidates sign in here.</p>
+                <Link className="primary-link wide-link" to="/candidate/login">
+                  Open /candidate/login
+                </Link>
+              </article>
+              <article className="info-card auth-link-card">
+                <p className="info-card-kicker">Admin Only</p>
+                <h3>Candidate Register</h3>
+                <p>Candidates do not self-register. Admin registers them inside `/admin/dashboard`.</p>
+                <Link className="ghost-link wide-link" to="/admin/dashboard">
+                  Open /admin/dashboard
+                </Link>
+              </article>
+            </div>
+          </section>
+
+          <section className="home-sections-grid">
+            <article className="sheet-card section-card">
+              <p className="eyebrow">Admin Section</p>
+              <h2>/admin/register, /admin/login, /admin/dashboard</h2>
+              <p className="muted">
+                Admin registers candidates and voters, sets election date and time, updates
+                deadlines, posts election notices, and controls the countdown shown to all users.
+              </p>
+            </article>
+
+            <article className="sheet-card section-card">
+              <p className="eyebrow">Voter Section</p>
+              <h2>/voter/register, /voter/login, /voter/dashboad, /voter/compain</h2>
+              <p className="muted">
+                Voters open their dashboard, see all elections, select one election, and view all
+                candidate compains before voting.
+              </p>
+            </article>
+
+            <article className="sheet-card section-card">
+              <p className="eyebrow">Candidate Section</p>
+              <h2>/candidate/login, /candidate/dashboad, /candidate/compaindetails</h2>
+              <p className="muted">
+                Candidates login after admin registration, view countdown, vote count, winner or
+                looser decision, and add compain details with a 00:30 video visible to voters.
+              </p>
+            </article>
+          </section>
+
+          <section className="home-section">
+            <div className="section-heading">
+              <div>
+                <h2 className="section-title">About Election Hub</h2>
+                <p className="section-note">Core capabilities used across the system.</p>
+              </div>
+            </div>
+            <div className="info-grid">
+              <article className="info-card">
+                <p className="info-card-kicker">Scheduling</p>
+                <h3>Election countdown control</h3>
+                <p>
+                  Admin updates election date, time, and deadline once, then all dashboards receive
+                  the same countdown.
+                </p>
+              </article>
+              <article className="info-card">
+                <p className="info-card-kicker">Campaigns</p>
+                <h3>Candidate compains and video</h3>
+                <p>
+                  Candidates publish slogans, manifesto details, and a 00:30 video that voters can
+                  review in the compain page.
+                </p>
+              </article>
+              <article className="info-card">
+                <p className="info-card-kicker">Results</p>
+                <h3>Winner or looser decision</h3>
+                <p>
+                  Candidates can see vote count and outcome status while voters and admins track the
+                  broader election activity.
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section className="home-section">
+            <div className="section-heading">
+              <div>
+                <h2 className="section-title">Contact and Help</h2>
+                <p className="section-note">Support for account access and election operations.</p>
+              </div>
+            </div>
+            <div className="contact-card">
+              <div className="contact-copy">
+                <p className="info-card-kicker">Support</p>
+                <h3>Talk to Election Hub</h3>
+                <p>
+                  Get help with admin setup, voter access, candidate registration, and election
+                  timing updates.
+                </p>
+                <div className="contact-actions">
+                  <a className="primary-link" href="mailto:support@electionhub.app">
+                    Email Support
+                  </a>
+                  <a className="ghost-link" href="tel:+255700000000">
+                    Call Now
+                  </a>
+                </div>
+              </div>
+              <div className="contact-list">
+                <a className="contact-item" href="mailto:support@electionhub.app">
+                  <span>Email</span>
+                  <strong>support@electionhub.app</strong>
+                </a>
+                <a className="contact-item" href="tel:+255700000000">
+                  <span>Phone</span>
+                  <strong>+255 700 000 000</strong>
+                </a>
+                <div className="contact-item">
+                  <span>Platform</span>
+                  <strong>Election Hub System</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
       </section>
-    </div>
+    </PortalLayout>
   );
 }
