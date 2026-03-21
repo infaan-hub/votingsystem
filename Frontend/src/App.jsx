@@ -190,6 +190,10 @@ function PhonePage({ eyebrow, title, subtitle, user, accent = "blue", tabs, chil
       <div className="backdrop-glow glow-b" />
       <section className={`web-shell accent-${accent}`}>
         <section className="hero-panel">
+          <div className="hero-brand">
+            <span className="brand-mark">i</span>
+            <span className="brand-text">VOTE</span>
+          </div>
           <div className="hero-meta">
             <div>
               <p className="eyebrow">{eyebrow}</p>

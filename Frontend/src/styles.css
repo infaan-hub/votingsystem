@@ -3,21 +3,21 @@
   font-family: "Segoe UI", "Helvetica Neue", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  --bg: #edf2f7;
-  --surface: rgba(255, 255, 255, 0.88);
+  --bg: #f7f6ff;
+  --surface: rgba(255, 255, 255, 0.92);
   --surface-strong: #ffffff;
-  --surface-soft: #f4f7fb;
-  --ink: #152033;
-  --muted: #66758c;
-  --line: rgba(21, 32, 51, 0.1);
-  --blue: #1673e6;
-  --blue-deep: #0b57d0;
-  --dark: #162133;
-  --amber: #dd8914;
-  --emerald: #17966d;
-  --rose: #d84f7d;
-  --shadow: 0 28px 70px rgba(18, 27, 44, 0.12);
-  --soft-shadow: 0 14px 34px rgba(20, 31, 48, 0.1);
+  --surface-soft: #f5f5fe;
+  --ink: #1f2860;
+  --muted: #6d73a0;
+  --line: rgba(109, 115, 160, 0.18);
+  --primary: #4a57d1;
+  --primary-deep: #2f389d;
+  --accent: #8f98f6;
+  --emerald: #27b18b;
+  --amber: #efab4e;
+  --rose: #dd6a90;
+  --shadow: 0 30px 70px rgba(84, 88, 154, 0.18);
+  --soft-shadow: 0 12px 30px rgba(102, 108, 170, 0.12);
 }
 
 * {
@@ -34,9 +34,8 @@ body {
   margin: 0;
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(22, 115, 230, 0.16), transparent 22%),
-    radial-gradient(circle at bottom right, rgba(221, 137, 20, 0.14), transparent 20%),
-    linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+    radial-gradient(circle at top center, rgba(151, 155, 244, 0.35), transparent 30%),
+    linear-gradient(180deg, #f8f7ff 0%, #f0f2ff 48%, #f7f7fb 100%);
 }
 
 a {
@@ -57,34 +56,34 @@ button {
 
 .web-app {
   min-height: 100vh;
-  padding: 1.5rem;
+  padding: 1.75rem 1.2rem 2rem;
   position: relative;
 }
 
 .backdrop-glow {
   position: fixed;
   z-index: -1;
-  width: 320px;
-  height: 320px;
+  width: 420px;
+  height: 420px;
   border-radius: 999px;
-  filter: blur(40px);
-  opacity: 0.75;
+  filter: blur(48px);
+  opacity: 0.55;
 }
 
 .glow-a {
-  top: 2rem;
-  left: 4%;
-  background: rgba(22, 115, 230, 0.18);
+  top: -4rem;
+  left: 10%;
+  background: rgba(125, 135, 244, 0.34);
 }
 
 .glow-b {
-  right: 4%;
-  bottom: 2rem;
-  background: rgba(221, 137, 20, 0.16);
+  right: 8%;
+  bottom: 1rem;
+  background: rgba(202, 206, 255, 0.5);
 }
 
 .web-shell {
-  width: min(1280px, 100%);
+  width: min(1220px, 100%);
   margin: 0 auto;
 }
 
@@ -93,22 +92,44 @@ button {
 }
 
 .hero-panel {
-  padding: 1.4rem;
-  border-radius: 32px;
-  color: white;
+  padding: 2rem 2rem 1.35rem;
+  border-radius: 34px;
+  color: var(--ink);
+  text-align: center;
+  background:
+    radial-gradient(circle at top center, rgba(146, 152, 244, 0.22), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(249, 249, 255, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: var(--shadow);
 }
 
-.accent-blue .hero-panel {
-  background: linear-gradient(140deg, #1683f3 0%, #0b57d0 54%, #173b72 100%);
+.hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgba(79, 88, 214, 0.08);
+  margin-bottom: 1rem;
 }
 
-.accent-dark .hero-panel {
-  background: linear-gradient(140deg, #121b2b 0%, #253854 54%, #3c587a 100%);
+.brand-mark {
+  width: 2.3rem;
+  height: 2.3rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: white;
+  font-size: 1.45rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), #707df0);
 }
 
-.accent-amber .hero-panel {
-  background: linear-gradient(140deg, #e08a15 0%, #c8670f 54%, #7f3d12 100%);
+.brand-text {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--primary-deep);
 }
 
 .hero-meta,
@@ -122,13 +143,17 @@ button {
   gap: 1rem;
 }
 
+.hero-meta {
+  align-items: center;
+}
+
 .eyebrow {
   margin: 0;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   font-weight: 700;
-  opacity: 0.82;
+  color: #7a80ae;
 }
 
 .hero-panel h1,
@@ -142,8 +167,9 @@ button {
 
 .hero-panel h1 {
   margin-top: 0.35rem;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.02;
+  font-size: clamp(2.1rem, 5vw, 3.3rem);
+  line-height: 1.04;
+  color: var(--primary-deep);
 }
 
 .hero-text,
@@ -158,9 +184,9 @@ button {
 }
 
 .hero-text {
-  margin-top: 0.65rem;
-  max-width: 720px;
-  color: rgba(255, 255, 255, 0.86);
+  margin: 0.8rem auto 0;
+  max-width: 700px;
+  color: var(--muted);
 }
 
 .role-pill,
@@ -170,7 +196,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.45rem 0.82rem;
+  padding: 0.48rem 0.9rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
@@ -179,7 +205,8 @@ button {
 }
 
 .role-pill {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(74, 87, 209, 0.1);
+  color: var(--primary-deep);
 }
 
 .hero-actions,
@@ -198,10 +225,12 @@ button {
 }
 
 .hero-actions {
-  margin-top: 1rem;
+  margin-top: 1.3rem;
+  justify-content: center;
 }
 
 .hero-actions-grid {
+  justify-content: center;
   grid-template-columns: repeat(3, minmax(0, 180px));
 }
 
@@ -214,7 +243,7 @@ button {
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  border-radius: 18px;
+  border-radius: 16px;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -223,45 +252,46 @@ button {
 .primary-link,
 .action-button {
   color: white;
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep));
-  box-shadow: 0 16px 28px rgba(11, 87, 208, 0.24);
+  background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+  box-shadow: 0 14px 28px rgba(74, 87, 209, 0.24);
 }
 
 .ghost-link,
 .ghost-button {
-  color: white;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--primary-deep);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(74, 87, 209, 0.12);
 }
 
 .inline-link {
   min-height: auto;
   padding: 0;
-  color: var(--blue-deep);
+  color: var(--primary);
 }
 
 .tab-dock {
-  margin-top: 1.15rem;
+  margin-top: 1.25rem;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .tab-link {
-  padding: 0.8rem 0.7rem;
+  padding: 0.82rem 0.7rem;
   border-radius: 18px;
   text-align: center;
   font-size: 0.84rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(74, 87, 209, 0.08);
 }
 
 .tab-link.active {
   color: white;
-  background: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, var(--primary), var(--primary-deep));
 }
 
 .page-body {
-  padding: 1.35rem 0 2rem;
+  padding: 1.4rem 0 2rem;
 }
 
 .sheet-card,
@@ -269,7 +299,7 @@ button {
 .countdown-panel,
 .loading-screen {
   background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.82);
   box-shadow: var(--soft-shadow);
   backdrop-filter: blur(18px);
   border-radius: 28px;
@@ -282,7 +312,7 @@ button {
 }
 
 .soft-card {
-  background: rgba(248, 250, 253, 0.94);
+  background: rgba(247, 247, 255, 0.94);
 }
 
 .compact {
@@ -292,6 +322,7 @@ button {
 .section-heading h2 {
   margin-top: 0.3rem;
   font-size: 1.35rem;
+  color: var(--primary-deep);
 }
 
 .field {
@@ -320,7 +351,7 @@ button {
   width: 100%;
   min-height: 52px;
   padding: 0 1rem;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid var(--line);
   background: var(--surface-strong);
   color: var(--ink);
@@ -352,22 +383,22 @@ button {
 }
 
 .status-banner.success {
-  background: rgba(23, 150, 109, 0.12);
-  color: #116a4d;
+  background: rgba(39, 177, 139, 0.12);
+  color: #177a60;
 }
 
 .status-banner.error {
-  background: rgba(216, 79, 125, 0.12);
-  color: #a1365e;
+  background: rgba(221, 106, 144, 0.12);
+  color: #b14f74;
 }
 
 .global-banner {
-  width: min(1280px, 100%);
+  width: min(1220px, 100%);
   margin: 0 auto 1rem;
   padding: 0.9rem 1rem;
   border-radius: 18px;
-  background: rgba(216, 79, 125, 0.12);
-  color: #a1365e;
+  background: rgba(221, 106, 144, 0.12);
+  color: #b14f74;
   font-weight: 700;
 }
 
@@ -376,31 +407,36 @@ button {
 }
 
 .portal-card {
-  padding: 1.2rem;
-  border-radius: 26px;
-  color: white;
+  padding: 1.3rem;
+  border-radius: 28px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(143, 152, 246, 0.16);
   box-shadow: var(--soft-shadow);
 }
 
-.admin-card {
-  background: linear-gradient(150deg, #111a2a, #243a5b);
+.portal-card strong {
+  display: block;
+  color: var(--primary-deep);
+  margin-bottom: 0.35rem;
 }
 
-.voter-card {
-  background: linear-gradient(150deg, #1473e6, #0a56c8);
-}
-
+.admin-card,
+.voter-card,
 .candidate-card-lite {
-  background: linear-gradient(150deg, #d88614, #aa4d12);
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .portal-kicker {
   margin-bottom: 0.8rem;
-  background: rgba(255, 255, 255, 0.16);
+  color: var(--primary);
+  background: rgba(74, 87, 209, 0.09);
 }
 
 .countdown-panel {
   margin-top: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 245, 255, 0.94));
 }
 
 .countdown-box {
@@ -413,6 +449,7 @@ button {
 .countdown-box strong {
   display: block;
   margin-top: 0.3rem;
+  color: var(--primary-deep);
 }
 
 .countdown-parts {
@@ -426,24 +463,25 @@ button {
   place-items: center;
   border-radius: 18px;
   background: var(--surface-strong);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(143, 152, 246, 0.18);
   font-weight: 700;
+  color: var(--primary-deep);
 }
 
 .badge-upcoming,
 .badge-soft {
-  background: rgba(22, 115, 230, 0.12);
-  color: var(--blue-deep);
+  background: rgba(74, 87, 209, 0.12);
+  color: var(--primary-deep);
 }
 
 .badge-active {
-  background: rgba(23, 150, 109, 0.14);
-  color: #116a4d;
+  background: rgba(39, 177, 139, 0.14);
+  color: #177a60;
 }
 
 .badge-ended {
-  background: rgba(216, 79, 125, 0.12);
-  color: #a1365e;
+  background: rgba(221, 106, 144, 0.12);
+  color: #b14f74;
 }
 
 .stats-grid.two-col,
@@ -452,9 +490,12 @@ button {
 }
 
 .stat-card {
-  padding: 1rem;
+  padding: 1.05rem;
   border-radius: 24px;
-  color: white;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(143, 152, 246, 0.16);
+  box-shadow: var(--soft-shadow);
 }
 
 .stat-head {
@@ -468,39 +509,43 @@ button {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--muted);
 }
 
 .stat-glow {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
 }
 
 .stat-card h3 {
-  margin: 0.55rem 0 0.3rem;
+  margin: 0.55rem 0 0.25rem;
   font-size: 1.45rem;
+  color: var(--primary-deep);
 }
 
 .stat-card .muted {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--muted);
 }
 
-.stat-emerald {
-  background: linear-gradient(150deg, #1da57a, #148760);
+.stat-emerald .stat-glow {
+  background: var(--emerald);
+  box-shadow: 0 0 0 8px rgba(39, 177, 139, 0.12);
 }
 
-.stat-orange {
-  background: linear-gradient(150deg, #df8b15, #c96710);
+.stat-orange .stat-glow {
+  background: var(--amber);
+  box-shadow: 0 0 0 8px rgba(239, 171, 78, 0.12);
 }
 
-.stat-slate {
-  background: linear-gradient(150deg, #20334c, #36557a);
+.stat-slate .stat-glow {
+  background: var(--primary);
+  box-shadow: 0 0 0 8px rgba(74, 87, 209, 0.12);
 }
 
-.stat-default {
-  background: linear-gradient(150deg, #1473e6, #3153d4);
+.stat-default .stat-glow {
+  background: var(--accent);
+  box-shadow: 0 0 0 8px rgba(143, 152, 246, 0.14);
 }
 
 .candidate-grid {
@@ -513,8 +558,10 @@ button {
 
 .candidate-banner {
   padding: 1rem;
-  color: white;
-  background: linear-gradient(150deg, #111a2a, #1473e6);
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, rgba(244, 245, 255, 1), rgba(255, 255, 255, 0.96));
+  border-bottom: 1px solid rgba(143, 152, 246, 0.14);
 }
 
 .candidate-tags {
@@ -525,12 +572,13 @@ button {
 }
 
 .candidate-tag {
-  background: rgba(255, 255, 255, 0.14);
-  color: white;
+  background: rgba(74, 87, 209, 0.1);
+  color: var(--primary-deep);
 }
 
 .candidate-tag.soft {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(39, 177, 139, 0.12);
+  color: #177a60;
 }
 
 .candidate-avatar,
@@ -545,14 +593,15 @@ button {
 .candidate-avatar {
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, var(--accent), var(--primary));
+  color: white;
   font-size: 1.15rem;
   font-weight: 700;
 }
 
 .slogan {
   margin-top: 0.35rem;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--muted);
   font-style: italic;
 }
 
@@ -597,8 +646,8 @@ button {
 }
 
 .election-item.active {
-  border-color: rgba(22, 115, 230, 0.32);
-  box-shadow: inset 0 0 0 1px rgba(22, 115, 230, 0.18);
+  border-color: rgba(74, 87, 209, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(74, 87, 209, 0.16);
 }
 
 .election-item strong,
@@ -648,8 +697,17 @@ button {
     padding: 1rem;
   }
 
+  .hero-panel {
+    padding: 1.4rem 1rem 1.1rem;
+  }
+
+  .brand-text {
+    font-size: 1.5rem;
+  }
+
   .tab-dock,
-  .election-list {
+  .election-list,
+  .hero-actions-grid {
     grid-template-columns: 1fr;
   }
 
