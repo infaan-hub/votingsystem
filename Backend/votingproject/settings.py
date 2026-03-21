@@ -84,11 +84,12 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-if os.getenv("DATABASE_URL") and importlib.util.find_spec("dj_database_url"):
+database_url = os.getenv("DATABASE_URL", "").strip()
+if database_url and importlib.util.find_spec("dj_database_url"):
     import dj_database_url
 
     DATABASES["default"] = dj_database_url.parse(
-        os.getenv("DATABASE_URL"),
+        database_url,
         conn_max_age=600,
         ssl_require=os.getenv("DATABASE_SSL_REQUIRE", "True").lower() in {"1", "true", "yes", "on"},
     )
