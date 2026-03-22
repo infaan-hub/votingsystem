@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 function ThemeToggle({ theme, onToggleTheme }) {
   return (
     <button className="theme-toggle" type="button" onClick={onToggleTheme} aria-label="Toggle theme">
-      <span className={`theme-icon sun ${theme === "light" ? "is-active" : ""}`}>Sun</span>
-      <span className={`theme-icon moon ${theme === "dark" ? "is-active" : ""}`}>Moon</span>
+      <span className={`theme-icon sun ${theme === "light" ? "is-active" : ""}`}>☀</span>
+      <span className={`theme-icon moon ${theme === "dark" ? "is-active" : ""}`}>☾</span>
     </button>
   );
 }
@@ -34,10 +34,6 @@ export function Header({
             <span />
             <span />
           </button>
-          <div>
-            <p className="site-kicker">Election Hub</p>
-            <h1>Election Hub</h1>
-          </div>
         </div>
         {user ? (
           <button className="ghost-button" type="button" onClick={onLogout}>

@@ -563,6 +563,64 @@ button {
   line-height: 1.6;
 }
 
+.election-visual-card {
+  padding: 1rem;
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.election-visual-frame {
+  min-height: 280px;
+  padding: 1.5rem;
+  border-radius: 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.35), transparent 28%),
+    linear-gradient(145deg, rgba(217, 70, 239, 0.92), rgba(79, 70, 229, 0.92));
+  box-shadow: var(--shadow-pressed);
+  color: #fff;
+}
+
+:root[data-theme="dark"] .election-visual-frame {
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.12), transparent 26%),
+    linear-gradient(145deg, rgba(190, 24, 93, 0.95), rgba(37, 99, 235, 0.9));
+}
+
+.election-visual-badge {
+  width: fit-content;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.election-visual-copy {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 28rem;
+}
+
+.election-visual-copy h3,
+.election-visual-copy p {
+  margin: 0;
+}
+
+.election-visual-copy h3 {
+  font-size: clamp(1.5rem, 2vw, 2.2rem);
+}
+
+.election-visual-copy p {
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.6;
+}
+
 .candidate-grid {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }

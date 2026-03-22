@@ -21,8 +21,8 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
           <p className="eyebrow">User Flow</p>
           <h2>E-Voting System Home</h2>
           <p className="lead">
-            Welcome to Election Hub. Start at <strong>/home</strong>, then move into admin,
-            voter, or candidate pages to manage elections, review campaigns, and follow results.
+            Welcome to Election Hub. Choose your role to sign in, view elections, explore candidate
+            campaigns, and follow the voting process with ease.
           </p>
         </div>
         <div className="hero-actions">
@@ -74,23 +74,40 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
 
       <ScreenCard
         step={2}
-        section="Portal Access"
-        title="Role Entry Cards"
-        subtitle="Open each page independently from the home route."
+        section="Election Spotlight"
+        title="Current Election Countdown"
+        subtitle="Follow the active election timeline and sign in before casting a vote."
       >
-        <div className="portal-grid">
-          <Link className="portal-tile" to="/admin/login">
-            <h3>Admin Pages</h3>
-            <p>Register candidates, register voters, set election timing, and review results.</p>
-          </Link>
-          <Link className="portal-tile" to="/voter/login">
-            <h3>Voter Pages</h3>
-            <p>See all elections, select one, browse campaigns, and vote when the ballot is open.</p>
-          </Link>
-          <Link className="portal-tile" to="/candidate/login">
-            <h3>Candidate Pages</h3>
-            <p>Watch countdowns, vote totals, decision state, and open campaign details.</p>
-          </Link>
+        <div className="panel-grid two-col">
+          <div className="election-visual-card">
+            <div className="election-visual-frame">
+              <div className="election-visual-badge">{formatStatus(activeElection?.status)}</div>
+              <div className="election-visual-copy">
+                <h3>{activeElection?.title || "Election Hub Event"}</h3>
+                <p>{activeElection?.description || "Stay ready for the next important voting event."}</p>
+              </div>
+            </div>
+          </div>
+          <div className="soft-panel">
+            <div className="stack-sm">
+              <div className="metric-card">
+                <span>Countdown</span>
+                <strong>{countdown}</strong>
+              </div>
+              <div className="metric-card">
+                <span>Voting Opens</span>
+                <strong>
+                  {activeElection?.status === "upcoming" ? "When the countdown ends" : "Voting is live or completed"}
+                </strong>
+              </div>
+              <div className="info-note">
+                Voters must log in before they can open the ballot and cast a vote.
+              </div>
+              <Link className="primary-button" to="/voter/login">
+                Voter Login to Vote
+              </Link>
+            </div>
+          </div>
         </div>
       </ScreenCard>
     </div>
