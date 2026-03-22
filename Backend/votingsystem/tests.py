@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+import requests
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.test import TestCase
@@ -401,6 +402,20 @@ class VotingApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertIn("admin portal", response.json()["detail"].lower())
+
+    @override_settings(
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
+    )
+    @patch("votingsystem.views.requests.post", side_effect=requests.RequestException("network down"))
+    def test_google_auth_handles_token_exchange_failure(self, requests_post_mock):
+        response = self.client.post(
+            "/api/auth/google/",
+            {"code": "google-popup-code", "role": "voter"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("temporarily unavailable", response.json()["detail"].lower())
 
     def test_forgot_password_endpoint(self):
         response = self.client.post(

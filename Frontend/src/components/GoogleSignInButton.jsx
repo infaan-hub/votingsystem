@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const GOOGLE_SCRIPT_ID = "google-identity-service";
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  "139448352472-lehcpckt5odaalct2413559e8n5i5704.apps.googleusercontent.com";
 
 function ensureGoogleScript() {
   if (document.getElementById(GOOGLE_SCRIPT_ID)) {
@@ -18,12 +20,9 @@ function ensureGoogleScript() {
 
 export default function GoogleSignInButton({ role, onCode, disabled = false }) {
   const clientRef = useRef(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) {
-      return;
-    }
-
     ensureGoogleScript();
 
     const intervalId = window.setInterval(() => {
@@ -41,6 +40,7 @@ export default function GoogleSignInButton({ role, onCode, disabled = false }) {
           }
         },
       });
+      setIsReady(true);
       window.clearInterval(intervalId);
     }, 250);
 
@@ -53,16 +53,12 @@ export default function GoogleSignInButton({ role, onCode, disabled = false }) {
     return "Continue with Google";
   }, [role]);
 
-  if (!GOOGLE_CLIENT_ID) {
-    return null;
-  }
-
   return (
     <div className="google-signin-stack">
       <button
         type="button"
         className="google-signin-button"
-        disabled={disabled}
+        disabled={disabled || !isReady}
         onClick={() => clientRef.current?.requestCode()}
       >
         <span className="google-signin-mark" aria-hidden="true">

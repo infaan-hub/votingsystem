@@ -13,6 +13,10 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState({
+    new_password: false,
+    confirm_password: false,
+  });
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -31,6 +35,13 @@ export default function ForgotPasswordPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function togglePassword(fieldKey) {
+    setShowPassword((current) => ({
+      ...current,
+      [fieldKey]: !current[fieldKey],
+    }));
   }
 
   return (
@@ -64,7 +75,7 @@ export default function ForgotPasswordPage() {
                 <input
                   id="reset-password"
                   name="new_password"
-                  type="password"
+                  type={showPassword.new_password ? "text" : "password"}
                   className="auth-input"
                   placeholder="New Password"
                   autoComplete="new-password"
@@ -72,15 +83,20 @@ export default function ForgotPasswordPage() {
                   onChange={(event) => setForm((current) => ({ ...current, new_password: event.target.value }))}
                   required
                 />
-                <span className="password-eye" aria-hidden="true">
-                  ◉
-                </span>
+                <button
+                  type="button"
+                  className="password-eye"
+                  aria-label={showPassword.new_password ? "Hide password" : "Show password"}
+                  onClick={() => togglePassword("new_password")}
+                >
+                  {showPassword.new_password ? "◉" : "◎"}
+                </button>
               </div>
               <div className="auth-field-wrap password-wrap">
                 <input
                   id="reset-confirm-password"
                   name="confirm_password"
-                  type="password"
+                  type={showPassword.confirm_password ? "text" : "password"}
                   className="auth-input"
                   placeholder="Confirm Password"
                   autoComplete="new-password"
@@ -90,9 +106,14 @@ export default function ForgotPasswordPage() {
                   }
                   required
                 />
-                <span className="password-eye" aria-hidden="true">
-                  ◉
-                </span>
+                <button
+                  type="button"
+                  className="password-eye"
+                  aria-label={showPassword.confirm_password ? "Hide password" : "Show password"}
+                  onClick={() => togglePassword("confirm_password")}
+                >
+                  {showPassword.confirm_password ? "◉" : "◎"}
+                </button>
               </div>
 
               {error ? <div className="error-banner">{error}</div> : null}

@@ -806,6 +806,9 @@ button {
 }
 
 .password-eye {
+  border: 0;
+  cursor: pointer;
+  padding: 0;
   width: 58px;
   min-width: 58px;
   height: 58px;
@@ -815,6 +818,16 @@ button {
   color: #6b7280;
   background: rgba(0, 0, 0, 0.04);
   font-size: 0.88rem;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.password-eye:hover {
+  color: #111827;
+}
+
+.password-eye:focus-visible {
+  outline: 2px solid rgba(79, 70, 229, 0.35);
+  outline-offset: 2px;
 }
 
 .auth-submit-button {

@@ -35,11 +35,6 @@ export function Header({
             <span />
           </button>
         </div>
-        {user ? (
-          <button className="ghost-button" type="button" onClick={onLogout}>
-            Logout
-          </button>
-        ) : null}
       </header>
 
       <aside className={`app-sidebar ${sidebarOpen ? "is-open" : ""}`}>
@@ -67,6 +62,11 @@ export function Header({
           <p className="site-kicker">Theme</p>
           <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} />
         </div>
+        {user ? (
+          <button className="ghost-button top-space" type="button" onClick={onLogout}>
+            Logout
+          </button>
+        ) : null}
       </aside>
 
       {sidebarOpen ? <button className="sidebar-backdrop" type="button" onClick={onCloseSidebar} /> : null}

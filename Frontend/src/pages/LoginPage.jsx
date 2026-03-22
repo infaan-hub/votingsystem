@@ -1,5 +1,5 @@
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import GoogleSignInButton from "../components/GoogleSignInButton";
 
@@ -9,6 +9,7 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (user) {
     if (role === "admin" && user.role === "admin") {
@@ -126,7 +127,7 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
                 <input
                   id={`${role}-password`}
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   className="auth-input"
                   placeholder="Password"
                   autoComplete="current-password"
@@ -134,9 +135,14 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
                   onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
                   required
                 />
-                <span className="password-eye" aria-hidden="true">
-                  ◉
-                </span>
+                <button
+                  type="button"
+                  className="password-eye"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((current) => !current)}
+                >
+                  {showPassword ? "◉" : "◎"}
+                </button>
               </div>
 
               {error ? <div className="error-banner">{error}</div> : null}

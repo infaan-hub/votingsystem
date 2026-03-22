@@ -6,13 +6,12 @@ import GoogleSignInButton from "../components/GoogleSignInButton";
 
 const FIELD_CONFIG = {
   admin: [
-    { key: "full_name", label: "Full Name", placeholder: "Full Name", autoComplete: "name", required: true },
-    { key: "username", label: "Username", placeholder: "Username", autoComplete: "username", required: true },
-    { key: "email", label: "Email", placeholder: "Email", type: "email", autoComplete: "email", required: true },
-    { key: "staff_id", label: "Staff ID", placeholder: "Staff ID", autoComplete: "off", required: true },
+    { key: "full_name", placeholder: "Full Name", autoComplete: "name", required: true },
+    { key: "username", placeholder: "Username", autoComplete: "username", required: true },
+    { key: "email", placeholder: "Email", type: "email", autoComplete: "email", required: true },
+    { key: "staff_id", placeholder: "Staff ID", autoComplete: "off", required: true },
     {
       key: "password",
-      label: "Password",
       placeholder: "Password",
       type: "password",
       autoComplete: "new-password",
@@ -20,7 +19,6 @@ const FIELD_CONFIG = {
     },
     {
       key: "confirm_password",
-      label: "Confirm Password",
       placeholder: "Confirm Password",
       type: "password",
       autoComplete: "new-password",
@@ -28,32 +26,18 @@ const FIELD_CONFIG = {
     },
   ],
   voter: [
-    {
-      key: "first_name",
-      label: "First Name",
-      placeholder: "First Name",
-      autoComplete: "given-name",
-      required: true,
-    },
-    {
-      key: "last_name",
-      label: "Last Name",
-      placeholder: "Last Name",
-      autoComplete: "family-name",
-      required: true,
-    },
-    { key: "username", label: "Username", placeholder: "Username", autoComplete: "username", required: true },
-    { key: "email", label: "Email", placeholder: "Email", type: "email", autoComplete: "email", required: true },
+    { key: "first_name", placeholder: "First Name", autoComplete: "given-name", required: true },
+    { key: "last_name", placeholder: "Last Name", autoComplete: "family-name", required: true },
+    { key: "username", placeholder: "Username", autoComplete: "username", required: true },
+    { key: "email", placeholder: "Email", type: "email", autoComplete: "email", required: true },
     {
       key: "registration_number",
-      label: "Registration Number",
       placeholder: "Registration Number",
       autoComplete: "off",
       required: true,
     },
     {
       key: "password",
-      label: "Password",
       placeholder: "Password",
       type: "password",
       autoComplete: "new-password",
@@ -61,7 +45,6 @@ const FIELD_CONFIG = {
     },
     {
       key: "confirm_password",
-      label: "Confirm Password",
       placeholder: "Confirm Password",
       type: "password",
       autoComplete: "new-password",
@@ -88,6 +71,10 @@ export default function RegisterPage({ role, onRegister, onGoogleLogin }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    password: false,
+    confirm_password: false,
+  });
 
   const fields = FIELD_CONFIG[role];
   const meta = {
@@ -115,6 +102,13 @@ export default function RegisterPage({ role, onRegister, onGoogleLogin }) {
         "Use your name, username, email, registration number, and password to create your voter account.",
     },
   }[role];
+
+  function togglePassword(fieldKey) {
+    setVisiblePasswords((current) => ({
+      ...current,
+      [fieldKey]: !current[fieldKey],
+    }));
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -177,38 +171,46 @@ export default function RegisterPage({ role, onRegister, onGoogleLogin }) {
 
             <form className="auth-form-stack" onSubmit={handleSubmit}>
               <div className={`auth-grid ${role === "voter" ? "split-grid" : ""}`}>
-                {fields.map((field) => (
-                  <div
-                    key={field.key}
-                    className={`auth-field-wrap ${
-                      role === "voter" && (field.key === "first_name" || field.key === "last_name")
-                        ? "half-field"
-                        : ""
-                    } ${field.key === "password" || field.key === "confirm_password" ? "password-wrap" : ""}`}
-                  >
-                    <input
-                      id={`${role}-${field.key}`}
-                      name={field.key}
-                      type={field.type || "text"}
-                      className="auth-input"
-                      placeholder={field.placeholder}
-                      autoComplete={field.autoComplete}
-                      value={form[field.key]}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }))
-                      }
-                      required={field.required}
-                    />
-                    {field.key === "password" || field.key === "confirm_password" ? (
-                      <span className="password-eye" aria-hidden="true">
-                        ◉
-                      </span>
-                    ) : null}
-                  </div>
-                ))}
+                {fields.map((field) => {
+                  const isPasswordField = field.key === "password" || field.key === "confirm_password";
+                  return (
+                    <div
+                      key={field.key}
+                      className={`auth-field-wrap ${
+                        role === "voter" && (field.key === "first_name" || field.key === "last_name")
+                          ? "half-field"
+                          : ""
+                      } ${isPasswordField ? "password-wrap" : ""}`}
+                    >
+                      <input
+                        id={`${role}-${field.key}`}
+                        name={field.key}
+                        type={isPasswordField && visiblePasswords[field.key] ? "text" : field.type || "text"}
+                        className="auth-input"
+                        placeholder={field.placeholder}
+                        autoComplete={field.autoComplete}
+                        value={form[field.key]}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            [field.key]: event.target.value,
+                          }))
+                        }
+                        required={field.required}
+                      />
+                      {isPasswordField ? (
+                        <button
+                          type="button"
+                          className="password-eye"
+                          aria-label={visiblePasswords[field.key] ? "Hide password" : "Show password"}
+                          onClick={() => togglePassword(field.key)}
+                        >
+                          {visiblePasswords[field.key] ? "◉" : "◎"}
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
 
               {error ? <div className="error-banner">{error}</div> : null}

@@ -1,4 +1,5 @@
 import time
+import logging
 
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -37,6 +38,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 from .services import (
     build_election_stats,
     cast_vote,
@@ -168,6 +170,17 @@ class GoogleAuthView(APIView):
             return Response(
                 {"detail": "Google sign-in could not be verified."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        except requests.RequestException:
+            return Response(
+                {"detail": "Google sign-in is temporarily unavailable. Please try again."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except Exception:
+            logger.exception("Google sign-in failed unexpectedly.")
+            return Response(
+                {"detail": "Google sign-in could not be completed right now."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         if not idinfo.get("email_verified"):
