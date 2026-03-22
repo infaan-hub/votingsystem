@@ -1,21 +1,24 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --bg: #f1f5f9;
-  --surface: #ffffff;
-  --surface-alt: #f8fafc;
-  --text: #0f172a;
-  --muted: #475569;
-  --line: #e2e8f0;
-  --pink: #db2777;
-  --pink-strong: #be185d;
-  --blue: #1d4ed8;
-  --success-bg: #ecfdf5;
+  --bg: #e8edf4;
+  --surface: #e8edf4;
+  --surface-alt: #eef3f9;
+  --surface-strong: #dde5ef;
+  --text: #1f2937;
+  --muted: #64748b;
+  --pink: #d946ef;
+  --blue: #4f46e5;
+  --success-bg: #dff5e6;
   --success-text: #166534;
-  --error-bg: #fff1f2;
+  --error-bg: #ffe3e7;
   --error-text: #be123c;
-  --shadow: 0 22px 48px rgba(15, 23, 42, 0.12);
-  --shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --shadow-raised:
+    -12px -12px 24px rgba(255, 255, 255, 0.9),
+    12px 12px 26px rgba(163, 177, 198, 0.46);
+  --shadow-pressed:
+    inset 7px 7px 16px rgba(163, 177, 198, 0.42),
+    inset -7px -7px 16px rgba(255, 255, 255, 0.9);
 }
 
 * {
@@ -30,11 +33,11 @@ body,
 
 body {
   margin: 0;
-  font-family: "Inter", sans-serif;
+  font-family: "Manrope", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(219, 39, 119, 0.14), transparent 28%),
-    radial-gradient(circle at top right, rgba(29, 78, 216, 0.14), transparent 34%),
+    radial-gradient(circle at top left, rgba(217, 70, 239, 0.08), transparent 26%),
+    radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 32%),
     var(--bg);
 }
 
@@ -64,20 +67,50 @@ button {
   margin: 0 auto;
 }
 
+.site-header,
+.landing-hero,
+.screen-card,
+.soft-panel,
+.mini-flow-card,
+.portal-tile,
+.candidate-card,
+.campaign-block,
+.comment-card,
+.info-note,
+.metric-card,
+.list-row,
+.center-state,
+.route-pill,
+.ghost-button,
+.secondary-button,
+.field-input,
+.primary-button {
+  background: var(--surface);
+  border: 0;
+  box-shadow: var(--shadow-raised);
+}
+
 .site-header {
   max-width: 1180px;
   margin: 0 auto 1.5rem;
   padding: 1.25rem 1.5rem;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
+  border-radius: 30px;
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-end;
   flex-wrap: wrap;
+}
+
+.site-kicker,
+.eyebrow,
+.screen-section,
+.candidate-role {
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--pink);
 }
 
 .site-header h1,
@@ -99,16 +132,6 @@ button {
   margin: 0;
 }
 
-.site-kicker,
-.eyebrow,
-.screen-section {
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: var(--pink);
-}
-
 .header-links {
   display: flex;
   gap: 0.75rem;
@@ -122,27 +145,23 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0.75rem 1rem;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  font-weight: 600;
+  min-height: 46px;
+  padding: 0.8rem 1rem;
+  border-radius: 18px;
+  font-weight: 700;
 }
 
 .primary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
+  min-height: 50px;
   width: 100%;
-  border: 0;
-  border-radius: 16px;
-  padding: 0.9rem 1rem;
-  font-weight: 700;
+  padding: 0.95rem 1.1rem;
+  border-radius: 18px;
+  font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, var(--pink), var(--blue));
-  box-shadow: 0 18px 30px rgba(219, 39, 119, 0.22);
 }
 
 .page-stack {
@@ -150,26 +169,9 @@ button {
   gap: 1.5rem;
 }
 
-.landing-hero,
-.screen-card,
-.soft-panel,
-.mini-flow-card,
-.portal-tile,
-.candidate-card,
-.campaign-block,
-.comment-card,
-.info-note,
-.metric-card,
-.list-row,
-.center-state {
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
-}
-
 .landing-hero {
   padding: 2rem;
+  border-radius: 34px;
   display: flex;
   justify-content: space-between;
   gap: 1rem;
@@ -178,7 +180,7 @@ button {
 }
 
 .lead {
-  margin-top: 0.8rem;
+  margin-top: 0.85rem;
   max-width: 62ch;
   color: var(--muted);
   line-height: 1.7;
@@ -192,18 +194,20 @@ button {
 
 .hero-user-chip {
   padding: 0.95rem 1rem;
-  border-radius: 18px;
-  background: var(--surface-alt);
+  border-radius: 20px;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
+  background: var(--surface);
+  box-shadow: var(--shadow-pressed);
 }
 
 .flow-preview-grid,
 .portal-grid,
 .candidate-grid,
 .panel-grid,
-.route-grid {
+.route-grid,
+.button-grid {
   display: grid;
   gap: 1rem;
 }
@@ -214,16 +218,22 @@ button {
 
 .mini-flow-card {
   padding: 1.25rem;
+  border-radius: 28px;
 }
 
-.mini-step {
+.mini-step,
+.screen-step {
   display: inline-flex;
-  padding: 0.45rem 0.7rem;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 0.55rem 0.85rem;
   border-radius: 999px;
-  background: rgba(219, 39, 119, 0.1);
+  background: var(--surface-alt);
+  box-shadow: var(--shadow-pressed);
   color: var(--pink);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .mini-flow-card h3 {
@@ -238,39 +248,28 @@ button {
 
 .screen-card {
   overflow: hidden;
+  border-radius: 34px;
 }
 
 .screen-card-head {
   padding: 1.5rem;
-  color: #fff;
-  background: linear-gradient(90deg, var(--pink), #c026d3, var(--blue));
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
   flex-wrap: wrap;
-}
-
-.screen-card-head .screen-section {
-  color: rgba(255, 255, 255, 0.82);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-pressed);
 }
 
 .screen-card-head h2 {
   margin-top: 0.5rem;
-  font-size: clamp(1.4rem, 2vw, 2rem);
+  font-size: clamp(1.35rem, 2vw, 2rem);
 }
 
 .screen-card-head p {
   margin-top: 0.35rem;
-  color: rgba(255, 255, 255, 0.86);
-}
-
-.screen-step {
-  padding: 0.7rem 1rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 0.92rem;
-  font-weight: 700;
+  color: var(--muted);
 }
 
 .screen-card-body {
@@ -285,8 +284,17 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.soft-panel,
+.comment-card,
+.info-note,
+.metric-card,
+.list-row,
+.route-pill {
+  padding: 1rem;
+  border-radius: 24px;
+}
+
 .soft-panel {
-  padding: 1.2rem;
   background: var(--surface-alt);
 }
 
@@ -294,22 +302,21 @@ button {
   display: block;
   margin-bottom: 0.45rem;
   font-size: 0.92rem;
+  font-weight: 600;
   color: var(--muted);
 }
 
 .field-input {
   width: 100%;
-  min-height: 48px;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  min-height: 50px;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
   outline: none;
-  background: #fff;
+  color: var(--text);
 }
 
 .field-input:focus {
-  border-color: var(--pink);
-  box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.14);
+  box-shadow: var(--shadow-pressed), 0 0 0 2px rgba(217, 70, 239, 0.12);
 }
 
 .field-textarea {
@@ -328,18 +335,11 @@ button {
 }
 
 .button-grid {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
 }
 
 .secondary-button {
   width: 100%;
-}
-
-.metric-card {
-  padding: 1rem;
-  background: #fff;
 }
 
 .metric-card span {
@@ -359,20 +359,13 @@ button {
   margin-top: 1rem;
 }
 
-.route-pill {
-  padding: 0.8rem 1rem;
-  border-radius: 18px;
-  background: #fff;
-  border: 1px solid var(--line);
-  font-weight: 600;
-}
-
 .portal-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .portal-tile {
   padding: 1.4rem;
+  border-radius: 28px;
 }
 
 .portal-tile p {
@@ -387,11 +380,13 @@ button {
 
 .candidate-card {
   overflow: hidden;
+  border-radius: 28px;
 }
 
 .candidate-photo {
   height: 180px;
-  background: linear-gradient(135deg, var(--pink), var(--blue));
+  background: linear-gradient(135deg, rgba(217, 70, 239, 0.92), rgba(79, 70, 229, 0.92));
+  box-shadow: var(--shadow-pressed);
 }
 
 .candidate-copy {
@@ -400,15 +395,13 @@ button {
   padding: 1.2rem;
 }
 
-.candidate-role {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--pink);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-}
-
-.candidate-copy p {
+.candidate-copy p,
+.comment-card p,
+.info-note,
+.lead,
+.screen-card-head p,
+.mini-flow-card p,
+.portal-tile p {
   color: var(--muted);
   line-height: 1.6;
 }
@@ -428,28 +421,13 @@ button {
   font-size: 0.92rem;
 }
 
-.list-row {
-  padding: 0.9rem 1rem;
-  background: #fff;
-}
-
 .campaign-block {
   padding: 1.2rem;
+  border-radius: 28px;
 }
 
 .campaign-header {
   margin-bottom: 1rem;
-}
-
-.comment-card,
-.info-note {
-  padding: 1rem;
-}
-
-.comment-card p,
-.info-note {
-  color: var(--muted);
-  line-height: 1.6;
 }
 
 .top-space {
@@ -464,22 +442,19 @@ button {
 .error-banner,
 .center-state {
   padding: 1rem 1.1rem;
+  border-radius: 22px;
 }
 
 .success-banner {
-  border-radius: 18px;
   background: var(--success-bg);
   color: var(--success-text);
-  border: 1px solid #bbf7d0;
-  font-weight: 600;
+  box-shadow: var(--shadow-raised);
 }
 
 .error-banner {
-  border-radius: 18px;
   background: var(--error-bg);
   color: var(--error-text);
-  border: 1px solid #fecdd3;
-  font-weight: 600;
+  box-shadow: var(--shadow-raised);
 }
 
 .center-state {
@@ -487,7 +462,7 @@ button {
   place-items: center;
   min-height: 320px;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 @media (max-width: 900px) {
@@ -503,7 +478,8 @@ button {
 
   .screen-card-body,
   .screen-card-head,
-  .landing-hero {
+  .landing-hero,
+  .site-header {
     padding: 1.2rem;
   }
 }
