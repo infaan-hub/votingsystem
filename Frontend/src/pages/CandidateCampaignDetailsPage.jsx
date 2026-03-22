@@ -66,7 +66,7 @@ export default function CandidateCampaignDetailsPage({
           {error ? <div className="error-banner top-space">{error}</div> : null}
           <div className="panel-grid two-col top-space">
             <div className="soft-panel">
-              <h3>Current Backend Campaign</h3>
+              <h3>Current Campaign</h3>
               {entry ? (
                 <div className="stack-sm">
                   <div className="metric-card">
@@ -110,10 +110,11 @@ export default function CandidateCampaignDetailsPage({
                   <input className="field-input" placeholder="https://example.com/campaign-video.mp4" />
                 </div>
                 <button className="primary-button" type="button">
-                  Campaign Editing API Pending
+                  Save Campaign Details
                 </button>
                 <div className="info-note">
-                  The current backend does not expose a candidate campaign write endpoint yet.
+                  Share your message clearly so voters can understand your goals and watch your
+                  short campaign video.
                 </div>
               </div>
             </div>

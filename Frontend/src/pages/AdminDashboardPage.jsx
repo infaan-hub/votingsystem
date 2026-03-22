@@ -80,10 +80,10 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
             <div className="soft-panel">
               <h3>Admin Functions</h3>
               <div className="action-note-list">
-                <div className="info-note">Register candidates page structure is ready here.</div>
-                <div className="info-note">Register voters page structure is ready here.</div>
-                <div className="info-note">Set election date, time, and deadline UI is represented here.</div>
-                <div className="info-note">Post election notices countdown flow is represented here.</div>
+                <div className="info-note">Register candidates for each election position.</div>
+                <div className="info-note">Register voters and prepare them for election access.</div>
+                <div className="info-note">Set election date, time, and deadline for all users.</div>
+                <div className="info-note">Post election notices and guide the shared countdown.</div>
               </div>
             </div>
           </div>

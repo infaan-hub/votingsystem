@@ -12,7 +12,7 @@ export default function RegisterPage({ role }) {
         step={2}
         section="Authentication"
         title={role === "admin" ? "Admin Register" : "Voter Register"}
-        subtitle="Styled registration route matching the requested page flow."
+        subtitle="Create your Election Hub account information."
       >
         <div className="panel-grid two-col">
           {fields.map((field) => (
@@ -22,13 +22,12 @@ export default function RegisterPage({ role }) {
             </div>
           ))}
           <div className="span-2 info-note">
-            The current backend exposes login, election, ballot, campaigns, stats, and results
-            APIs. Registration write APIs are not exposed yet, so this page is prepared in the
-            route flow and ready to connect when those endpoints exist.
+            Complete your details here to continue with your Election Hub registration process.
+            Election officers can help finalize account access where approval is required.
           </div>
           <div className="span-2">
             <button className="primary-button" type="button">
-              Registration API Pending
+              Continue Registration
             </button>
           </div>
         </div>

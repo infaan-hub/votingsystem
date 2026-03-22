@@ -7,7 +7,7 @@ const FLOW_SCREENS = [
   ["Login", "Secure voter, candidate, and admin access"],
   ["Register", "Separate onboarding routes for admin and voter flows"],
   ["Explore Elections", "See published elections and switch context instantly"],
-  ["Candidate Directory", "Read real candidate campaign profiles from the backend"],
+  ["Candidate Directory", "Read candidate profiles, promises, and campaign messages"],
   ["Live Results", "Watch results and stats when visibility is enabled"],
   ["Vote", "Open the authenticated ballot and cast one secure vote"],
 ];
@@ -30,8 +30,8 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
           <p className="eyebrow">User Flow</p>
           <h2>E-Voting System Home</h2>
           <p className="lead">
-            Start at <strong>/home</strong>, then move into admin, voter, or candidate pages. The
-            new frontend uses separate page files and a neumorphic style.
+            Welcome to Election Hub. Start at <strong>/home</strong>, then move into admin,
+            voter, or candidate pages to manage elections, review campaigns, and follow results.
           </p>
         </div>
         <div className="hero-actions">

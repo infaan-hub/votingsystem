@@ -100,7 +100,7 @@ export default function CandidateDashboardPage({
           step={4}
           section="Candidate"
           title="My Campaign Entries"
-          subtitle="Open campaign details and review your published backend profile."
+          subtitle="Open campaign details and review your published candidate profile."
         >
           <div className="candidate-grid">
             {candidateEntries.length ? (
