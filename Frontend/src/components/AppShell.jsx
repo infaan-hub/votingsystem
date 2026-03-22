@@ -1,7 +1,24 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-export function Header({ user, onLogout, sidebarOpen, onToggleSidebar, onCloseSidebar }) {
+function ThemeToggle({ theme, onToggleTheme }) {
+  return (
+    <button className="theme-toggle" type="button" onClick={onToggleTheme} aria-label="Toggle theme">
+      <span className={`theme-icon sun ${theme === "light" ? "is-active" : ""}`}>Sun</span>
+      <span className={`theme-icon moon ${theme === "dark" ? "is-active" : ""}`}>Moon</span>
+    </button>
+  );
+}
+
+export function Header({
+  user,
+  onLogout,
+  sidebarOpen,
+  onToggleSidebar,
+  onCloseSidebar,
+  theme,
+  onToggleTheme,
+}) {
   return (
     <>
       <header className="site-header compact-header">
@@ -50,6 +67,10 @@ export function Header({ user, onLogout, sidebarOpen, onToggleSidebar, onCloseSi
             Candidate
           </Link>
         </nav>
+        <div className="sidebar-theme">
+          <p className="site-kicker">Theme</p>
+          <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} />
+        </div>
       </aside>
 
       {sidebarOpen ? <button className="sidebar-backdrop" type="button" onClick={onCloseSidebar} /> : null}
@@ -57,7 +78,7 @@ export function Header({ user, onLogout, sidebarOpen, onToggleSidebar, onCloseSi
   );
 }
 
-export default function AppShell({ user, onLogout, children }) {
+export default function AppShell({ user, onLogout, theme, onToggleTheme, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -68,6 +89,8 @@ export default function AppShell({ user, onLogout, children }) {
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((current) => !current)}
         onCloseSidebar={() => setSidebarOpen(false)}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
       />
       <main className="app-content">{children}</main>
     </div>

@@ -14,14 +14,21 @@ import VoterCampaignPage from "./pages/VoterCampaignPage";
 import VoterDashboardPage from "./pages/VoterDashboardPage";
 
 const TOKEN_KEY = "election-hub-token";
+const THEME_KEY = "election-hub-theme";
 
 export default function App() {
   const [token, setToken] = useState(() => window.localStorage.getItem(TOKEN_KEY) || "");
+  const [theme, setTheme] = useState(() => window.localStorage.getItem(THEME_KEY) || "light");
   const [user, setUser] = useState(null);
   const [elections, setElections] = useState([]);
   const [selectedElectionId, setSelectedElectionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [appError, setAppError] = useState("");
+
+  useEffect(() => {
+    window.localStorage.setItem(THEME_KEY, theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     let ignore = false;
@@ -111,14 +118,14 @@ export default function App() {
 
   if (loading) {
     return (
-      <AppShell user={user} onLogout={handleLogout}>
+      <AppShell user={user} onLogout={handleLogout} theme={theme} onToggleTheme={() => setTheme((current) => (current === "light" ? "dark" : "light"))}>
         <div className="center-state">Loading election flow...</div>
       </AppShell>
     );
   }
 
   return (
-    <AppShell user={user} onLogout={handleLogout}>
+    <AppShell user={user} onLogout={handleLogout} theme={theme} onToggleTheme={() => setTheme((current) => (current === "light" ? "dark" : "light"))}>
       {appError ? <div className="error-banner">{appError}</div> : null}
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />

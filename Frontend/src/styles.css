@@ -19,6 +19,29 @@
   --shadow-pressed:
     inset 7px 7px 16px rgba(163, 177, 198, 0.42),
     inset -7px -7px 16px rgba(255, 255, 255, 0.9);
+  --overlay: rgba(15, 23, 42, 0.16);
+}
+
+:root[data-theme="dark"] {
+  --bg: #10151f;
+  --surface: #171d2a;
+  --surface-alt: #1d2533;
+  --surface-strong: #141b29;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --pink: #f472b6;
+  --blue: #60a5fa;
+  --success-bg: #123223;
+  --success-text: #9ae6b4;
+  --error-bg: #3a1621;
+  --error-text: #fda4af;
+  --shadow-raised:
+    -12px -12px 24px rgba(32, 40, 56, 0.55),
+    12px 12px 24px rgba(6, 10, 18, 0.78);
+  --shadow-pressed:
+    inset 7px 7px 16px rgba(6, 10, 18, 0.75),
+    inset -7px -7px 16px rgba(38, 49, 69, 0.54);
+  --overlay: rgba(2, 6, 23, 0.42);
 }
 
 * {
@@ -194,8 +217,44 @@ button {
   position: fixed;
   inset: 0;
   border: 0;
-  background: rgba(15, 23, 42, 0.16);
+  background: var(--overlay);
   z-index: 20;
+}
+
+.sidebar-theme {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.theme-toggle {
+  width: 100%;
+  min-height: 58px;
+  padding: 0.45rem;
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  border: 0;
+  background: var(--surface-alt);
+  box-shadow: var(--shadow-pressed);
+}
+
+.theme-icon {
+  min-height: 46px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.theme-icon.is-active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
 }
 
 .site-kicker,
@@ -445,12 +504,10 @@ button {
   align-items: center;
   justify-content: center;
   gap: 0.9rem;
-  background: #f7f8fb;
-  color: #1f2937;
+  background: var(--surface-alt);
+  color: var(--text);
   font-weight: 700;
-  box-shadow:
-    -10px -10px 20px rgba(255, 255, 255, 0.96),
-    10px 10px 20px rgba(163, 177, 198, 0.34);
+  box-shadow: var(--shadow-raised);
 }
 
 .google-signin-mark {
@@ -462,10 +519,8 @@ button {
   justify-content: center;
   font-weight: 800;
   color: #4285f4;
-  background: #fff;
-  box-shadow:
-    inset -4px -4px 8px rgba(255, 255, 255, 0.9),
-    inset 4px 4px 8px rgba(211, 217, 230, 0.8);
+  background: var(--surface);
+  box-shadow: var(--shadow-pressed);
 }
 
 .button-grid {
