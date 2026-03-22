@@ -10,6 +10,18 @@ urlpatterns = [
     path("auth/forgot-password/", views.PasswordResetView.as_view(), name="auth-forgot-password"),
     path("auth/register/admin/", views.AdminRegistrationView.as_view(), name="auth-register-admin"),
     path("auth/register/voter/", views.VoterRegistrationView.as_view(), name="auth-register-voter"),
+    path("admin/voters/", views.AdminCreateVoterView.as_view(), name="admin-create-voter"),
+    path("admin/candidates/", views.AdminCreateCandidateView.as_view(), name="admin-create-candidate"),
+    path(
+        "admin/elections/<int:pk>/schedule/",
+        views.AdminElectionScheduleUpdateView.as_view(),
+        name="admin-election-schedule-update",
+    ),
+    path(
+        "admin/elections/<int:pk>/announcements/",
+        views.AdminElectionAnnouncementCreateView.as_view(),
+        name="admin-election-announcement-create",
+    ),
     path("auth/logout/", views.AuthLogoutView.as_view(), name="auth-logout"),
     path("auth/me/", views.CurrentUserView.as_view(), name="auth-me"),
     path("elections/", views.ElectionListView.as_view(), name="election-list"),

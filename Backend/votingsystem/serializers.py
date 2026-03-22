@@ -166,6 +166,157 @@ class PasswordResetSerializer(serializers.Serializer):
         return attrs
 
 
+class AdminCreateVoterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+    role = serializers.ChoiceField(
+        choices=(
+            User.Role.STUDENT,
+            User.Role.STAFF,
+            User.Role.OFFICER,
+        ),
+        default=User.Role.STUDENT,
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "registration_number",
+            "staff_id",
+            "password",
+            "confirm_password",
+            "role",
+        )
+        extra_kwargs = {
+            "email": {"required": False, "allow_blank": True},
+            "registration_number": {"required": False, "allow_blank": True},
+            "staff_id": {"required": False, "allow_blank": True},
+        }
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs.pop("confirm_password"):
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        if attrs["role"] == User.Role.STUDENT and not attrs.get("registration_number"):
+            raise serializers.ValidationError(
+                {"registration_number": "Registration number is required for student voters."}
+            )
+        if attrs["role"] in {User.Role.STAFF, User.Role.OFFICER} and not attrs.get("staff_id"):
+            raise serializers.ValidationError(
+                {"staff_id": "Staff ID is required for staff and officer voters."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = User(**validated_data)
+        user.set_password(password)
+        user.full_clean()
+        user.save()
+        return user
+
+
+class AdminCreateCandidateSerializer(serializers.Serializer):
+    election_id = serializers.IntegerField()
+    position_id = serializers.IntegerField()
+    username = serializers.CharField()
+    email = serializers.EmailField(required=False, allow_blank=True)
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+    slogan = serializers.CharField(required=False, allow_blank=True)
+    manifesto = serializers.CharField(required=False, allow_blank=True)
+    approved = serializers.BooleanField(required=False, default=True)
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs.pop("confirm_password"):
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        try:
+            election = Election.objects.get(pk=attrs["election_id"])
+        except Election.DoesNotExist as exc:
+            raise serializers.ValidationError({"election_id": "Election was not found."}) from exc
+        try:
+            position = Position.objects.get(pk=attrs["position_id"])
+        except Position.DoesNotExist as exc:
+            raise serializers.ValidationError({"position_id": "Position was not found."}) from exc
+        if position.election_id != election.id:
+            raise serializers.ValidationError({"position_id": "Position does not belong to the selected election."})
+        attrs["election"] = election
+        attrs["position"] = position
+        return attrs
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        election = validated_data.pop("election")
+        position = validated_data.pop("position")
+        approved = validated_data.pop("approved", True)
+        slogan = validated_data.pop("slogan", "")
+        manifesto = validated_data.pop("manifesto", "")
+
+        user = User(
+            username=validated_data["username"],
+            email=validated_data.get("email", ""),
+            first_name=validated_data["first_name"],
+            last_name=validated_data["last_name"],
+            role=(
+                User.Role.STAFF
+                if position.voter_group in {Position.VoterGroup.STAFF, Position.VoterGroup.STAFF_AND_OFFICER}
+                else User.Role.STUDENT
+            ),
+            department=position.department,
+            section=position.section,
+        )
+        user.set_password(password)
+        user.full_clean()
+        user.save()
+
+        candidate = Candidate(
+            election=election,
+            position=position,
+            user=user,
+            department=position.department,
+            section=position.section,
+            slogan=slogan,
+            manifesto=manifesto,
+            approved=approved,
+        )
+        candidate.full_clean()
+        candidate.save()
+        return candidate
+
+
+class ElectionScheduleUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Election
+        fields = (
+            "title",
+            "description",
+            "campaign_start_at",
+            "campaign_end_at",
+            "voting_start_at",
+            "voting_end_at",
+            "allow_live_results",
+            "announce_winners_automatically",
+            "is_published",
+        )
+
+
+class AnnouncementCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Announcement
+        fields = (
+            "title",
+            "message",
+            "announcement_type",
+            "publish_at",
+            "is_pinned",
+        )
+
+
 class AnnouncementSerializer(serializers.ModelSerializer):
     is_visible = serializers.BooleanField(read_only=True)
 

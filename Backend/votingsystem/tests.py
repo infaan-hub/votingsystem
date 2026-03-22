@@ -199,6 +199,12 @@ class VotingApiTests(TestCase):
         client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
         return client
 
+    def admin_client(self):
+        token = Token.objects.create(user=self.admin_user)
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        return client
+
     def test_health_endpoint(self):
         response = self.client.get("/api/health/")
         self.assertEqual(response.status_code, 200)
@@ -415,6 +421,70 @@ class VotingApiTests(TestCase):
             format="json",
         )
         self.assertEqual(login_response.status_code, 200)
+
+    def test_admin_can_create_voter_candidate_update_schedule_and_post_announcement(self):
+        client = self.admin_client()
+
+        voter_response = client.post(
+            "/api/admin/voters/",
+            {
+                "username": "new_voter",
+                "email": "newvoter@example.com",
+                "first_name": "New",
+                "last_name": "Voter",
+                "registration_number": "REG-101",
+                "password": "VotePass123!",
+                "confirm_password": "VotePass123!",
+                "role": CustomUser.Role.STUDENT,
+            },
+            format="json",
+        )
+        self.assertEqual(voter_response.status_code, 201)
+        self.assertEqual(voter_response.json()["user"]["username"], "new_voter")
+
+        candidate_response = client.post(
+            "/api/admin/candidates/",
+            {
+                "election_id": self.election.id,
+                "position_id": self.position.id,
+                "username": "new_candidate",
+                "email": "candidate@example.com",
+                "first_name": "New",
+                "last_name": "Candidate",
+                "password": "Candidate123!",
+                "confirm_password": "Candidate123!",
+                "slogan": "Forward now",
+                "manifesto": "Serve the students well.",
+                "approved": True,
+            },
+            format="json",
+        )
+        self.assertEqual(candidate_response.status_code, 201)
+        self.assertEqual(candidate_response.json()["user"]["username"], "new_candidate")
+
+        schedule_response = client.patch(
+            f"/api/admin/elections/{self.election.id}/schedule/",
+            {
+                "title": "Updated University Leadership Election 2026",
+                "description": "Updated election schedule.",
+            },
+            format="json",
+        )
+        self.assertEqual(schedule_response.status_code, 200)
+        self.assertEqual(schedule_response.json()["title"], "Updated University Leadership Election 2026")
+
+        announcement_response = client.post(
+            f"/api/admin/elections/{self.election.id}/announcements/",
+            {
+                "title": "Voting Notice",
+                "message": "Voting begins soon.",
+                "announcement_type": "notice",
+                "is_pinned": True,
+            },
+            format="json",
+        )
+        self.assertEqual(announcement_response.status_code, 201)
+        self.assertEqual(announcement_response.json()["title"], "Voting Notice")
 
     def test_ballot_and_vote_endpoints(self):
         client = self.auth_client()

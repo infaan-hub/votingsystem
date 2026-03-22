@@ -168,6 +168,7 @@ export default function App() {
           element={
             <AdminDashboardPage
               user={user}
+              token={token}
               elections={elections}
               selectedElectionId={selectedElectionId}
               onSelectElection={setSelectedElectionId}

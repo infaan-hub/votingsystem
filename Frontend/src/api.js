@@ -104,6 +104,14 @@ export const login = (credentials) => request("/auth/login/", { method: "POST", 
 export const loginWithGoogle = (payload) => request("/auth/google/", { method: "POST", body: payload });
 export const resetPassword = (payload) =>
   request("/auth/forgot-password/", { method: "POST", body: payload });
+export const adminCreateVoter = (payload, token) =>
+  request("/admin/voters/", { method: "POST", body: payload, token });
+export const adminCreateCandidate = (payload, token) =>
+  request("/admin/candidates/", { method: "POST", body: payload, token });
+export const adminUpdateElectionSchedule = (id, payload, token) =>
+  request(`/admin/elections/${id}/schedule/`, { method: "PATCH", body: payload, token });
+export const adminCreateAnnouncement = (id, payload, token) =>
+  request(`/admin/elections/${id}/announcements/`, { method: "POST", body: payload, token });
 export const registerAdmin = (payload) =>
   request("/auth/register/admin/", { method: "POST", body: payload });
 export const registerVoter = (payload) =>

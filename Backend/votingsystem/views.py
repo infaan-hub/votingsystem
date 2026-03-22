@@ -17,9 +17,15 @@ from rest_framework.views import APIView
 
 from .models import Candidate, Election
 from .serializers import (
+    AdminCreateCandidateSerializer,
+    AdminCreateVoterSerializer,
     AdminRegistrationSerializer,
+    AnnouncementSerializer,
+    AnnouncementCreateSerializer,
+    CandidateSerializer,
     ElectionDetailSerializer,
     ElectionListSerializer,
+    ElectionScheduleUpdateSerializer,
     GoogleAuthSerializer,
     PasswordResetSerializer,
     PositionSerializer,
@@ -101,6 +107,15 @@ def _normalize_vote_error(detail):
     if isinstance(detail, str) and "already exists" in detail.lower():
         return "You have already voted for this position in this election."
     return detail
+
+
+class IsAdminRole(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.role == User.Role.ADMIN
+        )
 
 
 class HealthCheckView(APIView):
@@ -278,6 +293,54 @@ class VoterRegistrationView(APIView):
             {"token": token.key, "user": UserSummarySerializer(_serialize_user(user)).data},
             status=status.HTTP_201_CREATED,
         )
+
+
+class AdminCreateVoterView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, *args, **kwargs):
+        serializer = AdminCreateVoterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {"user": UserSummarySerializer(_serialize_user(user)).data},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminCreateCandidateView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, *args, **kwargs):
+        serializer = AdminCreateCandidateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        candidate = serializer.save()
+        return Response(
+            CandidateSerializer(candidate, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminElectionScheduleUpdateView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def patch(self, request, pk, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk)
+        serializer = ElectionScheduleUpdateSerializer(election, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(ElectionDetailSerializer(election, context={"request": request}).data)
+
+
+class AdminElectionAnnouncementCreateView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, pk, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk)
+        serializer = AnnouncementCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        announcement = serializer.save(election=election)
+        return Response(AnnouncementSerializer(announcement).data, status=status.HTTP_201_CREATED)
 
 
 class AuthLogoutView(APIView):

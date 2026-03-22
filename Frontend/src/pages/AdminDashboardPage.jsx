@@ -1,16 +1,81 @@
 import { useEffect, useState } from "react";
 
-import { fetchElectionDetail, fetchResults, fetchStats, openStatsStream } from "../api";
+import {
+  adminCreateAnnouncement,
+  adminCreateCandidate,
+  adminCreateVoter,
+  adminUpdateElectionSchedule,
+  fetchElectionDetail,
+  fetchResults,
+  fetchStats,
+  openStatsStream,
+} from "../api";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
 import { formatDateTime, formatStatus, useCountdown } from "../utils";
 
-export default function AdminDashboardPage({ user, elections, selectedElectionId, onSelectElection }) {
+const INITIAL_VOTER_FORM = {
+  username: "",
+  email: "",
+  first_name: "",
+  last_name: "",
+  registration_number: "",
+  staff_id: "",
+  password: "",
+  confirm_password: "",
+  role: "student",
+};
+
+const INITIAL_CANDIDATE_FORM = {
+  position_id: "",
+  username: "",
+  email: "",
+  first_name: "",
+  last_name: "",
+  password: "",
+  confirm_password: "",
+  slogan: "",
+  manifesto: "",
+  approved: true,
+};
+
+const INITIAL_ANNOUNCEMENT_FORM = {
+  title: "",
+  message: "",
+  announcement_type: "notice",
+  publish_at: "",
+  is_pinned: false,
+};
+
+export default function AdminDashboardPage({
+  user,
+  token,
+  elections,
+  selectedElectionId,
+  onSelectElection,
+}) {
   const [detail, setDetail] = useState(null);
   const [stats, setStats] = useState(null);
   const [results, setResults] = useState(null);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [voterForm, setVoterForm] = useState(INITIAL_VOTER_FORM);
+  const [candidateForm, setCandidateForm] = useState(INITIAL_CANDIDATE_FORM);
+  const [scheduleForm, setScheduleForm] = useState({
+    title: "",
+    description: "",
+    campaign_start_at: "",
+    campaign_end_at: "",
+    voting_start_at: "",
+    voting_end_at: "",
+    allow_live_results: true,
+    announce_winners_automatically: true,
+    is_published: true,
+  });
+  const [announcementForm, setAnnouncementForm] = useState(INITIAL_ANNOUNCEMENT_FORM);
+  const [submitting, setSubmitting] = useState("");
+
   const selectedElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
   const countdown = useCountdown(
@@ -21,29 +86,48 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
         : null,
   );
 
+  async function loadElectionData(electionId) {
+    const [detailResult, statsResult, resultsResult] = await Promise.allSettled([
+      fetchElectionDetail(electionId),
+      fetchStats(electionId, token),
+      fetchResults(electionId, token),
+    ]);
+    setDetail(detailResult.status === "fulfilled" ? detailResult.value : null);
+    setStats(statsResult.status === "fulfilled" ? statsResult.value : null);
+    setResults(resultsResult.status === "fulfilled" ? resultsResult.value : null);
+    const firstFailure = [detailResult, statsResult, resultsResult].find((item) => item.status === "rejected");
+    setError(firstFailure?.reason?.message || "");
+
+    if (detailResult.status === "fulfilled") {
+      const electionDetail = detailResult.value;
+      setScheduleForm({
+        title: electionDetail.title || "",
+        description: electionDetail.description || "",
+        campaign_start_at: electionDetail.campaign_start_at?.slice(0, 16) || "",
+        campaign_end_at: electionDetail.campaign_end_at?.slice(0, 16) || "",
+        voting_start_at: electionDetail.voting_start_at?.slice(0, 16) || "",
+        voting_end_at: electionDetail.voting_end_at?.slice(0, 16) || "",
+        allow_live_results: Boolean(electionDetail.allow_live_results),
+        announce_winners_automatically: Boolean(electionDetail.announce_winners_automatically),
+        is_published: electionDetail.is_published ?? true,
+      });
+    }
+  }
+
   useEffect(() => {
-    if (!selectedElection) {
+    if (!selectedElection || !token) {
       return;
     }
     let ignore = false;
-    Promise.allSettled([
-      fetchElectionDetail(selectedElection.id),
-      fetchStats(selectedElection.id),
-      fetchResults(selectedElection.id),
-    ]).then(([detailResult, statsResult, resultsResult]) => {
-      if (ignore) {
-        return;
+    loadElectionData(selectedElection.id).catch((requestError) => {
+      if (!ignore) {
+        setError(requestError.message);
       }
-      setDetail(detailResult.status === "fulfilled" ? detailResult.value : null);
-      setStats(statsResult.status === "fulfilled" ? statsResult.value : null);
-      setResults(resultsResult.status === "fulfilled" ? resultsResult.value : null);
-      const firstFailure = [detailResult, statsResult, resultsResult].find((item) => item.status === "rejected");
-      setError(firstFailure?.reason?.message || "");
     });
     return () => {
       ignore = true;
     };
-  }, [selectedElection]);
+  }, [selectedElection, token]);
 
   useEffect(() => {
     if (!selectedElection) {
@@ -54,7 +138,12 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
     stream.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        setStats((current) => ({ ...(current || {}), ...payload }));
+        if (payload.stats) {
+          setStats(payload.stats);
+        }
+        if (payload.winners) {
+          setResults((current) => ({ ...(current || {}), winners: payload.winners }));
+        }
       } catch {
         // Ignore malformed stream events.
       }
@@ -68,6 +157,90 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
       stream.close();
     };
   }, [selectedElection]);
+
+  async function handleCreateVoter(event) {
+    event.preventDefault();
+    setSubmitting("voter");
+    setError("");
+    setSuccess("");
+    try {
+      const response = await adminCreateVoter(voterForm, token);
+      setSuccess(`Voter account created for ${response.user.full_name || response.user.username}.`);
+      setVoterForm(INITIAL_VOTER_FORM);
+      if (selectedElection) {
+        await loadElectionData(selectedElection.id);
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting("");
+    }
+  }
+
+  async function handleCreateCandidate(event) {
+    event.preventDefault();
+    if (!selectedElection) {
+      return;
+    }
+    setSubmitting("candidate");
+    setError("");
+    setSuccess("");
+    try {
+      const response = await adminCreateCandidate(
+        {
+          ...candidateForm,
+          election_id: selectedElection.id,
+        },
+        token,
+      );
+      setSuccess(`Candidate ${response.user.full_name} was registered successfully.`);
+      setCandidateForm(INITIAL_CANDIDATE_FORM);
+      await loadElectionData(selectedElection.id);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting("");
+    }
+  }
+
+  async function handleUpdateSchedule(event) {
+    event.preventDefault();
+    if (!selectedElection) {
+      return;
+    }
+    setSubmitting("schedule");
+    setError("");
+    setSuccess("");
+    try {
+      await adminUpdateElectionSchedule(selectedElection.id, scheduleForm, token);
+      setSuccess("Election schedule updated successfully.");
+      await loadElectionData(selectedElection.id);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting("");
+    }
+  }
+
+  async function handleCreateAnnouncement(event) {
+    event.preventDefault();
+    if (!selectedElection) {
+      return;
+    }
+    setSubmitting("announcement");
+    setError("");
+    setSuccess("");
+    try {
+      await adminCreateAnnouncement(selectedElection.id, announcementForm, token);
+      setSuccess("Election notice posted successfully.");
+      setAnnouncementForm(INITIAL_ANNOUNCEMENT_FORM);
+      await loadElectionData(selectedElection.id);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting("");
+    }
+  }
 
   return (
     <RequireAuth user={user} allowAdmin loginPath="/admin/login">
@@ -115,11 +288,282 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
               </div>
             </div>
           </div>
+          {success ? <div className="success-banner top-space">{success}</div> : null}
           {error ? <div className="error-banner top-space">{error}</div> : null}
         </ScreenCard>
 
         <ScreenCard
           step={4}
+          section="Administration"
+          title="Manage Election"
+          subtitle="Create voter and candidate accounts, update election timing, and post announcements."
+        >
+          <div className="panel-grid two-col">
+            <form className="soft-panel form-stack" onSubmit={handleCreateVoter}>
+              <h3>Register Voter</h3>
+              <input
+                className="field-input"
+                placeholder="Username"
+                value={voterForm.username}
+                onChange={(event) => setVoterForm((current) => ({ ...current, username: event.target.value }))}
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Email"
+                type="email"
+                value={voterForm.email}
+                onChange={(event) => setVoterForm((current) => ({ ...current, email: event.target.value }))}
+              />
+              <input
+                className="field-input"
+                placeholder="First Name"
+                value={voterForm.first_name}
+                onChange={(event) => setVoterForm((current) => ({ ...current, first_name: event.target.value }))}
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Last Name"
+                value={voterForm.last_name}
+                onChange={(event) => setVoterForm((current) => ({ ...current, last_name: event.target.value }))}
+                required
+              />
+              <select
+                className="field-input"
+                value={voterForm.role}
+                onChange={(event) => setVoterForm((current) => ({ ...current, role: event.target.value }))}
+              >
+                <option value="student">Student</option>
+                <option value="staff">Staff</option>
+                <option value="officer">Election Officer</option>
+              </select>
+              <input
+                className="field-input"
+                placeholder="Registration Number"
+                value={voterForm.registration_number}
+                onChange={(event) =>
+                  setVoterForm((current) => ({ ...current, registration_number: event.target.value }))
+                }
+              />
+              <input
+                className="field-input"
+                placeholder="Staff ID"
+                value={voterForm.staff_id}
+                onChange={(event) => setVoterForm((current) => ({ ...current, staff_id: event.target.value }))}
+              />
+              <input
+                className="field-input"
+                placeholder="Password"
+                type="password"
+                value={voterForm.password}
+                onChange={(event) => setVoterForm((current) => ({ ...current, password: event.target.value }))}
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Confirm Password"
+                type="password"
+                value={voterForm.confirm_password}
+                onChange={(event) =>
+                  setVoterForm((current) => ({ ...current, confirm_password: event.target.value }))
+                }
+                required
+              />
+              <button className="primary-button" type="submit" disabled={submitting === "voter"}>
+                {submitting === "voter" ? "Registering Voter..." : "Register Voter"}
+              </button>
+            </form>
+
+            <form className="soft-panel form-stack" onSubmit={handleCreateCandidate}>
+              <h3>Register Candidate</h3>
+              <select
+                className="field-input"
+                value={candidateForm.position_id}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, position_id: event.target.value }))}
+                required
+              >
+                <option value="">Select Position</option>
+                {detail?.positions?.map((position) => (
+                  <option key={position.id} value={position.id}>
+                    {position.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="field-input"
+                placeholder="Username"
+                value={candidateForm.username}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, username: event.target.value }))}
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Email"
+                type="email"
+                value={candidateForm.email}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, email: event.target.value }))}
+              />
+              <input
+                className="field-input"
+                placeholder="First Name"
+                value={candidateForm.first_name}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, first_name: event.target.value }))}
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Last Name"
+                value={candidateForm.last_name}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, last_name: event.target.value }))}
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Password"
+                type="password"
+                value={candidateForm.password}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, password: event.target.value }))}
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Confirm Password"
+                type="password"
+                value={candidateForm.confirm_password}
+                onChange={(event) =>
+                  setCandidateForm((current) => ({ ...current, confirm_password: event.target.value }))
+                }
+                required
+              />
+              <input
+                className="field-input"
+                placeholder="Campaign Slogan"
+                value={candidateForm.slogan}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, slogan: event.target.value }))}
+              />
+              <textarea
+                className="field-input field-textarea"
+                placeholder="Manifesto"
+                value={candidateForm.manifesto}
+                onChange={(event) => setCandidateForm((current) => ({ ...current, manifesto: event.target.value }))}
+              />
+              <button className="primary-button" type="submit" disabled={submitting === "candidate"}>
+                {submitting === "candidate" ? "Registering Candidate..." : "Register Candidate"}
+              </button>
+            </form>
+
+            <form className="soft-panel form-stack" onSubmit={handleUpdateSchedule}>
+              <h3>Set Election Schedule</h3>
+              <input
+                className="field-input"
+                placeholder="Election Title"
+                value={scheduleForm.title}
+                onChange={(event) => setScheduleForm((current) => ({ ...current, title: event.target.value }))}
+                required
+              />
+              <textarea
+                className="field-input field-textarea"
+                placeholder="Election Description"
+                value={scheduleForm.description}
+                onChange={(event) => setScheduleForm((current) => ({ ...current, description: event.target.value }))}
+              />
+              <label className="field-label">Campaign Start</label>
+              <input
+                className="field-input"
+                type="datetime-local"
+                value={scheduleForm.campaign_start_at}
+                onChange={(event) =>
+                  setScheduleForm((current) => ({ ...current, campaign_start_at: event.target.value }))
+                }
+                required
+              />
+              <label className="field-label">Campaign End</label>
+              <input
+                className="field-input"
+                type="datetime-local"
+                value={scheduleForm.campaign_end_at}
+                onChange={(event) =>
+                  setScheduleForm((current) => ({ ...current, campaign_end_at: event.target.value }))
+                }
+                required
+              />
+              <label className="field-label">Voting Start</label>
+              <input
+                className="field-input"
+                type="datetime-local"
+                value={scheduleForm.voting_start_at}
+                onChange={(event) =>
+                  setScheduleForm((current) => ({ ...current, voting_start_at: event.target.value }))
+                }
+                required
+              />
+              <label className="field-label">Voting End</label>
+              <input
+                className="field-input"
+                type="datetime-local"
+                value={scheduleForm.voting_end_at}
+                onChange={(event) =>
+                  setScheduleForm((current) => ({ ...current, voting_end_at: event.target.value }))
+                }
+                required
+              />
+              <button className="primary-button" type="submit" disabled={submitting === "schedule"}>
+                {submitting === "schedule" ? "Saving Schedule..." : "Save Election Schedule"}
+              </button>
+            </form>
+
+            <form className="soft-panel form-stack" onSubmit={handleCreateAnnouncement}>
+              <h3>Post Election Notice</h3>
+              <input
+                className="field-input"
+                placeholder="Announcement Title"
+                value={announcementForm.title}
+                onChange={(event) =>
+                  setAnnouncementForm((current) => ({ ...current, title: event.target.value }))
+                }
+                required
+              />
+              <textarea
+                className="field-input field-textarea"
+                placeholder="Announcement Message"
+                value={announcementForm.message}
+                onChange={(event) =>
+                  setAnnouncementForm((current) => ({ ...current, message: event.target.value }))
+                }
+                required
+              />
+              <select
+                className="field-input"
+                value={announcementForm.announcement_type}
+                onChange={(event) =>
+                  setAnnouncementForm((current) => ({
+                    ...current,
+                    announcement_type: event.target.value,
+                  }))
+                }
+              >
+                <option value="notice">Notice</option>
+                <option value="campaign">Campaign</option>
+                <option value="result">Result</option>
+              </select>
+              <input
+                className="field-input"
+                type="datetime-local"
+                value={announcementForm.publish_at}
+                onChange={(event) =>
+                  setAnnouncementForm((current) => ({ ...current, publish_at: event.target.value }))
+                }
+              />
+              <button className="primary-button" type="submit" disabled={submitting === "announcement"}>
+                {submitting === "announcement" ? "Posting Notice..." : "Post Election Notice"}
+              </button>
+            </form>
+          </div>
+        </ScreenCard>
+
+        <ScreenCard
+          step={5}
           section="Oversight"
           title="Election Overview"
           subtitle="Read the published election structure, candidates, and visible totals."
@@ -142,9 +586,9 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
               <div className="stack-sm">
                 {results?.winners?.length ? (
                   results.winners.map((winner, index) => (
-                    <div className="list-row" key={`${winner.position_name}-${index}`}>
-                      <strong>{winner.position_name}</strong>
-                      <span>{winner.candidate_name}</span>
+                    <div className="list-row" key={`${winner.position}-${index}`}>
+                      <strong>{winner.position}</strong>
+                      <span>{winner.winner_names}</span>
                     </div>
                   ))
                 ) : (
@@ -154,7 +598,7 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
               {stats ? (
                 <div className="metric-card top-space">
                   <span>Total Votes</span>
-                  <strong>{stats.total_votes}</strong>
+                  <strong>{stats.votes_cast}</strong>
                 </div>
               ) : null}
             </div>
