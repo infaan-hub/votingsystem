@@ -29,6 +29,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "testserver",
+    "votingsystem-1-urbz.onrender.com",
     *env_list("ALLOWED_HOSTS"),
 ]
 if os.getenv("RENDER_EXTERNAL_HOSTNAME"):
@@ -145,6 +146,7 @@ AUTH_USER_MODEL = 'votingsystem.CustomUser'
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173',
     'http://localhost:5173',
+    'https://electionhub-xi.vercel.app',
     *env_list("CORS_ALLOWED_ORIGINS"),
 ]
 CORS_ALLOW_CREDENTIALS = True
@@ -154,6 +156,7 @@ if DEBUG and os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() in {"1", "true
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:5173',
     'http://localhost:5173',
+    'https://electionhub-xi.vercel.app',
     *env_list("CSRF_TRUSTED_ORIGINS"),
 ]
 

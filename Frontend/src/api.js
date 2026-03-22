@@ -34,9 +34,9 @@ async function request(path, options = {}) {
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Backend request timed out. Check that the API server is reachable.");
+      throw new Error("Election Hub is taking too long to respond. Please try again.");
     }
-    throw new Error("Backend server is not reachable. Start Django on http://127.0.0.1:8000.");
+    throw new Error("Election Hub is not reachable right now. Please try again shortly.");
   } finally {
     window.clearTimeout(timeoutId);
   }
@@ -60,7 +60,7 @@ async function request(path, options = {}) {
     throw new Error(
       data?.detail ||
         (response.status >= 500
-          ? "Backend server error. Check the Django terminal for the traceback."
+          ? "Election Hub is experiencing a server error. Please try again shortly."
           : "Request failed."),
     );
   }
