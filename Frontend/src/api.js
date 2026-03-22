@@ -4,10 +4,14 @@ const API_BASE =
     ? "http://127.0.0.1:8000/api"
     : "/api");
 
+const REQUEST_TIMEOUT_MS = 12000;
+
 async function request(path, options = {}) {
   const { method = "GET", body, token, headers = {} } = options;
   const finalHeaders = { ...headers };
   let finalBody = body;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   if (token) {
     finalHeaders.Authorization = `Token ${token}`;
@@ -24,11 +28,17 @@ async function request(path, options = {}) {
       method,
       headers: finalHeaders,
       body: finalBody,
+      signal: controller.signal,
     });
   } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("Backend request timed out. Check that the API server is running and reachable.");
+    }
     throw new Error(
       "Backend server is not reachable. Start Django on http://127.0.0.1:8000.",
     );
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 
   if (response.status === 204) {
