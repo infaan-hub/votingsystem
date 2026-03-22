@@ -497,6 +497,27 @@ class VotingApiTests(TestCase):
         self.assertEqual(candidate_by_name_response.status_code, 201)
         self.assertEqual(candidate_by_name_response.json()["user"]["username"], "candidate_by_name")
 
+        candidate_new_position_response = client.post(
+            "/api/admin/candidates/",
+            {
+                "election_id": self.election.id,
+                "position_name": "Secretary General",
+                "username": "candidate_new_position",
+                "email": "newposition@example.com",
+                "first_name": "New",
+                "last_name": "Office",
+                "password": "Candidate123!",
+                "confirm_password": "Candidate123!",
+                "slogan": "New office",
+                "manifesto": "Serve in a newly created office.",
+                "approved": True,
+            },
+            format="json",
+        )
+        self.assertEqual(candidate_new_position_response.status_code, 201)
+        self.assertEqual(candidate_new_position_response.json()["user"]["username"], "candidate_new_position")
+        self.assertTrue(Position.objects.filter(election=self.election, name="Secretary General").exists())
+
         schedule_response = client.patch(
             f"/api/admin/elections/{self.election.id}/schedule/",
             {

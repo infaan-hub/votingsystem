@@ -249,14 +249,15 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
             except Position.DoesNotExist as exc:
                 raise serializers.ValidationError({"position_id": "Position was not found."}) from exc
         elif position_name:
-            position = Position.objects.filter(
-                election=election,
-                name__iexact=position_name,
-            ).first()
+            position = Position.objects.filter(election=election, name__iexact=position_name).first()
             if not position:
-                raise serializers.ValidationError(
-                    {"position_name": "Position was not found for the selected election."}
+                position = Position(
+                    election=election,
+                    name=position_name,
+                    voter_group=Position.VoterGroup.ALL,
+                    max_winners=1,
                 )
+                position.full_clean()
         else:
             raise serializers.ValidationError(
                 {"position_name": "Position is required."}
@@ -271,6 +272,8 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
         password = validated_data.pop("password")
         election = validated_data.pop("election")
         position = validated_data.pop("position")
+        if position.pk is None:
+            position.save()
         approved = validated_data.pop("approved", True)
         slogan = validated_data.pop("slogan", "")
         manifesto = validated_data.pop("manifesto", "")

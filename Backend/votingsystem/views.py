@@ -325,7 +325,7 @@ class AdminCreateCandidateView(APIView):
     permission_classes = [IsAdminRole]
 
     def post(self, request, *args, **kwargs):
-        serializer = AdminCreateCandidateSerializer(data=request.data)
+        serializer = AdminCreateCandidateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         candidate = serializer.save()
         return Response(
