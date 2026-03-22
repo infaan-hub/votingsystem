@@ -376,6 +376,26 @@ class VotingApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("not linked", response.json()["detail"].lower())
 
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="google-client-id")
+    @patch("votingsystem.views.google_id_token.verify_oauth2_token")
+    def test_google_auth_rejects_admin_on_voter_portal(self, verify_mock):
+        self.admin_user.email = "admin-portal@example.com"
+        self.admin_user.save(update_fields=["email"])
+        verify_mock.return_value = {
+            "sub": "admin-google-id",
+            "email": "admin-portal@example.com",
+            "email_verified": True,
+            "name": self.admin_user.display_name,
+        }
+
+        response = self.client.post(
+            "/api/auth/google/",
+            {"credential": "google-token", "role": "voter"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("admin portal", response.json()["detail"].lower())
+
     def test_forgot_password_endpoint(self):
         response = self.client.post(
             "/api/auth/forgot-password/",

@@ -194,6 +194,11 @@ class GoogleAuthView(APIView):
                     {"detail": "This Google account does not have admin access."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+            if requested_role == "voter" and user.role == User.Role.ADMIN:
+                return Response(
+                    {"detail": "Admin accounts must use the admin portal."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             if requested_role == "candidate" and user.role == User.Role.ADMIN:
                 return Response(
                     {"detail": "Admin accounts must use the admin portal."},

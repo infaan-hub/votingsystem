@@ -70,7 +70,7 @@ export default function RegisterPage({ role, onRegister, onGoogleLogin }) {
       request: registerAdmin,
       successMessage: "Admin account created successfully. Redirecting to the admin dashboard...",
       dashboardPath: "/admin/dashboard",
-      allowGoogleCreate: false,
+      allowGoogleCreate: true,
     },
     voter: {
       title: "Voter Register",

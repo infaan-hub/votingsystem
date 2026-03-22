@@ -102,6 +102,102 @@ button {
   flex-wrap: wrap;
 }
 
+.compact-header {
+  align-items: center;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sidebar-toggle {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0 0.9rem;
+  background: var(--surface);
+  border: 0;
+  box-shadow: var(--shadow-raised);
+}
+
+.sidebar-toggle span {
+  display: block;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--text);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.sidebar-toggle.is-open span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.sidebar-toggle.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.sidebar-toggle.is-open span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.app-sidebar {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  width: min(280px, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  transform: translateX(-115%);
+  transition: transform 0.24s ease;
+  z-index: 30;
+}
+
+.app-sidebar.is-open {
+  transform: translateX(0);
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sidebar-close {
+  min-height: 40px;
+  padding: 0.65rem 0.85rem;
+}
+
+.sidebar-links {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sidebar-links a {
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: var(--surface-alt);
+  box-shadow: var(--shadow-raised);
+  font-weight: 700;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.16);
+  z-index: 20;
+}
+
 .site-kicker,
 .eyebrow,
 .screen-section,
@@ -519,5 +615,10 @@ button {
   .landing-hero,
   .site-header {
     padding: 1.2rem;
+  }
+
+  .app-sidebar {
+    top: 1rem;
+    left: 1rem;
   }
 }
