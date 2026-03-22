@@ -107,9 +107,6 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
 
         <div className="auth-panel">
           <div className="auth-panel-stack">
-            <GoogleSignInButton role={role} onCode={handleGoogleCode} disabled={submitting} />
-            <div className="auth-divider">or</div>
-
             <form className="auth-form-stack" onSubmit={handleSubmit}>
               <div className="auth-field-wrap">
                 <input
@@ -151,6 +148,9 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
                 {submitting ? "Signing In..." : "Login"}
               </button>
             </form>
+
+            <div className="auth-divider">or</div>
+            <GoogleSignInButton role={role} onCode={handleGoogleCode} disabled={submitting} />
 
             <p className="auth-support-text">
               <Link to="/forgot-password">Request a New Password</Link>

@@ -166,9 +166,6 @@ export default function RegisterPage({ role, onRegister, onGoogleLogin }) {
 
         <div className="auth-panel">
           <div className="auth-panel-stack">
-            <GoogleSignInButton role={role} onCode={handleGoogleCode} disabled={submitting} />
-            <div className="auth-divider">or</div>
-
             <form className="auth-form-stack" onSubmit={handleSubmit}>
               <div className={`auth-grid ${role === "voter" ? "split-grid" : ""}`}>
                 {fields.map((field) => {
@@ -220,6 +217,9 @@ export default function RegisterPage({ role, onRegister, onGoogleLogin }) {
                 {submitting ? "Creating Account..." : "Create account"}
               </button>
             </form>
+
+            <div className="auth-divider">or</div>
+            <GoogleSignInButton role={role} onCode={handleGoogleCode} disabled={submitting} />
 
             <p className="auth-caption">{meta.description}</p>
             <p className="auth-footer-link">
