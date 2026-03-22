@@ -308,35 +308,54 @@ export default function AdminDashboardPage({
           <div className="panel-grid two-col">
             <form className="soft-panel form-stack" onSubmit={handleCreateVoter}>
               <h3>Register Voter</h3>
+              <label className="field-label" htmlFor="admin-voter-username">Username</label>
               <input
+                id="admin-voter-username"
+                name="username"
                 className="field-input"
                 placeholder="Username"
+                autoComplete="username"
                 value={voterForm.username}
                 onChange={(event) => setVoterForm((current) => ({ ...current, username: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-voter-email">Email</label>
               <input
+                id="admin-voter-email"
+                name="email"
                 className="field-input"
                 placeholder="Email"
                 type="email"
+                autoComplete="email"
                 value={voterForm.email}
                 onChange={(event) => setVoterForm((current) => ({ ...current, email: event.target.value }))}
               />
+              <label className="field-label" htmlFor="admin-voter-first-name">First Name</label>
               <input
+                id="admin-voter-first-name"
+                name="first_name"
                 className="field-input"
                 placeholder="First Name"
+                autoComplete="given-name"
                 value={voterForm.first_name}
                 onChange={(event) => setVoterForm((current) => ({ ...current, first_name: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-voter-last-name">Last Name</label>
               <input
+                id="admin-voter-last-name"
+                name="last_name"
                 className="field-input"
                 placeholder="Last Name"
+                autoComplete="family-name"
                 value={voterForm.last_name}
                 onChange={(event) => setVoterForm((current) => ({ ...current, last_name: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-voter-role">Role</label>
               <select
+                id="admin-voter-role"
+                name="role"
                 className="field-input"
                 value={voterForm.role}
                 onChange={(event) => setVoterForm((current) => ({ ...current, role: event.target.value }))}
@@ -345,7 +364,10 @@ export default function AdminDashboardPage({
                 <option value="staff">Staff</option>
                 <option value="officer">Election Officer</option>
               </select>
+              <label className="field-label" htmlFor="admin-voter-registration-number">Registration Number</label>
               <input
+                id="admin-voter-registration-number"
+                name="registration_number"
                 className="field-input"
                 placeholder="Registration Number"
                 value={voterForm.registration_number}
@@ -353,24 +375,35 @@ export default function AdminDashboardPage({
                   setVoterForm((current) => ({ ...current, registration_number: event.target.value }))
                 }
               />
+              <label className="field-label" htmlFor="admin-voter-staff-id">Staff ID</label>
               <input
+                id="admin-voter-staff-id"
+                name="staff_id"
                 className="field-input"
                 placeholder="Staff ID"
                 value={voterForm.staff_id}
                 onChange={(event) => setVoterForm((current) => ({ ...current, staff_id: event.target.value }))}
               />
+              <label className="field-label" htmlFor="admin-voter-password">Password</label>
               <input
+                id="admin-voter-password"
+                name="password"
                 className="field-input"
                 placeholder="Password"
                 type="password"
+                autoComplete="new-password"
                 value={voterForm.password}
                 onChange={(event) => setVoterForm((current) => ({ ...current, password: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-voter-confirm-password">Confirm Password</label>
               <input
+                id="admin-voter-confirm-password"
+                name="confirm_password"
                 className="field-input"
                 placeholder="Confirm Password"
                 type="password"
+                autoComplete="new-password"
                 value={voterForm.confirm_password}
                 onChange={(event) =>
                   setVoterForm((current) => ({ ...current, confirm_password: event.target.value }))
@@ -384,7 +417,10 @@ export default function AdminDashboardPage({
 
             <form className="soft-panel form-stack" onSubmit={handleCreateCandidate}>
               <h3>Register Candidate</h3>
+              <label className="field-label" htmlFor="admin-candidate-position">Position</label>
               <input
+                id="admin-candidate-position"
+                name="position_name"
                 className="field-input"
                 list="candidate-position-options"
                 placeholder="Type Position"
@@ -399,59 +435,89 @@ export default function AdminDashboardPage({
                   <option key={position.id} value={position.name} />
                 ))}
               </datalist>
+              <label className="field-label" htmlFor="admin-candidate-username">Username</label>
               <input
+                id="admin-candidate-username"
+                name="username"
                 className="field-input"
                 placeholder="Username"
+                autoComplete="username"
                 value={candidateForm.username}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, username: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-candidate-email">Email</label>
               <input
+                id="admin-candidate-email"
+                name="email"
                 className="field-input"
                 placeholder="Email"
                 type="email"
+                autoComplete="email"
                 value={candidateForm.email}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, email: event.target.value }))}
               />
+              <label className="field-label" htmlFor="admin-candidate-first-name">First Name</label>
               <input
+                id="admin-candidate-first-name"
+                name="first_name"
                 className="field-input"
                 placeholder="First Name"
+                autoComplete="given-name"
                 value={candidateForm.first_name}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, first_name: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-candidate-last-name">Last Name</label>
               <input
+                id="admin-candidate-last-name"
+                name="last_name"
                 className="field-input"
                 placeholder="Last Name"
+                autoComplete="family-name"
                 value={candidateForm.last_name}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, last_name: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-candidate-password">Password</label>
               <input
+                id="admin-candidate-password"
+                name="password"
                 className="field-input"
                 placeholder="Password"
                 type="password"
+                autoComplete="new-password"
                 value={candidateForm.password}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, password: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-candidate-confirm-password">Confirm Password</label>
               <input
+                id="admin-candidate-confirm-password"
+                name="confirm_password"
                 className="field-input"
                 placeholder="Confirm Password"
                 type="password"
+                autoComplete="new-password"
                 value={candidateForm.confirm_password}
                 onChange={(event) =>
                   setCandidateForm((current) => ({ ...current, confirm_password: event.target.value }))
                 }
                 required
               />
+              <label className="field-label" htmlFor="admin-candidate-slogan">Campaign Slogan</label>
               <input
+                id="admin-candidate-slogan"
+                name="slogan"
                 className="field-input"
                 placeholder="Campaign Slogan"
                 value={candidateForm.slogan}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, slogan: event.target.value }))}
               />
+              <label className="field-label" htmlFor="admin-candidate-manifesto">Manifesto</label>
               <textarea
+                id="admin-candidate-manifesto"
+                name="manifesto"
                 className="field-input field-textarea"
                 placeholder="Manifesto"
                 value={candidateForm.manifesto}
@@ -464,21 +530,29 @@ export default function AdminDashboardPage({
 
             <form className="soft-panel form-stack" onSubmit={handleUpdateSchedule}>
               <h3>Set Election Schedule</h3>
+              <label className="field-label" htmlFor="admin-schedule-title">Election Title</label>
               <input
+                id="admin-schedule-title"
+                name="title"
                 className="field-input"
                 placeholder="Election Title"
                 value={scheduleForm.title}
                 onChange={(event) => setScheduleForm((current) => ({ ...current, title: event.target.value }))}
                 required
               />
+              <label className="field-label" htmlFor="admin-schedule-description">Election Description</label>
               <textarea
+                id="admin-schedule-description"
+                name="description"
                 className="field-input field-textarea"
                 placeholder="Election Description"
                 value={scheduleForm.description}
                 onChange={(event) => setScheduleForm((current) => ({ ...current, description: event.target.value }))}
               />
-              <label className="field-label">Campaign Start</label>
+              <label className="field-label" htmlFor="admin-schedule-campaign-start">Campaign Start</label>
               <input
+                id="admin-schedule-campaign-start"
+                name="campaign_start_at"
                 className="field-input"
                 type="datetime-local"
                 value={scheduleForm.campaign_start_at}
@@ -487,8 +561,10 @@ export default function AdminDashboardPage({
                 }
                 required
               />
-              <label className="field-label">Campaign End</label>
+              <label className="field-label" htmlFor="admin-schedule-campaign-end">Campaign End</label>
               <input
+                id="admin-schedule-campaign-end"
+                name="campaign_end_at"
                 className="field-input"
                 type="datetime-local"
                 value={scheduleForm.campaign_end_at}
@@ -497,8 +573,10 @@ export default function AdminDashboardPage({
                 }
                 required
               />
-              <label className="field-label">Voting Start</label>
+              <label className="field-label" htmlFor="admin-schedule-voting-start">Voting Start</label>
               <input
+                id="admin-schedule-voting-start"
+                name="voting_start_at"
                 className="field-input"
                 type="datetime-local"
                 value={scheduleForm.voting_start_at}
@@ -507,8 +585,10 @@ export default function AdminDashboardPage({
                 }
                 required
               />
-              <label className="field-label">Voting End</label>
+              <label className="field-label" htmlFor="admin-schedule-voting-end">Voting End</label>
               <input
+                id="admin-schedule-voting-end"
+                name="voting_end_at"
                 className="field-input"
                 type="datetime-local"
                 value={scheduleForm.voting_end_at}
@@ -524,7 +604,10 @@ export default function AdminDashboardPage({
 
             <form className="soft-panel form-stack" onSubmit={handleCreateAnnouncement}>
               <h3>Post Election Notice</h3>
+              <label className="field-label" htmlFor="admin-announcement-title">Announcement Title</label>
               <input
+                id="admin-announcement-title"
+                name="title"
                 className="field-input"
                 placeholder="Announcement Title"
                 value={announcementForm.title}
@@ -533,7 +616,10 @@ export default function AdminDashboardPage({
                 }
                 required
               />
+              <label className="field-label" htmlFor="admin-announcement-message">Announcement Message</label>
               <textarea
+                id="admin-announcement-message"
+                name="message"
                 className="field-input field-textarea"
                 placeholder="Announcement Message"
                 value={announcementForm.message}
@@ -542,7 +628,10 @@ export default function AdminDashboardPage({
                 }
                 required
               />
+              <label className="field-label" htmlFor="admin-announcement-type">Announcement Type</label>
               <select
+                id="admin-announcement-type"
+                name="announcement_type"
                 className="field-input"
                 value={announcementForm.announcement_type}
                 onChange={(event) =>
@@ -556,7 +645,10 @@ export default function AdminDashboardPage({
                 <option value="campaign">Campaign</option>
                 <option value="result">Result</option>
               </select>
+              <label className="field-label" htmlFor="admin-announcement-publish-at">Publish At</label>
               <input
+                id="admin-announcement-publish-at"
+                name="publish_at"
                 className="field-input"
                 type="datetime-local"
                 value={announcementForm.publish_at}
