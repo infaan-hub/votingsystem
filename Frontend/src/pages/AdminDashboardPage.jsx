@@ -28,7 +28,7 @@ const INITIAL_VOTER_FORM = {
 };
 
 const INITIAL_CANDIDATE_FORM = {
-  position_id: "",
+  position_name: "",
   username: "",
   email: "",
   first_name: "",
@@ -186,9 +186,16 @@ export default function AdminDashboardPage({
     setError("");
     setSuccess("");
     try {
+      const matchedPosition = detail?.positions?.find(
+        (position) => position.name.trim().toLowerCase() === candidateForm.position_name.trim().toLowerCase(),
+      );
+      if (!matchedPosition) {
+        throw new Error("Enter a valid position name for the selected election.");
+      }
       const response = await adminCreateCandidate(
         {
           ...candidateForm,
+          position_id: matchedPosition.id,
           election_id: selectedElection.id,
         },
         token,
@@ -377,19 +384,21 @@ export default function AdminDashboardPage({
 
             <form className="soft-panel form-stack" onSubmit={handleCreateCandidate}>
               <h3>Register Candidate</h3>
-              <select
+              <input
                 className="field-input"
-                value={candidateForm.position_id}
-                onChange={(event) => setCandidateForm((current) => ({ ...current, position_id: event.target.value }))}
+                list="candidate-position-options"
+                placeholder="Type Position"
+                value={candidateForm.position_name}
+                onChange={(event) =>
+                  setCandidateForm((current) => ({ ...current, position_name: event.target.value }))
+                }
                 required
-              >
-                <option value="">Select Position</option>
+              />
+              <datalist id="candidate-position-options">
                 {detail?.positions?.map((position) => (
-                  <option key={position.id} value={position.id}>
-                    {position.name}
-                  </option>
+                  <option key={position.id} value={position.name} />
                 ))}
-              </select>
+              </datalist>
               <input
                 className="field-input"
                 placeholder="Username"
