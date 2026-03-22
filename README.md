@@ -82,6 +82,14 @@ Frontend project settings:
 
 ```text
 VITE_API_BASE=https://your-render-service.onrender.com/api
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+```
+
+Backend Google sign-in variable:
+
+```text
+GOOGLE_OAUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=your-google-client-secret
 ```
 
 `vercel.json` rewrites all routes to `index.html`, which is required for React Router routes like:

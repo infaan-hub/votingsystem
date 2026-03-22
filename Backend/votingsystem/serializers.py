@@ -1,7 +1,10 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import Announcement, Candidate, Department, Election, Position, Section, Vote
 from .services import build_election_stats, build_winner_announcement, visible_announcements
+
+User = get_user_model()
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -28,6 +31,139 @@ class UserSummarySerializer(serializers.Serializer):
     section = SectionSerializer(read_only=True)
     registration_number = serializers.CharField(read_only=True)
     staff_id = serializers.CharField(read_only=True)
+    auth_provider = serializers.CharField(read_only=True)
+
+
+class RegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
+    confirm_password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        style={"input_type": "password"},
+    )
+    full_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "username",
+            "email",
+            "password",
+            "confirm_password",
+            "full_name",
+            "first_name",
+            "last_name",
+            "staff_id",
+            "registration_number",
+        )
+        extra_kwargs = {
+            "email": {"required": False, "allow_blank": True},
+            "first_name": {"required": False, "allow_blank": True},
+            "last_name": {"required": False, "allow_blank": True},
+            "staff_id": {"required": False, "allow_blank": True},
+            "registration_number": {"required": False, "allow_blank": True},
+        }
+
+    default_role = None
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        confirm_password = attrs.pop("confirm_password", "")
+        full_name = attrs.pop("full_name", "").strip()
+
+        if password != confirm_password:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+
+        if full_name and not attrs.get("first_name") and not attrs.get("last_name"):
+            name_parts = full_name.split()
+            attrs["first_name"] = name_parts[0]
+            attrs["last_name"] = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+
+        return attrs
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = User(**validated_data)
+        user.role = self.default_role
+        user.set_password(password)
+        user.full_clean()
+        user.save()
+        return user
+
+
+class AdminRegistrationSerializer(RegistrationSerializer):
+    class Meta(RegistrationSerializer.Meta):
+        fields = (
+            "username",
+            "email",
+            "password",
+            "confirm_password",
+            "full_name",
+            "staff_id",
+        )
+
+    default_role = User.Role.ADMIN
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if not attrs.get("staff_id"):
+            raise serializers.ValidationError({"staff_id": "Staff ID is required."})
+        return attrs
+
+
+class VoterRegistrationSerializer(RegistrationSerializer):
+    class Meta(RegistrationSerializer.Meta):
+        fields = (
+            "username",
+            "email",
+            "password",
+            "confirm_password",
+            "first_name",
+            "last_name",
+            "registration_number",
+        )
+
+    default_role = User.Role.STUDENT
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if not attrs.get("first_name"):
+            raise serializers.ValidationError({"first_name": "First name is required."})
+        if not attrs.get("last_name"):
+            raise serializers.ValidationError({"last_name": "Last name is required."})
+        if not attrs.get("registration_number"):
+            raise serializers.ValidationError(
+                {"registration_number": "Registration number is required."}
+            )
+        return attrs
+
+
+class GoogleAuthSerializer(serializers.Serializer):
+    credential = serializers.CharField(required=False, allow_blank=True)
+    code = serializers.CharField(required=False, allow_blank=True)
+    role = serializers.ChoiceField(
+        choices=("admin", "voter", "candidate"),
+        required=False,
+        allow_null=True,
+    )
+
+    def validate(self, attrs):
+        credential = (attrs.get("credential") or "").strip()
+        code = (attrs.get("code") or "").strip()
+        if not credential and not code:
+            raise serializers.ValidationError("Google sign-in data is required.")
+        return attrs
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    identity = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return attrs
 
 
 class AnnouncementSerializer(serializers.ModelSerializer):

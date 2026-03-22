@@ -329,9 +329,47 @@ button {
 .metric-list,
 .action-note-list,
 .campaign-column,
-.campaign-list {
+.campaign-list,
+.google-signin-stack {
   display: grid;
   gap: 1rem;
+}
+
+.google-button-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.google-signin-button {
+  width: 100%;
+  min-height: 60px;
+  padding: 0.95rem 1.25rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  background: #f7f8fb;
+  color: #1f2937;
+  font-weight: 700;
+  box-shadow:
+    -10px -10px 20px rgba(255, 255, 255, 0.96),
+    10px 10px 20px rgba(163, 177, 198, 0.34);
+}
+
+.google-signin-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #4285f4;
+  background: #fff;
+  box-shadow:
+    inset -4px -4px 8px rgba(255, 255, 255, 0.9),
+    inset 4px 4px 8px rgba(211, 217, 230, 0.8);
 }
 
 .button-grid {

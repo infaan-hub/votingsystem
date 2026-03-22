@@ -1,9 +1,14 @@
 import time
 
+from django.conf import settings
 from django.contrib.auth import authenticate
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
+import requests
 from rest_framework import generics, permissions, status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -12,14 +17,20 @@ from rest_framework.views import APIView
 
 from .models import Candidate, Election
 from .serializers import (
+    AdminRegistrationSerializer,
     ElectionDetailSerializer,
     ElectionListSerializer,
+    GoogleAuthSerializer,
+    PasswordResetSerializer,
     PositionSerializer,
     ResultsSerializer,
     UserSummarySerializer,
+    VoterRegistrationSerializer,
     VoteCreateSerializer,
     VoteSerializer,
 )
+
+User = get_user_model()
 from .services import (
     build_election_stats,
     cast_vote,
@@ -40,7 +51,50 @@ def _serialize_user(user):
         "section": user.section,
         "registration_number": user.registration_number,
         "staff_id": user.staff_id,
+        "auth_provider": user.auth_provider,
     }
+
+
+def _username_from_email(email):
+    base_username = (email or "").split("@")[0] or "google-user"
+    candidate = base_username
+    suffix = 1
+    while User.objects.filter(username=candidate).exists():
+        candidate = f"{base_username}{suffix}"
+        suffix += 1
+    return candidate
+
+
+def _verify_google_identity(*, credential="", code=""):
+    if credential:
+        return google_id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            settings.GOOGLE_OAUTH_CLIENT_ID,
+        )
+
+    token_response = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+            "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+            "redirect_uri": "postmessage",
+            "grant_type": "authorization_code",
+        },
+        timeout=15,
+    )
+    if token_response.status_code != 200:
+        raise ValueError("Google token exchange failed.")
+    token_payload = token_response.json()
+    id_token_value = token_payload.get("id_token")
+    if not id_token_value:
+        raise ValueError("Google did not return an ID token.")
+    return google_id_token.verify_oauth2_token(
+        id_token_value,
+        google_requests.Request(),
+        settings.GOOGLE_OAUTH_CLIENT_ID,
+    )
 
 
 def _normalize_vote_error(detail):
@@ -70,6 +124,155 @@ class AuthLoginView(ObtainAuthToken):
             )
         token, _ = Token.objects.get_or_create(user=user)
         return Response({"token": token.key, "user": UserSummarySerializer(_serialize_user(user)).data})
+
+
+class GoogleAuthView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = GoogleAuthSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not settings.GOOGLE_OAUTH_CLIENT_ID:
+            return Response(
+                {"detail": "Google sign-in is not configured on the server."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        if serializer.validated_data.get("code") and not settings.GOOGLE_OAUTH_CLIENT_SECRET:
+            return Response(
+                {"detail": "Google sign-in secret is not configured on the server."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            idinfo = _verify_google_identity(
+                credential=serializer.validated_data.get("credential", ""),
+                code=serializer.validated_data.get("code", ""),
+            )
+        except ValueError:
+            return Response(
+                {"detail": "Google sign-in could not be verified."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not idinfo.get("email_verified"):
+            return Response(
+                {"detail": "Google account email is not verified."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        email = (idinfo.get("email") or "").strip().lower()
+        google_id = idinfo.get("sub", "")
+        full_name = (idinfo.get("name") or "").strip()
+        requested_role = serializer.validated_data.get("role") or "voter"
+
+        if not email or not google_id:
+            return Response(
+                {"detail": "Google sign-in did not return a valid account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user and requested_role in {"admin", "candidate"}:
+            return Response(
+                {
+                    "detail": (
+                        "This Google account is not linked to an existing admin or candidate record."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user:
+            if user.google_id and user.google_id != google_id:
+                return Response(
+                    {"detail": "This email is already linked to a different Google account."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if requested_role == "admin" and user.role != User.Role.ADMIN:
+                return Response(
+                    {"detail": "This Google account does not have admin access."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            if requested_role == "candidate" and user.role == User.Role.ADMIN:
+                return Response(
+                    {"detail": "Admin accounts must use the admin portal."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            user.google_id = google_id
+            user.auth_provider = User.AuthProvider.GOOGLE
+            if not user.first_name and full_name:
+                name_parts = full_name.split()
+                user.first_name = name_parts[0]
+                user.last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+            user.save(update_fields=["google_id", "auth_provider", "first_name", "last_name"])
+        else:
+            name_parts = full_name.split()
+            user = User.objects.create_user(
+                username=_username_from_email(email),
+                email=email,
+                first_name=name_parts[0] if name_parts else "",
+                last_name=" ".join(name_parts[1:]) if len(name_parts) > 1 else "",
+                role=User.Role.STUDENT,
+                google_id=google_id,
+                auth_provider=User.AuthProvider.GOOGLE,
+            )
+
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({"token": token.key, "user": UserSummarySerializer(_serialize_user(user)).data})
+
+
+class PasswordResetView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        identity = serializer.validated_data["identity"].strip()
+        user = User.objects.filter(username__iexact=identity).first() or User.objects.filter(
+            email__iexact=identity
+        ).first()
+        if not user:
+            return Response(
+                {"detail": "No account was found with that username or email."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        user.set_password(serializer.validated_data["new_password"])
+        if user.auth_provider == User.AuthProvider.GOOGLE:
+            user.auth_provider = User.AuthProvider.LOCAL
+        user.save(update_fields=["password", "auth_provider"])
+        return Response({"detail": "Password updated successfully."})
+
+
+class AdminRegistrationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = AdminRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response(
+            {"token": token.key, "user": UserSummarySerializer(_serialize_user(user)).data},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class VoterRegistrationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = VoterRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response(
+            {"token": token.key, "user": UserSummarySerializer(_serialize_user(user)).data},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AuthLogoutView(APIView):

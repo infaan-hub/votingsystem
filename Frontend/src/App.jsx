@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { fetchCurrentUser, fetchElections, fetchHealth, login, logout } from "./api";
+import { fetchCurrentUser, fetchElections, fetchHealth, login, loginWithGoogle, logout } from "./api";
 import AppShell from "./components/AppShell";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import CandidateCampaignDetailsPage from "./pages/CandidateCampaignDetailsPage";
 import CandidateDashboardPage from "./pages/CandidateDashboardPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -80,6 +81,21 @@ export default function App() {
     return response.user;
   }
 
+  async function handleRegistration(authResponse) {
+    window.localStorage.setItem(TOKEN_KEY, authResponse.token);
+    setToken(authResponse.token);
+    setUser(authResponse.user);
+    return authResponse.user;
+  }
+
+  async function handleGoogleLogin(payload) {
+    const response = await loginWithGoogle(payload);
+    window.localStorage.setItem(TOKEN_KEY, response.token);
+    setToken(response.token);
+    setUser(response.user);
+    return response.user;
+  }
+
   async function handleLogout() {
     if (token) {
       try {
@@ -117,11 +133,29 @@ export default function App() {
             />
           }
         />
-        <Route path="/admin/login" element={<LoginPage role="admin" user={user} onLogin={handleLogin} />} />
-        <Route path="/voter/login" element={<LoginPage role="voter" user={user} onLogin={handleLogin} />} />
-        <Route path="/candidate/login" element={<LoginPage role="candidate" user={user} onLogin={handleLogin} />} />
-        <Route path="/admin/register" element={<RegisterPage role="admin" />} />
-        <Route path="/voter/register" element={<RegisterPage role="voter" />} />
+        <Route
+          path="/admin/login"
+          element={<LoginPage role="admin" user={user} onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />}
+        />
+        <Route
+          path="/voter/login"
+          element={<LoginPage role="voter" user={user} onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />}
+        />
+        <Route
+          path="/candidate/login"
+          element={
+            <LoginPage role="candidate" user={user} onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />
+          }
+        />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route
+          path="/admin/register"
+          element={<RegisterPage role="admin" onRegister={handleRegistration} onGoogleLogin={handleGoogleLogin} />}
+        />
+        <Route
+          path="/voter/register"
+          element={<RegisterPage role="voter" onRegister={handleRegistration} onGoogleLogin={handleGoogleLogin} />}
+        />
         <Route
           path="/admin/dashboard"
           element={

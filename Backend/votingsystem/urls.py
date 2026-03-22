@@ -6,6 +6,10 @@ from . import views
 urlpatterns = [
     path("health/", views.HealthCheckView.as_view(), name="health"),
     path("auth/login/", views.AuthLoginView.as_view(), name="auth-login"),
+    path("auth/google/", views.GoogleAuthView.as_view(), name="auth-google"),
+    path("auth/forgot-password/", views.PasswordResetView.as_view(), name="auth-forgot-password"),
+    path("auth/register/admin/", views.AdminRegistrationView.as_view(), name="auth-register-admin"),
+    path("auth/register/voter/", views.VoterRegistrationView.as_view(), name="auth-register-voter"),
     path("auth/logout/", views.AuthLogoutView.as_view(), name="auth-logout"),
     path("auth/me/", views.CurrentUserView.as_view(), name="auth-me"),
     path("elections/", views.ElectionListView.as_view(), name="election-list"),

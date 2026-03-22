@@ -1,9 +1,10 @@
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
+import GoogleSignInButton from "../components/GoogleSignInButton";
 import ScreenCard from "../components/ScreenCard";
 
-export default function LoginPage({ role, user, onLogin }) {
+export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ username: "", password: "" });
@@ -28,6 +29,29 @@ export default function LoginPage({ role, user, onLogin }) {
     setError("");
     try {
       const nextUser = await onLogin(form);
+      if (role === "admin" && nextUser.role !== "admin") {
+        throw new Error("This account does not have admin access.");
+      }
+      if (role !== "admin" && nextUser.role === "admin") {
+        throw new Error("Admin accounts must use the admin portal.");
+      }
+      const fallbackTarget =
+        role === "admin" ? "/admin/dashboard" : role === "candidate" ? "/candidate/dashboard" : "/voter/dashboard";
+      navigate(typeof location.state?.from === "string" ? location.state.from : fallbackTarget, {
+        replace: true,
+      });
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleGoogleCode(code) {
+    setSubmitting(true);
+    setError("");
+    try {
+      const nextUser = await onGoogleLogin({ code, role });
       if (role === "admin" && nextUser.role !== "admin") {
         throw new Error("This account does not have admin access.");
       }
@@ -103,6 +127,7 @@ export default function LoginPage({ role, user, onLogin }) {
           <button className="primary-button" type="submit" disabled={submitting}>
             {submitting ? "Signing In..." : "Login"}
           </button>
+          <GoogleSignInButton role={role} onCode={handleGoogleCode} disabled={submitting} />
           <div className="button-grid">
             {meta.registerPath ? (
               <Link className="secondary-button" to={meta.registerPath}>
@@ -111,10 +136,13 @@ export default function LoginPage({ role, user, onLogin }) {
             ) : (
               <div className="info-note">Candidates are registered by election administrators.</div>
             )}
-            <Link className="secondary-button" to="/home">
-              Return Home
+            <Link className="secondary-button" to="/forgot-password">
+              Forgot Password
             </Link>
           </div>
+          <Link className="secondary-button" to="/home">
+            Return Home
+          </Link>
         </form>
       </ScreenCard>
     </div>

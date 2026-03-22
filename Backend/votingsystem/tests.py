@@ -1,6 +1,8 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
+from django.test import override_settings
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.authtoken.models import Token
@@ -248,6 +250,151 @@ class VotingApiTests(TestCase):
 
         logout_response = me_client.post("/api/auth/logout/")
         self.assertEqual(logout_response.status_code, 204)
+
+    def test_admin_registration_endpoint(self):
+        response = self.client.post(
+            "/api/auth/register/admin/",
+            {
+                "full_name": "Election Master",
+                "username": "chief_admin",
+                "email": "chief@example.com",
+                "staff_id": "ADM-100",
+                "password": "AdminPass123!",
+                "confirm_password": "AdminPass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["user"]["role"], CustomUser.Role.ADMIN)
+        self.assertEqual(payload["user"]["username"], "chief_admin")
+        self.assertTrue(payload["token"])
+
+    def test_voter_registration_endpoint(self):
+        response = self.client.post(
+            "/api/auth/register/voter/",
+            {
+                "first_name": "Neema",
+                "last_name": "Suleiman",
+                "username": "neema_2026",
+                "email": "neema@example.com",
+                "registration_number": "REG-909",
+                "password": "VotePass123!",
+                "confirm_password": "VotePass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["user"]["role"], CustomUser.Role.STUDENT)
+        self.assertEqual(payload["user"]["registration_number"], "REG-909")
+        self.assertTrue(payload["token"])
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="google-client-id")
+    @patch("votingsystem.views.google_id_token.verify_oauth2_token")
+    def test_google_auth_creates_voter_when_email_is_new(self, verify_mock):
+        verify_mock.return_value = {
+            "sub": "google-user-1",
+            "email": "googlevoter@example.com",
+            "email_verified": True,
+            "name": "Google Voter",
+        }
+
+        response = self.client.post(
+            "/api/auth/google/",
+            {"credential": "google-token", "role": "voter"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["user"]["email"], "googlevoter@example.com")
+        self.assertEqual(payload["user"]["role"], CustomUser.Role.STUDENT)
+        self.assertEqual(payload["user"]["auth_provider"], CustomUser.AuthProvider.GOOGLE)
+
+    @override_settings(
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
+    )
+    @patch("votingsystem.views.requests.post")
+    @patch("votingsystem.views.google_id_token.verify_oauth2_token")
+    def test_google_auth_accepts_popup_code_flow(self, verify_mock, requests_post_mock):
+        requests_post_mock.return_value.status_code = 200
+        requests_post_mock.return_value.json.return_value = {"id_token": "id-token-from-google"}
+        verify_mock.return_value = {
+            "sub": "google-user-code-flow",
+            "email": "popupvoter@example.com",
+            "email_verified": True,
+            "name": "Popup Voter",
+        }
+
+        response = self.client.post(
+            "/api/auth/google/",
+            {"code": "google-popup-code", "role": "voter"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["user"]["email"], "popupvoter@example.com")
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="google-client-id")
+    @patch("votingsystem.views.google_id_token.verify_oauth2_token")
+    def test_google_auth_links_existing_candidate_by_email(self, verify_mock):
+        verify_mock.return_value = {
+            "sub": "candidate-google-id",
+            "email": self.candidate_user.email or "candidate_link@example.com",
+            "email_verified": True,
+            "name": self.candidate_user.display_name,
+        }
+        if not self.candidate_user.email:
+            self.candidate_user.email = "candidate_link@example.com"
+            self.candidate_user.save(update_fields=["email"])
+
+        response = self.client.post(
+            "/api/auth/google/",
+            {"credential": "google-token", "role": "candidate"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.candidate_user.refresh_from_db()
+        self.assertEqual(self.candidate_user.google_id, "candidate-google-id")
+        self.assertEqual(response.json()["user"]["id"], self.candidate_user.id)
+
+    @override_settings(GOOGLE_OAUTH_CLIENT_ID="google-client-id")
+    @patch("votingsystem.views.google_id_token.verify_oauth2_token")
+    def test_google_auth_rejects_new_admin_creation(self, verify_mock):
+        verify_mock.return_value = {
+            "sub": "new-admin-google-id",
+            "email": "newadmin@example.com",
+            "email_verified": True,
+            "name": "New Admin",
+        }
+
+        response = self.client.post(
+            "/api/auth/google/",
+            {"credential": "google-token", "role": "admin"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("not linked", response.json()["detail"].lower())
+
+    def test_forgot_password_endpoint(self):
+        response = self.client.post(
+            "/api/auth/forgot-password/",
+            {
+                "identity": "student_a",
+                "new_password": "NewPass123!",
+                "confirm_password": "NewPass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["detail"], "Password updated successfully.")
+
+        login_response = self.client.post(
+            "/api/auth/login/",
+            {"username": "student_a", "password": "NewPass123!"},
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, 200)
 
     def test_ballot_and_vote_endpoints(self):
         client = self.auth_client()

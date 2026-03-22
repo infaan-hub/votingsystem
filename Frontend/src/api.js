@@ -8,6 +8,28 @@ const API_BASE =
 
 const REQUEST_TIMEOUT_MS = 12000;
 
+function getErrorMessage(data, fallbackMessage) {
+  if (!data) {
+    return fallbackMessage;
+  }
+  if (typeof data.detail === "string") {
+    return data.detail;
+  }
+  if (typeof data === "string") {
+    return data;
+  }
+  if (typeof data === "object") {
+    const firstEntry = Object.values(data).find((value) => value);
+    if (typeof firstEntry === "string") {
+      return firstEntry;
+    }
+    if (Array.isArray(firstEntry) && firstEntry.length) {
+      return String(firstEntry[0]);
+    }
+  }
+  return fallbackMessage;
+}
+
 async function request(path, options = {}) {
   const { method = "GET", body, token, headers = {} } = options;
   const finalHeaders = { ...headers };
@@ -58,10 +80,12 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     throw new Error(
-      data?.detail ||
-        (response.status >= 500
+      getErrorMessage(
+        data,
+        response.status >= 500
           ? "Election Hub is experiencing a server error. Please try again shortly."
-          : "Request failed."),
+          : "Request failed.",
+      ),
     );
   }
 
@@ -75,7 +99,15 @@ export const fetchCampaigns = (id) => request(`/elections/${id}/campaigns/`);
 export const fetchBallot = (id, token) => request(`/elections/${id}/ballot/`, { token });
 export const fetchResults = (id, token) => request(`/elections/${id}/results/`, { token });
 export const fetchStats = (id, token) => request(`/elections/${id}/stats/`, { token });
+export const openStatsStream = (id) => new EventSource(`${API_BASE}/elections/${id}/stats-stream/`);
 export const login = (credentials) => request("/auth/login/", { method: "POST", body: credentials });
+export const loginWithGoogle = (payload) => request("/auth/google/", { method: "POST", body: payload });
+export const resetPassword = (payload) =>
+  request("/auth/forgot-password/", { method: "POST", body: payload });
+export const registerAdmin = (payload) =>
+  request("/auth/register/admin/", { method: "POST", body: payload });
+export const registerVoter = (payload) =>
+  request("/auth/register/voter/", { method: "POST", body: payload });
 export const logout = (token) => request("/auth/logout/", { method: "POST", token });
 export const fetchCurrentUser = (token) => request("/auth/me/", { token });
 export const voteForCandidate = (candidateId, token) =>

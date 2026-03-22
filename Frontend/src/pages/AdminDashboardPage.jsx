@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { fetchElectionDetail, fetchResults, fetchStats } from "../api";
+import { fetchElectionDetail, fetchResults, fetchStats, openStatsStream } from "../api";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
@@ -42,6 +42,30 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
     });
     return () => {
       ignore = true;
+    };
+  }, [selectedElection]);
+
+  useEffect(() => {
+    if (!selectedElection) {
+      return;
+    }
+    const stream = openStatsStream(selectedElection.id);
+
+    stream.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        setStats((current) => ({ ...(current || {}), ...payload }));
+      } catch {
+        // Ignore malformed stream events.
+      }
+    };
+
+    stream.onerror = () => {
+      stream.close();
+    };
+
+    return () => {
+      stream.close();
     };
   }, [selectedElection]);
 

@@ -49,6 +49,10 @@ class Section(TimestampedModel):
 
 
 class CustomUser(AbstractUser):
+    class AuthProvider(models.TextChoices):
+        LOCAL = "local", "Local"
+        GOOGLE = "google", "Google"
+
     class Role(models.TextChoices):
         STUDENT = "student", "Student"
         STAFF = "staff", "Staff"
@@ -77,6 +81,12 @@ class CustomUser(AbstractUser):
     registration_number = models.CharField(max_length=60, blank=True)
     staff_id = models.CharField(max_length=60, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
+    google_id = models.CharField(max_length=255, blank=True, unique=True, null=True)
+    auth_provider = models.CharField(
+        max_length=20,
+        choices=AuthProvider.choices,
+        default=AuthProvider.LOCAL,
+    )
 
     class Meta:
         ordering = ("username",)
