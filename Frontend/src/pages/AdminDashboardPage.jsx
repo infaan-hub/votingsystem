@@ -186,16 +186,9 @@ export default function AdminDashboardPage({
     setError("");
     setSuccess("");
     try {
-      const matchedPosition = detail?.positions?.find(
-        (position) => position.name.trim().toLowerCase() === candidateForm.position_name.trim().toLowerCase(),
-      );
-      if (!matchedPosition) {
-        throw new Error("Enter a valid position name for the selected election.");
-      }
       const response = await adminCreateCandidate(
         {
           ...candidateForm,
-          position_id: matchedPosition.id,
           election_id: selectedElection.id,
         },
         token,

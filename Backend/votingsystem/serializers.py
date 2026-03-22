@@ -221,7 +221,8 @@ class AdminCreateVoterSerializer(serializers.ModelSerializer):
 
 class AdminCreateCandidateSerializer(serializers.Serializer):
     election_id = serializers.IntegerField()
-    position_id = serializers.IntegerField()
+    position_id = serializers.IntegerField(required=False)
+    position_name = serializers.CharField(required=False, allow_blank=True)
     username = serializers.CharField()
     email = serializers.EmailField(required=False, allow_blank=True)
     first_name = serializers.CharField()
@@ -239,10 +240,27 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
             election = Election.objects.get(pk=attrs["election_id"])
         except Election.DoesNotExist as exc:
             raise serializers.ValidationError({"election_id": "Election was not found."}) from exc
-        try:
-            position = Position.objects.get(pk=attrs["position_id"])
-        except Position.DoesNotExist as exc:
-            raise serializers.ValidationError({"position_id": "Position was not found."}) from exc
+        position = None
+        position_id = attrs.get("position_id")
+        position_name = (attrs.get("position_name") or "").strip()
+        if position_id:
+            try:
+                position = Position.objects.get(pk=position_id)
+            except Position.DoesNotExist as exc:
+                raise serializers.ValidationError({"position_id": "Position was not found."}) from exc
+        elif position_name:
+            position = Position.objects.filter(
+                election=election,
+                name__iexact=position_name,
+            ).first()
+            if not position:
+                raise serializers.ValidationError(
+                    {"position_name": "Position was not found for the selected election."}
+                )
+        else:
+            raise serializers.ValidationError(
+                {"position_name": "Position is required."}
+            )
         if position.election_id != election.id:
             raise serializers.ValidationError({"position_id": "Position does not belong to the selected election."})
         attrs["election"] = election
