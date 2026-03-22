@@ -32,11 +32,9 @@ async function request(path, options = {}) {
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Backend request timed out. Check that the API server is running and reachable.");
+      throw new Error("Backend request timed out. Check that the API server is reachable.");
     }
-    throw new Error(
-      "Backend server is not reachable. Start Django on http://127.0.0.1:8000.",
-    );
+    throw new Error("Backend server is not reachable. Start Django on http://127.0.0.1:8000.");
   } finally {
     window.clearTimeout(timeoutId);
   }
@@ -47,6 +45,7 @@ async function request(path, options = {}) {
 
   const rawText = await response.text();
   let data = null;
+
   if (rawText) {
     try {
       data = JSON.parse(rawText);
@@ -56,78 +55,26 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    const detail =
+    throw new Error(
       data?.detail ||
-      data?.candidate?.[0] ||
-      data?.voter?.[0] ||
-      data?.election?.[0] ||
-      (response.status >= 500
-        ? "Backend server error. Check the Django terminal for the traceback."
-        : null) ||
-      "Request failed.";
-    throw new Error(detail);
+        (response.status >= 500
+          ? "Backend server error. Check the Django terminal for the traceback."
+          : "Request failed."),
+    );
   }
 
   return data;
 }
 
-export function fetchElections() {
-  return request("/elections/");
-}
-
-export function fetchElectionDetail(electionId) {
-  return request(`/elections/${electionId}/`);
-}
-
-export function fetchCampaigns(electionId) {
-  return request(`/elections/${electionId}/campaigns/`);
-}
-
-export function fetchBallot(electionId, token) {
-  return request(`/elections/${electionId}/ballot/`, { token });
-}
-
-export function fetchResults(electionId, token) {
-  return request(`/elections/${electionId}/results/`, { token });
-}
-
-export function fetchStats(electionId, token) {
-  return request(`/elections/${electionId}/stats/`, { token });
-}
-
-export function voteForCandidate(candidateId, token) {
-  return request("/votes/", {
-    method: "POST",
-    body: { candidate_id: candidateId },
-    token,
-  });
-}
-
-export function login(credentials) {
-  return request("/auth/login/", {
-    method: "POST",
-    body: credentials,
-  });
-}
-
-export function logout(token) {
-  return request("/auth/logout/", {
-    method: "POST",
-    token,
-  });
-}
-
-export function fetchCurrentUser(token) {
-  return request("/auth/me/", { token });
-}
-
-export function subscribeToStats(electionId, onMessage, onError) {
-  const source = new EventSource(`${API_BASE}/elections/${electionId}/stats-stream/`);
-  source.onmessage = (event) => {
-    onMessage(JSON.parse(event.data));
-  };
-  source.onerror = (error) => {
-    onError?.(error);
-  };
-  return () => source.close();
-}
+export const fetchHealth = () => request("/health/");
+export const fetchElections = () => request("/elections/");
+export const fetchElectionDetail = (id) => request(`/elections/${id}/`);
+export const fetchCampaigns = (id) => request(`/elections/${id}/campaigns/`);
+export const fetchBallot = (id, token) => request(`/elections/${id}/ballot/`, { token });
+export const fetchResults = (id, token) => request(`/elections/${id}/results/`, { token });
+export const fetchStats = (id, token) => request(`/elections/${id}/stats/`, { token });
+export const login = (credentials) => request("/auth/login/", { method: "POST", body: credentials });
+export const logout = (token) => request("/auth/logout/", { method: "POST", token });
+export const fetchCurrentUser = (token) => request("/auth/me/", { token });
+export const voteForCandidate = (candidateId, token) =>
+  request("/votes/", { method: "POST", body: { candidate_id: candidateId }, token });
