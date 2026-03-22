@@ -77,6 +77,7 @@ export default function LoginPage({ role, user, onLogin }) {
               name="username"
               className="field-input"
               placeholder="Enter your username"
+              autoComplete="username"
               value={form.username}
               onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
               required
@@ -92,6 +93,7 @@ export default function LoginPage({ role, user, onLogin }) {
               type="password"
               className="field-input"
               placeholder="********"
+              autoComplete="current-password"
               value={form.password}
               onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
               required

@@ -6,6 +6,14 @@ export default function RegisterPage({ role }) {
       ? ["Full Name", "Email", "Staff ID", "Department"]
       : ["First Name", "Last Name", "Email", "Registration Number"];
 
+  function getAutocomplete(field) {
+    if (field === "Full Name") return "name";
+    if (field === "First Name") return "given-name";
+    if (field === "Last Name") return "family-name";
+    if (field === "Email") return "email";
+    return "off";
+  }
+
   return (
     <div className="page-stack">
       <ScreenCard
@@ -27,6 +35,7 @@ export default function RegisterPage({ role }) {
                 name={fieldKey}
                 className="field-input"
                 placeholder={field}
+                autoComplete={getAutocomplete(field)}
               />
             </div>
             );
