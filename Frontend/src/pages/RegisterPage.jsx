@@ -15,12 +15,22 @@ export default function RegisterPage({ role }) {
         subtitle="Create your Election Hub account information."
       >
         <div className="panel-grid two-col">
-          {fields.map((field) => (
+          {fields.map((field) => {
+            const fieldKey = field.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+            return (
             <div key={field}>
-              <label className="field-label">{field}</label>
-              <input className="field-input" placeholder={field} />
+              <label className="field-label" htmlFor={`${role}-${fieldKey}`}>
+                {field}
+              </label>
+              <input
+                id={`${role}-${fieldKey}`}
+                name={fieldKey}
+                className="field-input"
+                placeholder={field}
+              />
             </div>
-          ))}
+            );
+          })}
           <div className="span-2 info-note">
             Complete your details here to continue with your Election Hub registration process.
             Election officers can help finalize account access where approval is required.

@@ -1,16 +1,7 @@
 import { Link } from "react-router-dom";
 
 import ScreenCard from "../components/ScreenCard";
-import { formatStatus, toSentence, useCountdown } from "../utils";
-
-const FLOW_SCREENS = [
-  ["Login", "Secure voter, candidate, and admin access"],
-  ["Register", "Separate onboarding routes for admin and voter flows"],
-  ["Explore Elections", "See published elections and switch context instantly"],
-  ["Candidate Directory", "Read candidate profiles, promises, and campaign messages"],
-  ["Live Results", "Watch results and stats when visibility is enabled"],
-  ["Vote", "Open the authenticated ballot and cast one secure vote"],
-];
+import { formatStatus, useCountdown } from "../utils";
 
 export default function HomePage({ elections, selectedElectionId, onSelectElection, user }) {
   const activeElection =
@@ -38,18 +29,7 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
           <Link className="primary-button" to="/voter/login">
             Open Flow Start
           </Link>
-          <div className="hero-user-chip">{user ? `Signed in as ${toSentence(user.role)}` : "Guest mode"}</div>
         </div>
-      </section>
-
-      <section className="flow-preview-grid">
-        {FLOW_SCREENS.map(([title, subtitle], index) => (
-          <article className="mini-flow-card" key={title}>
-            <div className="mini-step">Step {index + 1}</div>
-            <h3>{title}</h3>
-            <p>{subtitle}</p>
-          </article>
-        ))}
       </section>
 
       <ScreenCard
@@ -60,8 +40,12 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
       >
         <div className="panel-grid two-col">
           <div className="soft-panel">
-            <label className="field-label">Select Election</label>
+            <label className="field-label" htmlFor="home-election-select">
+              Select Election
+            </label>
             <select
+              id="home-election-select"
+              name="home_election"
               className="field-input"
               value={selectedElectionId ?? ""}
               onChange={(event) => onSelectElection(event.target.value)}
@@ -84,29 +68,6 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
                 </div>
               </div>
             ) : null}
-          </div>
-
-          <div className="soft-panel">
-            <h3>Portal Routes</h3>
-            <div className="route-grid">
-              {[
-                "/home",
-                "/admin/register",
-                "/admin/login",
-                "/admin/dashboard",
-                "/voter/register",
-                "/voter/login",
-                "/voter/dashboad",
-                "/voter/compain",
-                "/candidate/login",
-                "/candidate/dashboad",
-                "/candidate/compaindetails",
-              ].map((path) => (
-                <div className="route-pill" key={path}>
-                  {path}
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </ScreenCard>

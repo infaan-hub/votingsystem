@@ -5,7 +5,7 @@ export function Header({ user, onLogout }) {
     <header className="site-header">
       <div>
         <p className="site-kicker">Election Hub</p>
-        <h1>Neumorphic Election Frontend</h1>
+        <h1>Election Hub</h1>
       </div>
       <nav className="header-links">
         <Link to="/home">Home</Link>

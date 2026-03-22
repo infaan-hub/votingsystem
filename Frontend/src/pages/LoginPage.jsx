@@ -69,8 +69,12 @@ export default function LoginPage({ role, user, onLogin }) {
       <ScreenCard step={1} section="Authentication" title={meta.title} subtitle={meta.subtitle}>
         <form className="form-stack" onSubmit={handleSubmit}>
           <div>
-            <label className="field-label">Phone / Voter ID / Username</label>
+            <label className="field-label" htmlFor={`${role}-username`}>
+              Phone / Voter ID / Username
+            </label>
             <input
+              id={`${role}-username`}
+              name="username"
               className="field-input"
               placeholder="Enter your username"
               value={form.username}
@@ -79,8 +83,12 @@ export default function LoginPage({ role, user, onLogin }) {
             />
           </div>
           <div>
-            <label className="field-label">Password</label>
+            <label className="field-label" htmlFor={`${role}-password`}>
+              Password
+            </label>
             <input
+              id={`${role}-password`}
+              name="password"
               type="password"
               className="field-input"
               placeholder="********"

@@ -56,11 +56,15 @@ export default function AdminDashboardPage({ user, elections, selectedElectionId
         >
           <div className="panel-grid two-col">
             <div className="soft-panel">
-              <label className="field-label">Current Election</label>
+              <label className="field-label" htmlFor="admin-election-select">
+                Current Election
+              </label>
               <ElectionSelector
                 elections={elections}
                 selectedElectionId={selectedElectionId}
                 onSelectElection={onSelectElection}
+                inputId="admin-election-select"
+                inputName="admin_election"
               />
               <div className="metric-list top-space">
                 <div className="metric-card">

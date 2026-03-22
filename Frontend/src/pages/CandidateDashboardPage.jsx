@@ -86,11 +86,15 @@ export default function CandidateDashboardPage({
             </div>
           </div>
           <div className="soft-panel top-space">
-            <label className="field-label">Current Election</label>
+            <label className="field-label" htmlFor="candidate-election-select">
+              Current Election
+            </label>
             <ElectionSelector
               elections={elections}
               selectedElectionId={selectedElectionId}
               onSelectElection={onSelectElection}
+              inputId="candidate-election-select"
+              inputName="candidate_election"
             />
           </div>
           {error ? <div className="error-banner top-space">{error}</div> : null}

@@ -56,11 +56,15 @@ export default function CandidateCampaignDetailsPage({
           subtitle="Add compain details, include video 00:30, and publish for voters."
         >
           <div className="soft-panel">
-            <label className="field-label">Selected Election</label>
+            <label className="field-label" htmlFor="candidate-campaign-election-select">
+              Selected Election
+            </label>
             <ElectionSelector
               elections={elections}
               selectedElectionId={selectedElectionId}
               onSelectElection={onSelectElection}
+              inputId="candidate-campaign-election-select"
+              inputName="candidate_campaign_election"
             />
           </div>
           {error ? <div className="error-banner top-space">{error}</div> : null}
@@ -94,20 +98,49 @@ export default function CandidateCampaignDetailsPage({
               <h3>Campaign Form</h3>
               <div className="form-stack">
                 <div>
-                  <label className="field-label">Compain Title</label>
-                  <input className="field-input" placeholder="Education, healthcare, leadership..." />
+                  <label className="field-label" htmlFor="campaign-title">
+                    Compain Title
+                  </label>
+                  <input
+                    id="campaign-title"
+                    name="campaign_title"
+                    className="field-input"
+                    placeholder="Education, healthcare, leadership..."
+                  />
                 </div>
                 <div>
-                  <label className="field-label">Manifesto Summary</label>
-                  <textarea className="field-input field-textarea" placeholder="Write campaign goals..." />
+                  <label className="field-label" htmlFor="campaign-manifesto">
+                    Manifesto Summary
+                  </label>
+                  <textarea
+                    id="campaign-manifesto"
+                    name="campaign_manifesto"
+                    className="field-input field-textarea"
+                    placeholder="Write campaign goals..."
+                  />
                 </div>
                 <div>
-                  <label className="field-label">Video Duration</label>
-                  <input className="field-input" value="00:30" readOnly />
+                  <label className="field-label" htmlFor="campaign-video-duration">
+                    Video Duration
+                  </label>
+                  <input
+                    id="campaign-video-duration"
+                    name="campaign_video_duration"
+                    className="field-input"
+                    value="00:30"
+                    readOnly
+                  />
                 </div>
                 <div>
-                  <label className="field-label">Video Link</label>
-                  <input className="field-input" placeholder="https://example.com/campaign-video.mp4" />
+                  <label className="field-label" htmlFor="campaign-video-link">
+                    Video Link
+                  </label>
+                  <input
+                    id="campaign-video-link"
+                    name="campaign_video_link"
+                    className="field-input"
+                    placeholder="https://example.com/campaign-video.mp4"
+                  />
                 </div>
                 <button className="primary-button" type="button">
                   Save Campaign Details

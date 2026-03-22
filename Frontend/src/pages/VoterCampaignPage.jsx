@@ -44,11 +44,15 @@ export default function VoterCampaignPage({ user, elections, selectedElectionId,
           subtitle="See all compains of candidates for the selected election."
         >
           <div className="soft-panel">
-            <label className="field-label">Selected Election</label>
+            <label className="field-label" htmlFor="voter-campaign-election-select">
+              Selected Election
+            </label>
             <ElectionSelector
               elections={elections}
               selectedElectionId={selectedElectionId}
               onSelectElection={onSelectElection}
+              inputId="voter-campaign-election-select"
+              inputName="voter_campaign_election"
             />
           </div>
           {error ? <div className="error-banner top-space">{error}</div> : null}

@@ -1,6 +1,14 @@
-export default function ElectionSelector({ elections, selectedElectionId, onSelectElection }) {
+export default function ElectionSelector({
+  elections,
+  selectedElectionId,
+  onSelectElection,
+  inputId = "election-select",
+  inputName = "election",
+}) {
   return (
     <select
+      id={inputId}
+      name={inputName}
       className="field-input"
       value={selectedElectionId ?? ""}
       onChange={(event) => onSelectElection(event.target.value)}

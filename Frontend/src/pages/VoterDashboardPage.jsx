@@ -65,11 +65,15 @@ export default function VoterDashboardPage({
         >
           <div className="panel-grid two-col">
             <div className="soft-panel">
-              <label className="field-label">Select Election</label>
+              <label className="field-label" htmlFor="voter-election-select">
+                Select Election
+              </label>
               <ElectionSelector
                 elections={elections}
                 selectedElectionId={selectedElectionId}
                 onSelectElection={onSelectElection}
+                inputId="voter-election-select"
+                inputName="voter_election"
               />
               <div className="stack-sm top-space">
                 {elections.map((election) => (
