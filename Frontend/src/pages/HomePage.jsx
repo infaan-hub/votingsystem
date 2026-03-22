@@ -18,7 +18,6 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
     <div className="page-stack">
       <section className="landing-hero">
         <div>
-          <p className="eyebrow">User Flow</p>
           <h2>E-Voting System Home</h2>
           <p className="lead">
             Welcome to Election Hub. Choose your role to sign in, view elections, explore candidate
@@ -27,7 +26,7 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
         </div>
         <div className="hero-actions">
           <Link className="primary-button" to="/voter/login">
-            Open Flow Start
+            Vote now
           </Link>
         </div>
       </section>
