@@ -2,7 +2,6 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 import GoogleSignInButton from "../components/GoogleSignInButton";
-import ScreenCard from "../components/ScreenCard";
 
 export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
   const navigate = useNavigate();
@@ -23,6 +22,39 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
     }
   }
 
+  const meta = {
+    admin: {
+      title: "Login Here",
+      eyebrow: "Admin Portal",
+      subtitle: "Use your admin username and password to manage elections.",
+      registerPath: "/admin/register",
+      registerLabel: "Create admin account",
+    },
+    voter: {
+      title: "Login Here",
+      eyebrow: "Voter Portal",
+      subtitle: "Use your voter username and password to access the ballot.",
+      registerPath: "/voter/register",
+      registerLabel: "Create voter account",
+    },
+    candidate: {
+      title: "Login Here",
+      eyebrow: "Candidate Portal",
+      subtitle: "Sign in with the credentials assigned to your candidate account.",
+      registerPath: null,
+      registerLabel: "",
+    },
+  }[role];
+
+  function redirectUser(nextUser) {
+    const fallbackTarget =
+      role === "admin" ? "/admin/dashboard" : role === "candidate" ? "/candidate/dashboard" : "/voter/dashboard";
+    navigate(typeof location.state?.from === "string" ? location.state.from : fallbackTarget, {
+      replace: true,
+    });
+    return nextUser;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setSubmitting(true);
@@ -35,11 +67,7 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
       if (role !== "admin" && nextUser.role === "admin") {
         throw new Error("Admin accounts must use the admin portal.");
       }
-      const fallbackTarget =
-        role === "admin" ? "/admin/dashboard" : role === "candidate" ? "/candidate/dashboard" : "/voter/dashboard";
-      navigate(typeof location.state?.from === "string" ? location.state.from : fallbackTarget, {
-        replace: true,
-      });
+      redirectUser(nextUser);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -58,11 +86,7 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
       if (role !== "admin" && nextUser.role === "admin") {
         throw new Error("Admin accounts must use the admin portal.");
       }
-      const fallbackTarget =
-        role === "admin" ? "/admin/dashboard" : role === "candidate" ? "/candidate/dashboard" : "/voter/dashboard";
-      navigate(typeof location.state?.from === "string" ? location.state.from : fallbackTarget, {
-        replace: true,
-      });
+      redirectUser(nextUser);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -70,81 +94,77 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
     }
   }
 
-  const meta = {
-    admin: {
-      title: "Admin Login",
-      subtitle: "Secure election management access",
-      registerPath: "/admin/register",
-    },
-    voter: {
-      title: "Voter Login",
-      subtitle: "Secure voter access",
-      registerPath: "/voter/register",
-    },
-    candidate: {
-      title: "Candidate Login",
-      subtitle: "Candidates sign in after being registered by admin",
-      registerPath: null,
-    },
-  }[role];
-
   return (
-    <div className="page-stack">
-      <ScreenCard step={1} section="Authentication" title={meta.title} subtitle={meta.subtitle}>
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <div>
-            <label className="field-label" htmlFor={`${role}-username`}>
-              Phone / Voter ID / Username
-            </label>
-            <input
-              id={`${role}-username`}
-              name="username"
-              className="field-input"
-              placeholder="Enter your username"
-              autoComplete="username"
-              value={form.username}
-              onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
-              required
-            />
-          </div>
-          <div>
-            <label className="field-label" htmlFor={`${role}-password`}>
-              Password
-            </label>
-            <input
-              id={`${role}-password`}
-              name="password"
-              type="password"
-              className="field-input"
-              placeholder="********"
-              autoComplete="current-password"
-              value={form.password}
-              onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-              required
-            />
-          </div>
-          {error ? <div className="error-banner">{error}</div> : null}
-          <button className="primary-button" type="submit" disabled={submitting}>
-            {submitting ? "Signing In..." : "Login"}
-          </button>
-          <GoogleSignInButton role={role} onCode={handleGoogleCode} disabled={submitting} />
-          <div className="button-grid">
+    <section className="auth-stage">
+      <div className="auth-card-shell">
+        <div className="auth-banner">
+          <div className="auth-banner-shape left" />
+          <div className="auth-banner-shape right" />
+          <p className="auth-banner-kicker">{meta.eyebrow}</p>
+          <h2>{meta.title}</h2>
+        </div>
+
+        <div className="auth-panel">
+          <div className="auth-panel-stack">
+            <GoogleSignInButton role={role} onCode={handleGoogleCode} disabled={submitting} />
+            <div className="auth-divider">or</div>
+
+            <form className="auth-form-stack" onSubmit={handleSubmit}>
+              <div className="auth-field-wrap">
+                <input
+                  id={`${role}-username`}
+                  name="username"
+                  className="auth-input"
+                  placeholder="Username"
+                  autoComplete="username"
+                  value={form.username}
+                  onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
+                  required
+                />
+              </div>
+              <div className="auth-field-wrap password-wrap">
+                <input
+                  id={`${role}-password`}
+                  name="password"
+                  type="password"
+                  className="auth-input"
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  value={form.password}
+                  onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                  required
+                />
+                <span className="password-eye" aria-hidden="true">
+                  ◉
+                </span>
+              </div>
+
+              {error ? <div className="error-banner">{error}</div> : null}
+
+              <button className="auth-submit-button" type="submit" disabled={submitting}>
+                {submitting ? "Signing In..." : "Login"}
+              </button>
+            </form>
+
+            <p className="auth-support-text">
+              <Link to="/forgot-password">Request a New Password</Link>
+            </p>
+
             {meta.registerPath ? (
-              <Link className="secondary-button" to={meta.registerPath}>
-                Create Account
-              </Link>
+              <p className="auth-footer-link">
+                New here? <Link to={meta.registerPath}>{meta.registerLabel}</Link>
+              </p>
             ) : (
-              <div className="info-note">Candidates are registered by election administrators.</div>
+              <p className="auth-footer-link">Candidates are registered by election administrators.</p>
             )}
-            <Link className="secondary-button" to="/forgot-password">
-              Forgot Password
-            </Link>
+
+            <p className="auth-support-text">
+              <Link to="/home">Return Home</Link>
+            </p>
+            <p className="auth-caption">{meta.subtitle}</p>
           </div>
-          <Link className="secondary-button" to="/home">
-            Return Home
-          </Link>
-        </form>
-      </ScreenCard>
-    </div>
+        </div>
+      </div>
+    </section>
   );
 }

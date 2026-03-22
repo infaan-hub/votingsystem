@@ -50,13 +50,7 @@ export default function GoogleSignInButton({ role, onCode, disabled = false }) {
   }, [onCode]);
 
   const buttonLabel = useMemo(() => {
-    if (role === "admin") {
-      return "Sign in with Google";
-    }
-    if (role === "candidate") {
-      return "Continue with Google";
-    }
-    return "Sign in with Google";
+    return "Continue with Google";
   }, [role]);
 
   if (!GOOGLE_CLIENT_ID) {
@@ -76,10 +70,6 @@ export default function GoogleSignInButton({ role, onCode, disabled = false }) {
         </span>
         <span>{buttonLabel}</span>
       </button>
-      <p className="info-note">
-        Use your Google account to continue with Election Hub. Existing admin and candidate accounts
-        are matched by email, while new voter accounts can be created automatically.
-      </p>
     </div>
   );
 }
