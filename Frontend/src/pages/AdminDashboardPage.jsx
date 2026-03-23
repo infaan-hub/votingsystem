@@ -37,6 +37,7 @@ const INITIAL_CANDIDATE_FORM = {
   confirm_password: "",
   slogan: "",
   manifesto: "",
+  photo: null,
   approved: true,
 };
 
@@ -186,11 +187,23 @@ export default function AdminDashboardPage({
     setError("");
     setSuccess("");
     try {
+      const payload = new FormData();
+      payload.append("election_id", String(selectedElection.id));
+      payload.append("position_name", candidateForm.position_name);
+      payload.append("username", candidateForm.username);
+      payload.append("email", candidateForm.email);
+      payload.append("first_name", candidateForm.first_name);
+      payload.append("last_name", candidateForm.last_name);
+      payload.append("password", candidateForm.password);
+      payload.append("confirm_password", candidateForm.confirm_password);
+      payload.append("slogan", candidateForm.slogan);
+      payload.append("manifesto", candidateForm.manifesto);
+      payload.append("approved", String(candidateForm.approved));
+      if (candidateForm.photo instanceof File) {
+        payload.append("photo", candidateForm.photo);
+      }
       const response = await adminCreateCandidate(
-        {
-          ...candidateForm,
-          election_id: selectedElection.id,
-        },
+        payload,
         token,
       );
       setSuccess(`Candidate ${response.user.full_name} was registered successfully.`);
@@ -515,6 +528,20 @@ export default function AdminDashboardPage({
                 placeholder="Manifesto"
                 value={candidateForm.manifesto}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, manifesto: event.target.value }))}
+              />
+              <label className="field-label" htmlFor="admin-candidate-photo">Candidate Image</label>
+              <input
+                id="admin-candidate-photo"
+                name="photo"
+                className="field-input"
+                type="file"
+                accept="image/*"
+                onChange={(event) =>
+                  setCandidateForm((current) => ({
+                    ...current,
+                    photo: event.target.files?.[0] || null,
+                  }))
+                }
               />
               <button className="primary-button" type="submit" disabled={submitting === "candidate"}>
                 {submitting === "candidate" ? "Registering Candidate..." : "Register Candidate"}

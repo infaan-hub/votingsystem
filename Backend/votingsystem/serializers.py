@@ -231,6 +231,7 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
     confirm_password = serializers.CharField(write_only=True, min_length=8)
     slogan = serializers.CharField(required=False, allow_blank=True)
     manifesto = serializers.CharField(required=False, allow_blank=True)
+    photo = serializers.ImageField(required=False, allow_null=True)
     approved = serializers.BooleanField(required=False, default=True)
 
     def validate(self, attrs):
@@ -277,6 +278,7 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
         approved = validated_data.pop("approved", True)
         slogan = validated_data.pop("slogan", "")
         manifesto = validated_data.pop("manifesto", "")
+        photo = validated_data.pop("photo", None)
 
         user = User(
             username=validated_data["username"],
@@ -303,6 +305,7 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
             section=position.section,
             slogan=slogan,
             manifesto=manifesto,
+            photo=photo,
             approved=approved,
         )
         candidate.full_clean()

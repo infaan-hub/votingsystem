@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import requests
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.test import TestCase
 from django.utils import timezone
@@ -517,6 +518,29 @@ class VotingApiTests(TestCase):
         self.assertEqual(candidate_new_position_response.status_code, 201)
         self.assertEqual(candidate_new_position_response.json()["user"]["username"], "candidate_new_position")
         self.assertTrue(Position.objects.filter(election=self.election, name="Secretary General").exists())
+
+        candidate_with_photo_response = client.post(
+            "/api/admin/candidates/",
+            {
+                "election_id": self.election.id,
+                "position_name": "Treasurer",
+                "username": "candidate_with_photo",
+                "email": "candidatephoto@example.com",
+                "first_name": "Photo",
+                "last_name": "Candidate",
+                "password": "Candidate123!",
+                "confirm_password": "Candidate123!",
+                "photo": SimpleUploadedFile(
+                    "candidate.gif",
+                    b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+                    b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                    b"\x00\x02\x02D\x01\x00;",
+                    content_type="image/gif",
+                ),
+            },
+        )
+        self.assertEqual(candidate_with_photo_response.status_code, 201)
+        self.assertTrue(candidate_with_photo_response.json()["photo_url"])
 
         schedule_response = client.patch(
             f"/api/admin/elections/{self.election.id}/schedule/",
