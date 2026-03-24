@@ -566,6 +566,49 @@ class VotingApiTests(TestCase):
         self.assertEqual(announcement_response.status_code, 201)
         self.assertEqual(announcement_response.json()["title"], "Voting Notice")
 
+    def test_admin_can_save_election_schedule_with_dedicated_api(self):
+        client = self.admin_client()
+
+        response = client.post(
+            f"/api/admin/elections/{self.election.id}/schedule/save/",
+            {
+                "title": "Saved Through Dedicated Schedule API",
+                "description": "Dedicated schedule save endpoint.",
+                "campaign_start_at": (timezone.now() - timedelta(days=1)).isoformat(),
+                "campaign_end_at": (timezone.now() + timedelta(days=1)).isoformat(),
+                "voting_start_at": (timezone.now() + timedelta(days=2)).isoformat(),
+                "voting_end_at": (timezone.now() + timedelta(days=3)).isoformat(),
+                "allow_live_results": False,
+                "announce_winners_automatically": False,
+                "is_published": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["title"], "Saved Through Dedicated Schedule API")
+        self.assertFalse(response.json()["allow_live_results"])
+        self.assertFalse(response.json()["announce_winners_automatically"])
+
+    def test_admin_can_post_election_notice_with_dedicated_api(self):
+        client = self.admin_client()
+
+        response = client.post(
+            f"/api/admin/elections/{self.election.id}/notices/save/",
+            {
+                "title": "Dedicated Notice API",
+                "message": "This notice is posted through its own API.",
+                "announcement_type": "notice",
+                "publish_at": (timezone.now() + timedelta(hours=1)).isoformat(),
+                "is_pinned": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["title"], "Dedicated Notice API")
+        self.assertTrue(response.json()["is_pinned"])
+
     def test_admin_create_voter_returns_validation_error_for_duplicate_username(self):
         client = self.admin_client()
 

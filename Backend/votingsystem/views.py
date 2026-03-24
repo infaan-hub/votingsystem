@@ -18,6 +18,8 @@ from rest_framework.views import APIView
 
 from .models import Candidate, Election
 from .serializers import (
+    AdminElectionNoticeSaveSerializer,
+    AdminElectionScheduleSaveSerializer,
     AdminCreateCandidateSerializer,
     AdminCreateVoterSerializer,
     AdminRegistrationSerializer,
@@ -345,6 +347,20 @@ class AdminElectionScheduleUpdateView(APIView):
         return Response(ElectionDetailSerializer(election, context={"request": request}).data)
 
 
+class AdminElectionScheduleSaveView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, pk, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk)
+        serializer = AdminElectionScheduleSaveSerializer(
+            data=request.data,
+            context={"election": election},
+        )
+        serializer.is_valid(raise_exception=True)
+        election = serializer.save()
+        return Response(ElectionDetailSerializer(election, context={"request": request}).data)
+
+
 class AdminElectionAnnouncementCreateView(APIView):
     permission_classes = [IsAdminRole]
 
@@ -353,6 +369,20 @@ class AdminElectionAnnouncementCreateView(APIView):
         serializer = AnnouncementCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         announcement = serializer.save(election=election)
+        return Response(AnnouncementSerializer(announcement).data, status=status.HTTP_201_CREATED)
+
+
+class AdminElectionNoticeSaveView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, pk, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk)
+        serializer = AdminElectionNoticeSaveSerializer(
+            data=request.data,
+            context={"election": election},
+        )
+        serializer.is_valid(raise_exception=True)
+        announcement = serializer.save()
         return Response(AnnouncementSerializer(announcement).data, status=status.HTTP_201_CREATED)
 
 

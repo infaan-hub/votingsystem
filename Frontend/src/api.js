@@ -183,13 +183,13 @@ export const adminCreateCandidate = (electionId, form, token) =>
     token,
   });
 export const adminUpdateElectionSchedule = (id, form, token) =>
-  request(`/admin/elections/${id}/schedule/`, {
-    method: "PATCH",
+  request(`/admin/elections/${id}/schedule/save/`, {
+    method: "POST",
     body: serializeElectionSchedulePayload(form),
     token,
   });
 export const adminCreateAnnouncement = (id, form, token) =>
-  request(`/admin/elections/${id}/announcements/`, {
+  request(`/admin/elections/${id}/notices/save/`, {
     method: "POST",
     body: serializeAnnouncementPayload(form),
     token,

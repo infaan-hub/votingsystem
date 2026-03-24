@@ -18,9 +18,19 @@ urlpatterns = [
         name="admin-election-schedule-update",
     ),
     path(
+        "admin/elections/<int:pk>/schedule/save/",
+        views.AdminElectionScheduleSaveView.as_view(),
+        name="admin-election-schedule-save",
+    ),
+    path(
         "admin/elections/<int:pk>/announcements/",
         views.AdminElectionAnnouncementCreateView.as_view(),
         name="admin-election-announcement-create",
+    ),
+    path(
+        "admin/elections/<int:pk>/notices/save/",
+        views.AdminElectionNoticeSaveView.as_view(),
+        name="admin-election-notice-save",
     ),
     path("auth/logout/", views.AuthLogoutView.as_view(), name="auth-logout"),
     path("auth/me/", views.CurrentUserView.as_view(), name="auth-me"),

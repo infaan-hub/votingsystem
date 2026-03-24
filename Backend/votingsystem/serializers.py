@@ -380,6 +380,35 @@ class ElectionScheduleUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class AdminElectionScheduleSaveSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=180)
+    description = serializers.CharField(required=False, allow_blank=True)
+    campaign_start_at = serializers.DateTimeField()
+    campaign_end_at = serializers.DateTimeField()
+    voting_start_at = serializers.DateTimeField()
+    voting_end_at = serializers.DateTimeField()
+    allow_live_results = serializers.BooleanField(required=False, default=True)
+    announce_winners_automatically = serializers.BooleanField(required=False, default=True)
+    is_published = serializers.BooleanField(required=False, default=True)
+
+    def validate(self, attrs):
+        election = self.context["election"]
+        for field, value in attrs.items():
+            setattr(election, field, value)
+        try:
+            election.full_clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
+        return attrs
+
+    def save(self, **kwargs):
+        election = self.context["election"]
+        for field, value in self.validated_data.items():
+            setattr(election, field, value)
+        election.save()
+        return election
+
+
 class AnnouncementCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
@@ -394,6 +423,21 @@ class AnnouncementCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         try:
             return super().create(validated_data)
+        except IntegrityError as exc:
+            raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
+
+
+class AdminElectionNoticeSaveSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=180)
+    message = serializers.CharField()
+    announcement_type = serializers.ChoiceField(choices=Announcement.AnnouncementType.choices)
+    publish_at = serializers.DateTimeField(required=False, allow_null=True)
+    is_pinned = serializers.BooleanField(required=False, default=False)
+
+    def create(self, validated_data):
+        election = self.context["election"]
+        try:
+            return Announcement.objects.create(election=election, **validated_data)
         except IntegrityError as exc:
             raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
 
