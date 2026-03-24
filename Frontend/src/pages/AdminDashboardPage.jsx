@@ -181,6 +181,8 @@ export default function AdminDashboardPage({
   async function handleCreateCandidate(event) {
     event.preventDefault();
     if (!selectedElection) {
+      setError("Select an election before registering a candidate.");
+      setSuccess("");
       return;
     }
     setSubmitting("candidate");
@@ -311,6 +313,8 @@ export default function AdminDashboardPage({
           title="Manage Election"
           subtitle="Create voter and candidate accounts, update election timing, and post announcements."
         >
+          {success ? <div className="success-banner top-space">{success}</div> : null}
+          {error ? <div className="error-banner top-space">{error}</div> : null}
           <div className="panel-grid two-col">
             <form className="soft-panel form-stack" onSubmit={handleCreateVoter}>
               <h3>Register Voter</h3>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { fetchCurrentUser, fetchElections, fetchHealth, login, loginWithGoogle, logout } from "./api";
+import { fetchCurrentUser, fetchElections, login, loginWithGoogle, logout } from "./api";
 import AppShell from "./components/AppShell";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import CandidateCampaignDetailsPage from "./pages/CandidateCampaignDetailsPage";
@@ -15,14 +15,47 @@ import VoterDashboardPage from "./pages/VoterDashboardPage";
 
 const TOKEN_KEY = "election-hub-token";
 const THEME_KEY = "election-hub-theme";
+const ELECTIONS_CACHE_KEY = "election-hub-elections";
+const SELECTED_ELECTION_KEY = "election-hub-selected-election";
+
+function readCachedElections() {
+  try {
+    const cachedValue = window.localStorage.getItem(ELECTIONS_CACHE_KEY);
+    if (!cachedValue) {
+      return [];
+    }
+    const parsedValue = JSON.parse(cachedValue);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
+}
+
+function getPreferredElectionId(electionEntries, currentSelection) {
+  if (!electionEntries.length) {
+    return null;
+  }
+  const matchingSelection = electionEntries.find((entry) => String(entry.id) === String(currentSelection));
+  if (matchingSelection) {
+    return String(matchingSelection.id);
+  }
+  const preferredElection =
+    electionEntries.find((entry) => entry.status === "active") ||
+    electionEntries.find((entry) => entry.status === "upcoming") ||
+    electionEntries[0];
+  return preferredElection ? String(preferredElection.id) : null;
+}
 
 export default function App() {
   const [token, setToken] = useState(() => window.localStorage.getItem(TOKEN_KEY) || "");
   const [theme, setTheme] = useState(() => window.localStorage.getItem(THEME_KEY) || "light");
   const [user, setUser] = useState(null);
-  const [elections, setElections] = useState([]);
-  const [selectedElectionId, setSelectedElectionId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [elections, setElections] = useState(() => readCachedElections());
+  const [selectedElectionId, setSelectedElectionId] = useState(() => {
+    const cachedElections = readCachedElections();
+    const cachedSelection = window.localStorage.getItem(SELECTED_ELECTION_KEY);
+    return getPreferredElectionId(cachedElections, cachedSelection);
+  });
   const [appError, setAppError] = useState("");
 
   useEffect(() => {
@@ -32,29 +65,36 @@ export default function App() {
 
   useEffect(() => {
     let ignore = false;
-    Promise.allSettled([fetchHealth(), fetchElections()]).then(([healthResult, electionsResult]) => {
-      if (ignore) {
-        return;
-      }
-      if (healthResult.status === "rejected") {
-        setAppError(healthResult.reason.message);
-      }
-      if (electionsResult.status === "fulfilled") {
-        setElections(electionsResult.value);
-        const preferred =
-          electionsResult.value.find((entry) => entry.status === "active") ||
-          electionsResult.value.find((entry) => entry.status === "upcoming") ||
-          electionsResult.value[0];
-        setSelectedElectionId(preferred ? String(preferred.id) : null);
-      } else {
-        setAppError(electionsResult.reason.message);
-      }
-      setLoading(false);
-    });
+    fetchElections()
+      .then((response) => {
+        if (ignore) {
+          return;
+        }
+        setElections(response);
+        setSelectedElectionId((currentSelection) => getPreferredElectionId(response, currentSelection));
+        setAppError("");
+      })
+      .catch((requestError) => {
+        if (!ignore) {
+          setAppError(requestError.message);
+        }
+      });
     return () => {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(ELECTIONS_CACHE_KEY, JSON.stringify(elections));
+  }, [elections]);
+
+  useEffect(() => {
+    if (selectedElectionId) {
+      window.localStorage.setItem(SELECTED_ELECTION_KEY, selectedElectionId);
+      return;
+    }
+    window.localStorage.removeItem(SELECTED_ELECTION_KEY);
+  }, [selectedElectionId]);
 
   useEffect(() => {
     if (!token) {
@@ -114,14 +154,6 @@ export default function App() {
     window.localStorage.removeItem(TOKEN_KEY);
     setToken("");
     setUser(null);
-  }
-
-  if (loading) {
-    return (
-      <AppShell user={user} onLogout={handleLogout} theme={theme} onToggleTheme={() => setTheme((current) => (current === "light" ? "dark" : "light"))}>
-        <div className="center-state">Loading election flow...</div>
-      </AppShell>
-    );
   }
 
   return (

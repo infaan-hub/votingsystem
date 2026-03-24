@@ -48,13 +48,18 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
               className="field-input"
               value={selectedElectionId ?? ""}
               onChange={(event) => onSelectElection(event.target.value)}
+              disabled={!elections.length}
             >
+              {!elections.length ? <option value="">Loading elections...</option> : null}
               {elections.map((election) => (
                 <option key={election.id} value={election.id}>
                   {election.title}
                 </option>
               ))}
             </select>
+            {!elections.length ? (
+              <div className="info-note top-space">Fetching the latest election list in the background.</div>
+            ) : null}
             {activeElection ? (
               <div className="stack-sm top-space">
                 <div className="metric-card">
