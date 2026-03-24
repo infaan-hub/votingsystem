@@ -94,7 +94,7 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       getErrorMessage(
         data,
         response.status >= 500
@@ -102,6 +102,9 @@ async function request(path, options = {}) {
           : "Request failed.",
       ),
     );
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
 
   return data;
@@ -187,12 +190,30 @@ export const adminUpdateElectionSchedule = (id, form, token) =>
     method: "POST",
     body: serializeElectionSchedulePayload(form),
     token,
+  }).catch((error) => {
+    if (error?.status !== 404) {
+      throw error;
+    }
+    return request(`/admin/elections/${id}/schedule/`, {
+      method: "PATCH",
+      body: serializeElectionSchedulePayload(form),
+      token,
+    });
   });
 export const adminCreateAnnouncement = (id, form, token) =>
   request(`/admin/elections/${id}/notices/save/`, {
     method: "POST",
     body: serializeAnnouncementPayload(form),
     token,
+  }).catch((error) => {
+    if (error?.status !== 404) {
+      throw error;
+    }
+    return request(`/admin/elections/${id}/announcements/`, {
+      method: "POST",
+      body: serializeAnnouncementPayload(form),
+      token,
+    });
   });
 export const registerAdmin = (payload) =>
   request("/auth/register/admin/", { method: "POST", body: payload });
