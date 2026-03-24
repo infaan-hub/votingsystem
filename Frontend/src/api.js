@@ -8,6 +8,21 @@ const API_BASE =
 
 const REQUEST_TIMEOUT_MS = 12000;
 
+function normalizeText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function serializeDateTime(value) {
+  if (!value) {
+    return null;
+  }
+  const parsedValue = new Date(value);
+  if (Number.isNaN(parsedValue.getTime())) {
+    return null;
+  }
+  return parsedValue.toISOString();
+}
+
 function getErrorMessage(data, fallbackMessage) {
   if (!data) {
     return fallbackMessage;
@@ -106,12 +121,79 @@ export const resetPassword = (payload) =>
   request("/auth/forgot-password/", { method: "POST", body: payload });
 export const adminCreateVoter = (payload, token) =>
   request("/admin/voters/", { method: "POST", body: payload, token });
-export const adminCreateCandidate = (payload, token) =>
-  request("/admin/candidates/", { method: "POST", body: payload, token });
-export const adminUpdateElectionSchedule = (id, payload, token) =>
-  request(`/admin/elections/${id}/schedule/`, { method: "PATCH", body: payload, token });
-export const adminCreateAnnouncement = (id, payload, token) =>
-  request(`/admin/elections/${id}/announcements/`, { method: "POST", body: payload, token });
+export function serializeAdminCandidatePayload(electionId, form) {
+  const payload = new FormData();
+  payload.append("election_id", String(electionId));
+  payload.append("position_name", normalizeText(form.position_name));
+  payload.append("username", normalizeText(form.username));
+  payload.append("first_name", normalizeText(form.first_name));
+  payload.append("last_name", normalizeText(form.last_name));
+  payload.append("password", form.password);
+  payload.append("confirm_password", form.confirm_password);
+  payload.append("approved", String(Boolean(form.approved)));
+
+  const email = normalizeText(form.email);
+  const slogan = normalizeText(form.slogan);
+  const manifesto = normalizeText(form.manifesto);
+
+  if (email) {
+    payload.append("email", email);
+  }
+  if (slogan) {
+    payload.append("slogan", slogan);
+  }
+  if (manifesto) {
+    payload.append("manifesto", manifesto);
+  }
+  if (form.photo instanceof File) {
+    payload.append("photo", form.photo);
+  }
+
+  return payload;
+}
+
+export function serializeElectionSchedulePayload(form) {
+  return {
+    title: normalizeText(form.title),
+    description: normalizeText(form.description),
+    campaign_start_at: serializeDateTime(form.campaign_start_at),
+    campaign_end_at: serializeDateTime(form.campaign_end_at),
+    voting_start_at: serializeDateTime(form.voting_start_at),
+    voting_end_at: serializeDateTime(form.voting_end_at),
+    allow_live_results: Boolean(form.allow_live_results),
+    announce_winners_automatically: Boolean(form.announce_winners_automatically),
+    is_published: Boolean(form.is_published),
+  };
+}
+
+export function serializeAnnouncementPayload(form) {
+  return {
+    title: normalizeText(form.title),
+    message: normalizeText(form.message),
+    announcement_type: form.announcement_type,
+    publish_at: serializeDateTime(form.publish_at),
+    is_pinned: Boolean(form.is_pinned),
+  };
+}
+
+export const adminCreateCandidate = (electionId, form, token) =>
+  request("/admin/candidates/", {
+    method: "POST",
+    body: serializeAdminCandidatePayload(electionId, form),
+    token,
+  });
+export const adminUpdateElectionSchedule = (id, form, token) =>
+  request(`/admin/elections/${id}/schedule/`, {
+    method: "PATCH",
+    body: serializeElectionSchedulePayload(form),
+    token,
+  });
+export const adminCreateAnnouncement = (id, form, token) =>
+  request(`/admin/elections/${id}/announcements/`, {
+    method: "POST",
+    body: serializeAnnouncementPayload(form),
+    token,
+  });
 export const registerAdmin = (payload) =>
   request("/auth/register/admin/", { method: "POST", body: payload });
 export const registerVoter = (payload) =>

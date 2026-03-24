@@ -189,25 +189,7 @@ export default function AdminDashboardPage({
     setError("");
     setSuccess("");
     try {
-      const payload = new FormData();
-      payload.append("election_id", String(selectedElection.id));
-      payload.append("position_name", candidateForm.position_name);
-      payload.append("username", candidateForm.username);
-      payload.append("email", candidateForm.email);
-      payload.append("first_name", candidateForm.first_name);
-      payload.append("last_name", candidateForm.last_name);
-      payload.append("password", candidateForm.password);
-      payload.append("confirm_password", candidateForm.confirm_password);
-      payload.append("slogan", candidateForm.slogan);
-      payload.append("manifesto", candidateForm.manifesto);
-      payload.append("approved", String(candidateForm.approved));
-      if (candidateForm.photo instanceof File) {
-        payload.append("photo", candidateForm.photo);
-      }
-      const response = await adminCreateCandidate(
-        payload,
-        token,
-      );
+      const response = await adminCreateCandidate(selectedElection.id, candidateForm, token);
       setSuccess(`Candidate ${response.user.full_name} was registered successfully.`);
       setCandidateForm(INITIAL_CANDIDATE_FORM);
       await loadElectionData(selectedElection.id);
@@ -439,6 +421,7 @@ export default function AdminDashboardPage({
                   setCandidateForm((current) => ({ ...current, position_name: event.target.value }))
                 }
                 required
+                disabled={submitting === "candidate"}
               />
               <datalist id="candidate-position-options">
                 {detail?.positions?.map((position) => (
@@ -455,6 +438,7 @@ export default function AdminDashboardPage({
                 value={candidateForm.username}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, username: event.target.value }))}
                 required
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-email">Email</label>
               <input
@@ -466,6 +450,7 @@ export default function AdminDashboardPage({
                 autoComplete="email"
                 value={candidateForm.email}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, email: event.target.value }))}
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-first-name">First Name</label>
               <input
@@ -477,6 +462,7 @@ export default function AdminDashboardPage({
                 value={candidateForm.first_name}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, first_name: event.target.value }))}
                 required
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-last-name">Last Name</label>
               <input
@@ -488,6 +474,7 @@ export default function AdminDashboardPage({
                 value={candidateForm.last_name}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, last_name: event.target.value }))}
                 required
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-password">Password</label>
               <input
@@ -500,6 +487,7 @@ export default function AdminDashboardPage({
                 value={candidateForm.password}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, password: event.target.value }))}
                 required
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-confirm-password">Confirm Password</label>
               <input
@@ -514,6 +502,7 @@ export default function AdminDashboardPage({
                   setCandidateForm((current) => ({ ...current, confirm_password: event.target.value }))
                 }
                 required
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-slogan">Campaign Slogan</label>
               <input
@@ -523,6 +512,7 @@ export default function AdminDashboardPage({
                 placeholder="Campaign Slogan"
                 value={candidateForm.slogan}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, slogan: event.target.value }))}
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-manifesto">Manifesto</label>
               <textarea
@@ -532,6 +522,7 @@ export default function AdminDashboardPage({
                 placeholder="Manifesto"
                 value={candidateForm.manifesto}
                 onChange={(event) => setCandidateForm((current) => ({ ...current, manifesto: event.target.value }))}
+                disabled={submitting === "candidate"}
               />
               <label className="field-label" htmlFor="admin-candidate-photo">Candidate Image</label>
               <input
@@ -546,6 +537,7 @@ export default function AdminDashboardPage({
                     photo: event.target.files?.[0] || null,
                   }))
                 }
+                disabled={submitting === "candidate"}
               />
               <button className="primary-button" type="submit" disabled={submitting === "candidate"}>
                 {submitting === "candidate" ? "Registering Candidate..." : "Register Candidate"}
@@ -563,6 +555,7 @@ export default function AdminDashboardPage({
                 value={scheduleForm.title}
                 onChange={(event) => setScheduleForm((current) => ({ ...current, title: event.target.value }))}
                 required
+                disabled={submitting === "schedule"}
               />
               <label className="field-label" htmlFor="admin-schedule-description">Election Description</label>
               <textarea
@@ -572,6 +565,7 @@ export default function AdminDashboardPage({
                 placeholder="Election Description"
                 value={scheduleForm.description}
                 onChange={(event) => setScheduleForm((current) => ({ ...current, description: event.target.value }))}
+                disabled={submitting === "schedule"}
               />
               <label className="field-label" htmlFor="admin-schedule-campaign-start">Campaign Start</label>
               <input
@@ -584,6 +578,7 @@ export default function AdminDashboardPage({
                   setScheduleForm((current) => ({ ...current, campaign_start_at: event.target.value }))
                 }
                 required
+                disabled={submitting === "schedule"}
               />
               <label className="field-label" htmlFor="admin-schedule-campaign-end">Campaign End</label>
               <input
@@ -596,6 +591,7 @@ export default function AdminDashboardPage({
                   setScheduleForm((current) => ({ ...current, campaign_end_at: event.target.value }))
                 }
                 required
+                disabled={submitting === "schedule"}
               />
               <label className="field-label" htmlFor="admin-schedule-voting-start">Voting Start</label>
               <input
@@ -608,6 +604,7 @@ export default function AdminDashboardPage({
                   setScheduleForm((current) => ({ ...current, voting_start_at: event.target.value }))
                 }
                 required
+                disabled={submitting === "schedule"}
               />
               <label className="field-label" htmlFor="admin-schedule-voting-end">Voting End</label>
               <input
@@ -620,7 +617,50 @@ export default function AdminDashboardPage({
                   setScheduleForm((current) => ({ ...current, voting_end_at: event.target.value }))
                 }
                 required
+                disabled={submitting === "schedule"}
               />
+              <label className="field-label" htmlFor="admin-schedule-live-results">
+                <input
+                  id="admin-schedule-live-results"
+                  name="allow_live_results"
+                  type="checkbox"
+                  checked={scheduleForm.allow_live_results}
+                  onChange={(event) =>
+                    setScheduleForm((current) => ({ ...current, allow_live_results: event.target.checked }))
+                  }
+                  disabled={submitting === "schedule"}
+                />
+                Allow live results
+              </label>
+              <label className="field-label" htmlFor="admin-schedule-auto-winners">
+                <input
+                  id="admin-schedule-auto-winners"
+                  name="announce_winners_automatically"
+                  type="checkbox"
+                  checked={scheduleForm.announce_winners_automatically}
+                  onChange={(event) =>
+                    setScheduleForm((current) => ({
+                      ...current,
+                      announce_winners_automatically: event.target.checked,
+                    }))
+                  }
+                  disabled={submitting === "schedule"}
+                />
+                Announce winners automatically
+              </label>
+              <label className="field-label" htmlFor="admin-schedule-published">
+                <input
+                  id="admin-schedule-published"
+                  name="is_published"
+                  type="checkbox"
+                  checked={scheduleForm.is_published}
+                  onChange={(event) =>
+                    setScheduleForm((current) => ({ ...current, is_published: event.target.checked }))
+                  }
+                  disabled={submitting === "schedule"}
+                />
+                Publish this election
+              </label>
               <button className="primary-button" type="submit" disabled={submitting === "schedule"}>
                 {submitting === "schedule" ? "Saving Schedule..." : "Save Election Schedule"}
               </button>
@@ -639,6 +679,7 @@ export default function AdminDashboardPage({
                   setAnnouncementForm((current) => ({ ...current, title: event.target.value }))
                 }
                 required
+                disabled={submitting === "announcement"}
               />
               <label className="field-label" htmlFor="admin-announcement-message">Announcement Message</label>
               <textarea
@@ -651,6 +692,7 @@ export default function AdminDashboardPage({
                   setAnnouncementForm((current) => ({ ...current, message: event.target.value }))
                 }
                 required
+                disabled={submitting === "announcement"}
               />
               <label className="field-label" htmlFor="admin-announcement-type">Announcement Type</label>
               <select
@@ -664,6 +706,7 @@ export default function AdminDashboardPage({
                     announcement_type: event.target.value,
                   }))
                 }
+                disabled={submitting === "announcement"}
               >
                 <option value="notice">Notice</option>
                 <option value="campaign">Campaign</option>
@@ -679,7 +722,21 @@ export default function AdminDashboardPage({
                 onChange={(event) =>
                   setAnnouncementForm((current) => ({ ...current, publish_at: event.target.value }))
                 }
+                disabled={submitting === "announcement"}
               />
+              <label className="field-label" htmlFor="admin-announcement-pinned">
+                <input
+                  id="admin-announcement-pinned"
+                  name="is_pinned"
+                  type="checkbox"
+                  checked={announcementForm.is_pinned}
+                  onChange={(event) =>
+                    setAnnouncementForm((current) => ({ ...current, is_pinned: event.target.checked }))
+                  }
+                  disabled={submitting === "announcement"}
+                />
+                Pin this notice
+              </label>
               <button className="primary-button" type="submit" disabled={submitting === "announcement"}>
                 {submitting === "announcement" ? "Posting Notice..." : "Post Election Notice"}
               </button>
