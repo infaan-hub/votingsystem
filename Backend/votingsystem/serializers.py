@@ -1,10 +1,34 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
 from .models import Announcement, Candidate, Department, Election, Position, Section, Vote
 from .services import build_election_stats, build_winner_announcement, visible_announcements
 
 User = get_user_model()
+
+
+def _normalize_integrity_error(error):
+    message = str(error)
+    lowered = message.lower()
+
+    if "username" in lowered:
+        return {"username": "This username is already in use."}
+    if "email" in lowered:
+        return {"email": "This email is already in use."}
+    if "google_id" in lowered:
+        return {"detail": "This account is already linked to a Google identity."}
+    if "unique_candidate_per_position" in lowered:
+        return {"detail": "This user is already registered as a candidate for that position."}
+    if "unique_position_scope_per_election" in lowered:
+        return {"position_name": "A position with this name already exists for the selected election scope."}
+    return {
+        "detail": (
+            "The submitted data conflicts with an existing record. Use a different username, "
+            "email, or position details and try again."
+        )
+    }
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -215,7 +239,10 @@ class AdminCreateVoterSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.full_clean()
-        user.save()
+        try:
+            user.save()
+        except IntegrityError as exc:
+            raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
         return user
 
 
@@ -273,47 +300,59 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
         password = validated_data.pop("password")
         election = validated_data.pop("election")
         position = validated_data.pop("position")
-        if position.pk is None:
-            position.save()
         approved = validated_data.pop("approved", True)
         slogan = validated_data.pop("slogan", "")
         manifesto = validated_data.pop("manifesto", "")
         photo = validated_data.pop("photo", None)
 
-        user = User(
-            username=validated_data["username"],
-            email=validated_data.get("email", ""),
-            first_name=validated_data["first_name"],
-            last_name=validated_data["last_name"],
-            role=(
-                User.Role.STAFF
-                if position.voter_group in {Position.VoterGroup.STAFF, Position.VoterGroup.STAFF_AND_OFFICER}
-                else User.Role.STUDENT
-            ),
-            department=position.department,
-            section=position.section,
-        )
-        user.set_password(password)
-        user.full_clean()
-        user.save()
+        try:
+            with transaction.atomic():
+                if position.pk is None:
+                    position.save()
+                user = User(
+                    username=validated_data["username"],
+                    email=validated_data.get("email", ""),
+                    first_name=validated_data["first_name"],
+                    last_name=validated_data["last_name"],
+                    role=(
+                        User.Role.STAFF
+                        if position.voter_group in {Position.VoterGroup.STAFF, Position.VoterGroup.STAFF_AND_OFFICER}
+                        else User.Role.STUDENT
+                    ),
+                    department=position.department,
+                    section=position.section,
+                )
+                user.set_password(password)
+                user.full_clean()
+                user.save()
 
-        candidate = Candidate(
-            election=election,
-            position=position,
-            user=user,
-            department=position.department,
-            section=position.section,
-            slogan=slogan,
-            manifesto=manifesto,
-            photo=photo,
-            approved=approved,
-        )
-        candidate.full_clean()
-        candidate.save()
+                candidate = Candidate(
+                    election=election,
+                    position=position,
+                    user=user,
+                    department=position.department,
+                    section=position.section,
+                    slogan=slogan,
+                    manifesto=manifesto,
+                    photo=photo,
+                    approved=approved,
+                )
+                candidate.full_clean()
+                candidate.save()
+        except IntegrityError as exc:
+            raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
+
         return candidate
 
 
 class ElectionScheduleUpdateSerializer(serializers.ModelSerializer):
+    SCHEDULE_FIELDS = {
+        "campaign_start_at",
+        "campaign_end_at",
+        "voting_start_at",
+        "voting_end_at",
+    }
+
     class Meta:
         model = Election
         fields = (
@@ -328,6 +367,18 @@ class ElectionScheduleUpdateSerializer(serializers.ModelSerializer):
             "is_published",
         )
 
+    def validate(self, attrs):
+        if not self.SCHEDULE_FIELDS.intersection(attrs):
+            return attrs
+
+        for field, value in attrs.items():
+            setattr(self.instance, field, value)
+        try:
+            self.instance.full_clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict) from exc
+        return attrs
+
 
 class AnnouncementCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -339,6 +390,12 @@ class AnnouncementCreateSerializer(serializers.ModelSerializer):
             "publish_at",
             "is_pinned",
         )
+
+    def create(self, validated_data):
+        try:
+            return super().create(validated_data)
+        except IntegrityError as exc:
+            raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
 
 
 class AnnouncementSerializer(serializers.ModelSerializer):
