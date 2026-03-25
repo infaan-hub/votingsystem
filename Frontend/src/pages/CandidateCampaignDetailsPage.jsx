@@ -110,21 +110,25 @@ export default function CandidateCampaignDetailsPage({
     setError("");
     setSuccess("");
     try {
-      const updatedEntry = await updateCandidateCampaign(selectedElection.id, campaignForm, token);
-      setCampaigns((current) => {
-        if (!current?.positions) {
-          return current;
-        }
-        return {
-          ...current,
-          positions: current.positions.map((position) => ({
-            ...position,
-            candidates: position.candidates.map((candidate) =>
-              candidate.id === updatedEntry.id ? updatedEntry : candidate,
-            ),
-          })),
-        };
-      });
+      await updateCandidateCampaign(selectedElection.id, campaignForm, token);
+      const refreshedCampaigns = await fetchCampaigns(selectedElection.id);
+      setCampaigns(refreshedCampaigns);
+      const refreshedEntry =
+        refreshedCampaigns?.positions?.flatMap((position) =>
+          position.candidates
+            .filter((candidate) => String(candidate.user.id) === String(user?.id))
+            .map((candidate) => ({ ...candidate, positionName: position.name })),
+        )[0] || null;
+      if (campaignForm.campaign_video && !refreshedEntry?.campaign_video_url) {
+        setSuccess("");
+        setError("Campaign video was not saved on the server. Upload the MP4 again.");
+        return;
+      }
+      setCampaignForm((current) => ({
+        ...current,
+        campaign_video: null,
+      }));
+      setCampaignVideoPreviewUrl("");
       setSuccess("Campaign details saved successfully.");
     } catch (requestError) {
       setError(requestError.message);
