@@ -754,6 +754,13 @@ class VotingApiTests(TestCase):
         self.assertEqual(second_vote_response.status_code, 400)
         self.assertIn("already voted", str(second_vote_response.json()).lower())
 
+        campaigns_response = client.get(f"/api/elections/{self.election.id}/campaigns/")
+        self.assertEqual(campaigns_response.status_code, 200)
+        self.assertEqual(
+            campaigns_response.json()["positions"][0]["candidates"][0]["vote_total"],
+            1,
+        )
+
     def test_hidden_live_stats_are_blocked_for_guest(self):
         response = self.client.get(f"/api/elections/{self.hidden_results_election.id}/stats/")
         self.assertEqual(response.status_code, 403)

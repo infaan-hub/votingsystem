@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 from rest_framework import serializers
 
 from .models import Announcement, Candidate, Department, Election, Position, Section, Vote
@@ -805,12 +806,16 @@ class PositionSerializer(serializers.ModelSerializer):
         )
 
     def get_candidates(self, obj):
-        queryset = obj.candidates.filter(approved=True).select_related(
-            "user",
-            "department",
-            "section",
-            "user__department",
-            "user__section",
+        queryset = (
+            obj.candidates.filter(approved=True)
+            .select_related(
+                "user",
+                "department",
+                "section",
+                "user__department",
+                "user__section",
+            )
+            .annotate(vote_total=Count("votes"))
         )
         return CandidateSerializer(queryset, many=True, context=self.context).data
 

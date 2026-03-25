@@ -336,6 +336,10 @@ button {
   background: linear-gradient(135deg, var(--pink), var(--blue));
 }
 
+.vote-recorded-button {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+}
+
 .page-stack {
   display: grid;
   gap: 1.5rem;

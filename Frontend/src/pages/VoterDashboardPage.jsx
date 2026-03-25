@@ -22,33 +22,40 @@ export default function VoterDashboardPage({
   const selectedElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
 
+  async function loadVoterData(electionId) {
+    const [campaignResult, ballotResult] = await Promise.allSettled([
+      fetchCampaigns(electionId),
+      fetchBallot(electionId, token),
+    ]);
+    setCampaigns(campaignResult.status === "fulfilled" ? campaignResult.value : null);
+    setBallot(ballotResult.status === "fulfilled" ? ballotResult.value : null);
+    const firstFailure = [campaignResult, ballotResult].find((item) => item.status === "rejected");
+    setError(firstFailure?.reason?.message || "");
+  }
+
   useEffect(() => {
     if (!selectedElection || !token) {
       return;
     }
     let ignore = false;
-    Promise.allSettled([fetchCampaigns(selectedElection.id), fetchBallot(selectedElection.id, token)]).then(
-      ([campaignResult, ballotResult]) => {
-        if (ignore) {
-          return;
-        }
-        setCampaigns(campaignResult.status === "fulfilled" ? campaignResult.value : null);
-        setBallot(ballotResult.status === "fulfilled" ? ballotResult.value : null);
-        const firstFailure = [campaignResult, ballotResult].find((item) => item.status === "rejected");
-        setError(firstFailure?.reason?.message || "");
-      },
-    );
+    loadVoterData(selectedElection.id).catch((requestError) => {
+      if (!ignore) {
+        setError(requestError.message);
+      }
+    });
     return () => {
       ignore = true;
     };
   }, [selectedElection, token]);
 
   async function handleVote(candidateId) {
+    if (!selectedElection) {
+      return;
+    }
     try {
       const response = await voteForCandidate(candidateId, token);
       setVoteMessage(`Vote recorded for ${response.candidate}.`);
-      const refreshedBallot = await fetchBallot(selectedElection.id, token);
-      setBallot(refreshedBallot);
+      await loadVoterData(selectedElection.id);
       setError("");
     } catch (requestError) {
       setVoteMessage("");
@@ -139,7 +146,7 @@ export default function VoterDashboardPage({
                         <span>{candidate.vote_total ?? 0} votes</span>
                       </div>
                       <button
-                        className="primary-button"
+                        className={alreadyVoted ? "primary-button vote-recorded-button" : "primary-button"}
                         type="button"
                         disabled={!ballot?.is_voting_open || alreadyVoted}
                         onClick={() => handleVote(candidate.id)}
