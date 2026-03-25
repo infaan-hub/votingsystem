@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { fetchCampaigns, updateCandidateCampaign } from "../api";
+import { fetchCampaigns, resolveMediaUrl, updateCandidateCampaign } from "../api";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
@@ -22,6 +22,7 @@ export default function CandidateCampaignDetailsPage({
     campaign_video: null,
   });
   const [campaignVideoPreviewUrl, setCampaignVideoPreviewUrl] = useState("");
+  const previewObjectUrlRef = useRef("");
   const selectedElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
 
@@ -69,11 +70,22 @@ export default function CandidateCampaignDetailsPage({
       return undefined;
     }
     const objectUrl = URL.createObjectURL(campaignForm.campaign_video);
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+    }
+    previewObjectUrlRef.current = objectUrl;
     setCampaignVideoPreviewUrl(objectUrl);
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
+    return undefined;
   }, [campaignForm.campaign_video]);
+
+  useEffect(
+    () => () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+      }
+    },
+    [],
+  );
 
   async function handleSaveCampaign() {
     if (!selectedElection || !token || !entry) {
@@ -170,7 +182,12 @@ export default function CandidateCampaignDetailsPage({
                     <strong>{entry.campaign_video_url ? "Saved MP4 video" : "No campaign video saved."}</strong>
                   </div>
                   {entry.campaign_video_url ? (
-                    <video className="candidate-video" controls preload="metadata" src={entry.campaign_video_url}>
+                    <video
+                      className="candidate-video"
+                      controls
+                      preload="metadata"
+                      src={resolveMediaUrl(entry.campaign_video_url)}
+                    >
                       Your browser does not support MP4 playback.
                     </video>
                   ) : null}
