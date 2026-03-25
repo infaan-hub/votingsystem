@@ -194,7 +194,7 @@ export default function VoterDashboardPage({
                         disabled={!ballot?.is_voting_open || alreadyVoted}
                         onClick={() => handleVote(candidate.id)}
                       >
-                        <span className="ballot-flyer-vote-mark">{alreadyVoted ? "✓" : "🖐"}</span>
+                        <span className="ballot-flyer-vote-mark">{alreadyVoted ? "✓" : "□"}</span>
                         <em>{alreadyVoted ? "Vote accepted" : "Touch to vote"}</em>
                       </button>
                     </div>
