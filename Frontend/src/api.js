@@ -179,6 +179,14 @@ export function serializeAnnouncementPayload(form) {
   };
 }
 
+export function serializeCandidateCampaignPayload(form) {
+  return {
+    slogan: normalizeText(form.campaign_title),
+    manifesto: normalizeText(form.campaign_manifesto),
+    campaign_video_url: normalizeText(form.campaign_video_link),
+  };
+}
+
 export const adminCreateCandidate = (electionId, form, token) =>
   request("/admin/candidates/", {
     method: "POST",
@@ -214,6 +222,12 @@ export const adminCreateAnnouncement = (id, form, token) =>
       body: serializeAnnouncementPayload(form),
       token,
     });
+  });
+export const updateCandidateCampaign = (id, form, token) =>
+  request(`/candidate/elections/${id}/campaign/`, {
+    method: "PATCH",
+    body: serializeCandidateCampaignPayload(form),
+    token,
   });
 export const registerAdmin = (payload) =>
   request("/auth/register/admin/", { method: "POST", body: payload });

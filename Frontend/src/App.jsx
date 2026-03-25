@@ -249,6 +249,7 @@ export default function App() {
           element={
             <CandidateCampaignDetailsPage
               user={user}
+              token={token}
               elections={elections}
               selectedElectionId={selectedElectionId}
               onSelectElection={setSelectedElectionId}

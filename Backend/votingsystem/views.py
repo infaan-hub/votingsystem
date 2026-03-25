@@ -26,6 +26,7 @@ from .serializers import (
     AnnouncementSerializer,
     AnnouncementCreateSerializer,
     CandidateSerializer,
+    CandidateCampaignUpdateSerializer,
     ElectionDetailSerializer,
     ElectionListSerializer,
     ElectionScheduleUpdateSerializer,
@@ -334,6 +335,22 @@ class AdminCreateCandidateView(APIView):
             CandidateSerializer(candidate, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class CandidateCampaignUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk, is_published=True)
+        candidate = get_object_or_404(
+            Candidate.objects.select_related("user", "position", "department", "section"),
+            election=election,
+            user=request.user,
+        )
+        serializer = CandidateCampaignUpdateSerializer(candidate, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(CandidateSerializer(candidate, context={"request": request}).data)
 
 
 class AdminElectionScheduleUpdateView(APIView):

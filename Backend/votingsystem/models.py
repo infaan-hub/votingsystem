@@ -288,6 +288,7 @@ class Candidate(TimestampedModel):
     )
     slogan = models.CharField(max_length=180, blank=True)
     manifesto = models.TextField(blank=True)
+    campaign_video_url = models.URLField(blank=True)
     photo = models.ImageField(upload_to="candidate_photos/", blank=True, null=True)
     approved = models.BooleanField(default=False)
     featured_order = models.PositiveSmallIntegerField(default=0)

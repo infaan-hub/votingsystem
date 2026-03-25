@@ -442,6 +442,20 @@ class AdminElectionNoticeSaveSerializer(serializers.Serializer):
             raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
 
 
+class CandidateCampaignUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Candidate
+        fields = ("slogan", "manifesto", "campaign_video_url")
+
+    def update(self, instance, validated_data):
+        instance.slogan = validated_data.get("slogan", instance.slogan)
+        instance.manifesto = validated_data.get("manifesto", instance.manifesto)
+        instance.campaign_video_url = validated_data.get("campaign_video_url", instance.campaign_video_url)
+        instance.full_clean()
+        instance.save(update_fields=["slogan", "manifesto", "campaign_video_url", "updated_at"])
+        return instance
+
+
 class AnnouncementSerializer(serializers.ModelSerializer):
     is_visible = serializers.BooleanField(read_only=True)
 
@@ -475,6 +489,7 @@ class CandidateSerializer(serializers.ModelSerializer):
             "section",
             "slogan",
             "manifesto",
+            "campaign_video_url",
             "approved",
             "photo_url",
             "vote_total",
