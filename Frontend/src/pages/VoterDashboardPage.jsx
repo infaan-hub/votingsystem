@@ -159,44 +159,59 @@ export default function VoterDashboardPage({
         >
           <div className="candidate-grid">
             {campaigns?.positions?.flatMap((position) =>
-              position.candidates.map((candidate) => {
+              position.candidates.map((candidate, candidateIndex) => {
                 const alreadyVoted = ballot?.voted_position_ids?.includes(position.id);
                 const candidatePhoto = resolveMediaUrl(candidate.photo || candidate.photo_url);
                 return (
-                  <article className="candidate-card" key={`${position.id}-${candidate.id}`}>
-                    {candidatePhoto ? (
-                      <img
-                        className="candidate-photo"
-                        src={candidatePhoto}
-                        alt={candidate.user.full_name}
-                      />
-                    ) : (
-                      <div className="candidate-photo candidate-photo-placeholder" />
-                    )}
-                    <div className="candidate-copy">
-                      <div className="candidate-role">{position.name}</div>
-                      <h3>{candidate.user.full_name}</h3>
-                      <p>{candidate.slogan || "No slogan provided."}</p>
-                      <div className="candidate-meta">
-                        <span>{candidate.user.department?.name || "General scope"}</span>
-                        <span>{candidate.vote_total ?? 0} votes</span>
+                  <article className="ballot-flyer-card" key={`${position.id}-${candidate.id}`}>
+                    <div className="ballot-flyer-brand">VOTE</div>
+                    <div className="ballot-flyer-banner">
+                      <span className="ballot-flyer-number-badge">NUMBER {candidateIndex + 1}</span>
+                      <strong>ON THE BALLOT</strong>
+                    </div>
+                    <div className="ballot-flyer-grid">
+                      <div className="ballot-flyer-slot ballot-flyer-slot-number">{candidateIndex + 1}</div>
+                      <div className="ballot-flyer-slot ballot-flyer-slot-photo">
+                        {candidatePhoto ? (
+                          <img
+                            className="ballot-flyer-photo"
+                            src={candidatePhoto}
+                            alt={candidate.user.full_name}
+                          />
+                        ) : (
+                          <div className="ballot-flyer-photo ballot-flyer-photo-placeholder" />
+                        )}
+                      </div>
+                      <div className="ballot-flyer-slot ballot-flyer-slot-name">
+                        <span>{candidate.user.full_name}</span>
+                        <strong>{position.name}</strong>
                       </div>
                       <button
-                        className={alreadyVoted ? "primary-button vote-recorded-button" : "primary-button"}
+                        className={`ballot-flyer-slot ballot-flyer-slot-vote ${
+                          alreadyVoted ? "is-recorded" : ""
+                        }`}
                         type="button"
                         disabled={!ballot?.is_voting_open || alreadyVoted}
                         onClick={() => handleVote(candidate.id)}
                       >
-                        {alreadyVoted ? "Vote Recorded" : "Vote Candidate"}
-                      </button>
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        onClick={() => navigate("/voter/compain")}
-                      >
-                        View Campaign
+                        <span className="ballot-flyer-vote-mark">{alreadyVoted ? "✓" : "🖐"}</span>
+                        <em>{alreadyVoted ? "Vote accepted" : "Touch to vote"}</em>
                       </button>
                     </div>
+                    <div className="ballot-flyer-footer">
+                      <div className="ballot-flyer-meta">
+                        <span>{candidate.user.department?.name || "General scope"}</span>
+                        <span>{candidate.vote_total ?? 0} votes</span>
+                      </div>
+                      <p>{candidate.slogan || "Ready to deliver. Let's change the narrative."}</p>
+                    </div>
+                    <button
+                      className="secondary-button top-space"
+                      type="button"
+                      onClick={() => navigate("/voter/compain")}
+                    >
+                      View Campaign
+                    </button>
                   </article>
                 );
               }),
