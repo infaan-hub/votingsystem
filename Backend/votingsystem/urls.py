@@ -13,6 +13,11 @@ urlpatterns = [
     path("admin/voters/", views.AdminCreateVoterView.as_view(), name="admin-create-voter"),
     path("admin/candidates/", views.AdminCreateCandidateView.as_view(), name="admin-create-candidate"),
     path(
+        "admin/elections/<int:pk>/candidates/",
+        views.AdminCreateCandidateView.as_view(),
+        name="admin-election-create-candidate",
+    ),
+    path(
         "candidate/elections/<int:pk>/campaign/",
         views.CandidateCampaignUpdateView.as_view(),
         name="candidate-campaign-update",

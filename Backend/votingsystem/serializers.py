@@ -258,7 +258,6 @@ class AdminCreateVoterSerializer(serializers.ModelSerializer):
 
 
 class AdminCreateCandidateSerializer(serializers.Serializer):
-    election_id = serializers.IntegerField()
     position_name = serializers.CharField(required=False, allow_blank=True)
     username = serializers.CharField()
     email = serializers.EmailField(required=False, allow_blank=True)
@@ -274,10 +273,9 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("confirm_password"):
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
-        try:
-            election = Election.objects.get(pk=attrs["election_id"])
-        except Election.DoesNotExist as exc:
-            raise serializers.ValidationError({"election_id": "Election was not found."}) from exc
+        election = self.context.get("election")
+        if not election:
+            raise serializers.ValidationError({"detail": "Election context is required."})
         position = None
         position_name = (attrs.get("position_name") or "").strip()
         if position_name:

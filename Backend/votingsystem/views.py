@@ -327,8 +327,14 @@ class AdminCreateVoterView(APIView):
 class AdminCreateCandidateView(APIView):
     permission_classes = [IsAdminRole]
 
-    def post(self, request, *args, **kwargs):
-        serializer = AdminCreateCandidateSerializer(data=request.data, context={"request": request})
+    def post(self, request, pk=None, *args, **kwargs):
+        election = None
+        if pk is not None:
+            election = get_object_or_404(Election, pk=pk)
+        serializer = AdminCreateCandidateSerializer(
+            data=request.data,
+            context={"request": request, "election": election},
+        )
         serializer.is_valid(raise_exception=True)
         candidate = serializer.save()
         return Response(

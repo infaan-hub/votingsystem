@@ -459,9 +459,8 @@ class VotingApiTests(TestCase):
         self.assertEqual(voter_response.json()["user"]["username"], "new_voter")
 
         candidate_response = client.post(
-            "/api/admin/candidates/",
+            f"/api/admin/elections/{self.election.id}/candidates/",
             {
-                "election_id": self.election.id,
                 "position_name": self.position.name,
                 "username": "new_candidate",
                 "email": "candidate@example.com",
@@ -479,9 +478,8 @@ class VotingApiTests(TestCase):
         self.assertEqual(candidate_response.json()["user"]["username"], "new_candidate")
 
         candidate_by_name_response = client.post(
-            "/api/admin/candidates/",
+            f"/api/admin/elections/{self.election.id}/candidates/",
             {
-                "election_id": self.election.id,
                 "position_name": self.position.name,
                 "username": "candidate_by_name",
                 "email": "candidatebyname@example.com",
@@ -499,9 +497,8 @@ class VotingApiTests(TestCase):
         self.assertEqual(candidate_by_name_response.json()["user"]["username"], "candidate_by_name")
 
         candidate_new_position_response = client.post(
-            "/api/admin/candidates/",
+            f"/api/admin/elections/{self.election.id}/candidates/",
             {
-                "election_id": self.election.id,
                 "position_name": "Secretary General",
                 "username": "candidate_new_position",
                 "email": "newposition@example.com",
@@ -520,9 +517,8 @@ class VotingApiTests(TestCase):
         self.assertTrue(Position.objects.filter(election=self.election, name="Secretary General").exists())
 
         candidate_with_photo_response = client.post(
-            "/api/admin/candidates/",
+            f"/api/admin/elections/{self.election.id}/candidates/",
             {
-                "election_id": self.election.id,
                 "position_name": "Treasurer",
                 "username": "candidate_with_photo",
                 "email": "candidatephoto@example.com",
@@ -634,9 +630,8 @@ class VotingApiTests(TestCase):
         client = self.admin_client()
 
         response = client.post(
-            "/api/admin/candidates/",
+            f"/api/admin/elections/{self.election.id}/candidates/",
             {
-                "election_id": self.election.id,
                 "position_name": "President",
                 "username": "candidate_a",
                 "email": "candidate@example.com",

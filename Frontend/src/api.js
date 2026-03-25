@@ -126,7 +126,6 @@ export const adminCreateVoter = (payload, token) =>
   request("/admin/voters/", { method: "POST", body: payload, token });
 export function serializeAdminCandidatePayload(electionId, form) {
   const payload = new FormData();
-  payload.append("election_id", String(electionId));
   payload.append("position_name", normalizeText(form.position_name));
   payload.append("username", normalizeText(form.username));
   payload.append("first_name", normalizeText(form.first_name));
@@ -188,7 +187,7 @@ export function serializeCandidateCampaignPayload(form) {
 }
 
 export const adminCreateCandidate = (electionId, form, token) =>
-  request("/admin/candidates/", {
+  request(`/admin/elections/${electionId}/candidates/`, {
     method: "POST",
     body: serializeAdminCandidatePayload(electionId, form),
     token,
