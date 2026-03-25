@@ -5,6 +5,10 @@ services:
     rootDir: Backend
     buildCommand: ./build.sh
     startCommand: gunicorn votingproject.wsgi:application
+    disk:
+      name: voting-system-media
+      mountPath: /var/data/media
+      sizeGB: 5
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
@@ -22,5 +26,9 @@ services:
         value: https://electionhub-xi.vercel.app
       - key: CSRF_TRUSTED_ORIGINS
         value: https://electionhub-xi.vercel.app
+      - key: MEDIA_ROOT
+        value: /var/data/media
+      - key: MEDIA_URL
+        value: /media/
       - key: DATABASE_URL
         sync: false

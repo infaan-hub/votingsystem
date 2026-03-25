@@ -39,6 +39,19 @@ def _normalize_django_validation_error(error):
     return {"detail": "Submitted data is not valid."}
 
 
+def _build_media_url(file_field, request=None):
+    if not file_field:
+        return None
+    storage = getattr(file_field, "storage", None)
+    name = getattr(file_field, "name", "")
+    if not storage or not name or not storage.exists(name):
+        return None
+    file_url = file_field.url
+    if request:
+        return request.build_absolute_uri(file_url)
+    return file_url
+
+
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
@@ -496,11 +509,9 @@ class CandidateCampaignUpdateSerializer(serializers.ModelSerializer):
         return instance
 
     def get_campaign_video_url(self, obj):
-        if obj.campaign_video:
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(obj.campaign_video.url)
-            return obj.campaign_video.url
+        media_url = _build_media_url(obj.campaign_video, self.context.get("request"))
+        if media_url:
+            return media_url
         return obj.campaign_video_url or None
 
 
@@ -558,19 +569,12 @@ class CandidateSerializer(serializers.ModelSerializer):
         }
 
     def get_photo_url(self, obj):
-        if not obj.photo:
-            return None
-        request = self.context.get("request")
-        if request:
-            return request.build_absolute_uri(obj.photo.url)
-        return obj.photo.url
+        return _build_media_url(obj.photo, self.context.get("request"))
 
     def get_campaign_video_url(self, obj):
-        if obj.campaign_video:
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(obj.campaign_video.url)
-            return obj.campaign_video.url
+        media_url = _build_media_url(obj.campaign_video, self.context.get("request"))
+        if media_url:
+            return media_url
         return obj.campaign_video_url or None
 
 
@@ -636,12 +640,7 @@ class ElectionListSerializer(serializers.ModelSerializer):
         return obj.seconds_until_end()
 
     def get_image_url(self, obj):
-        if not obj.image:
-            return None
-        request = self.context.get("request")
-        if request:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url
+        return _build_media_url(obj.image, self.context.get("request"))
 
 
 class ElectionDetailSerializer(ElectionListSerializer):
