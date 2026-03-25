@@ -19,8 +19,9 @@ export default function CandidateCampaignDetailsPage({
   const [campaignForm, setCampaignForm] = useState({
     campaign_title: "",
     campaign_manifesto: "",
-    campaign_video_link: "",
+    campaign_video: null,
   });
+  const [campaignVideoPreviewUrl, setCampaignVideoPreviewUrl] = useState("");
   const selectedElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
 
@@ -58,15 +59,39 @@ export default function CandidateCampaignDetailsPage({
     setCampaignForm({
       campaign_title: entry?.slogan || "",
       campaign_manifesto: entry?.manifesto || "",
-      campaign_video_link: entry?.campaign_video_url || "",
+      campaign_video: null,
     });
   }, [entry]);
+
+  useEffect(() => {
+    if (!(campaignForm.campaign_video instanceof File)) {
+      setCampaignVideoPreviewUrl("");
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(campaignForm.campaign_video);
+    setCampaignVideoPreviewUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [campaignForm.campaign_video]);
 
   async function handleSaveCampaign() {
     if (!selectedElection || !token || !entry) {
       setSuccess("");
       setError("No candidate profile was found for this account.");
       return;
+    }
+    if (campaignForm.campaign_video) {
+      if (campaignForm.campaign_video.type !== "video/mp4") {
+        setSuccess("");
+        setError("Campaign video must be an MP4 file.");
+        return;
+      }
+      if (campaignForm.campaign_video.size > 50 * 1024 * 1024) {
+        setSuccess("");
+        setError("Campaign video must be 50MB or smaller.");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -141,9 +166,14 @@ export default function CandidateCampaignDetailsPage({
                     <p>{entry.manifesto || "No manifesto published."}</p>
                   </div>
                   <div className="metric-card">
-                    <span>Video Link</span>
-                    <strong>{entry.campaign_video_url || "No video link saved."}</strong>
+                    <span>Campaign Video</span>
+                    <strong>{entry.campaign_video_url ? "Saved MP4 video" : "No campaign video saved."}</strong>
                   </div>
+                  {entry.campaign_video_url ? (
+                    <video className="candidate-video" controls preload="metadata" src={entry.campaign_video_url}>
+                      Your browser does not support MP4 playback.
+                    </video>
+                  ) : null}
                 </div>
               ) : (
                 <div className="info-note">No candidate profile was found for this account.</div>
@@ -197,20 +227,28 @@ export default function CandidateCampaignDetailsPage({
                   />
                 </div>
                 <div>
-                  <label className="field-label" htmlFor="campaign-video-link">
-                    Video Link
+                  <label className="field-label" htmlFor="campaign-video-file">
+                    Campaign Video (MP4)
                   </label>
                   <input
-                    id="campaign-video-link"
-                    name="campaign_video_link"
+                    id="campaign-video-file"
+                    name="campaign_video"
                     className="field-input"
-                    placeholder="https://example.com/campaign-video.mp4"
-                    value={campaignForm.campaign_video_link}
+                    type="file"
+                    accept="video/mp4"
                     onChange={(event) =>
-                      setCampaignForm((current) => ({ ...current, campaign_video_link: event.target.value }))
+                      setCampaignForm((current) => ({
+                        ...current,
+                        campaign_video: event.target.files?.[0] || null,
+                      }))
                     }
                     disabled={submitting}
                   />
+                  {campaignVideoPreviewUrl ? (
+                    <video className="candidate-video top-space" controls preload="metadata" src={campaignVideoPreviewUrl}>
+                      Your browser does not support MP4 playback.
+                    </video>
+                  ) : null}
                 </div>
                 <button className="primary-button" type="button" onClick={handleSaveCampaign} disabled={submitting}>
                   {submitting ? "Saving Campaign..." : "Save Campaign Details"}

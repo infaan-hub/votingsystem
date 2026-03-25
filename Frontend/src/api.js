@@ -124,7 +124,7 @@ export const resetPassword = (payload) =>
   request("/auth/forgot-password/", { method: "POST", body: payload });
 export const adminCreateVoter = (payload, token) =>
   request("/admin/voters/", { method: "POST", body: payload, token });
-export function serializeAdminCandidatePayload(electionId, form) {
+export function serializeAdminCandidatePayload(form) {
   const payload = new FormData();
   payload.append("position_name", normalizeText(form.position_name));
   payload.append("username", normalizeText(form.username));
@@ -155,17 +155,23 @@ export function serializeAdminCandidatePayload(electionId, form) {
 }
 
 export function serializeElectionSchedulePayload(form) {
-  return {
-    title: normalizeText(form.title),
-    description: normalizeText(form.description),
-    campaign_start_at: serializeDateTime(form.campaign_start_at),
-    campaign_end_at: serializeDateTime(form.campaign_end_at),
-    voting_start_at: serializeDateTime(form.voting_start_at),
-    voting_end_at: serializeDateTime(form.voting_end_at),
-    allow_live_results: Boolean(form.allow_live_results),
-    announce_winners_automatically: Boolean(form.announce_winners_automatically),
-    is_published: Boolean(form.is_published),
-  };
+  const payload = new FormData();
+  payload.append("title", normalizeText(form.title));
+  payload.append("description", normalizeText(form.description));
+  payload.append("campaign_start_at", serializeDateTime(form.campaign_start_at) || "");
+  payload.append("campaign_end_at", serializeDateTime(form.campaign_end_at) || "");
+  payload.append("voting_start_at", serializeDateTime(form.voting_start_at) || "");
+  payload.append("voting_end_at", serializeDateTime(form.voting_end_at) || "");
+  payload.append("allow_live_results", String(Boolean(form.allow_live_results)));
+  payload.append(
+    "announce_winners_automatically",
+    String(Boolean(form.announce_winners_automatically)),
+  );
+  payload.append("is_published", String(Boolean(form.is_published)));
+  if (form.image instanceof File) {
+    payload.append("image", form.image);
+  }
+  return payload;
 }
 
 export function serializeAnnouncementPayload(form) {
@@ -179,17 +185,19 @@ export function serializeAnnouncementPayload(form) {
 }
 
 export function serializeCandidateCampaignPayload(form) {
-  return {
-    slogan: normalizeText(form.campaign_title),
-    manifesto: normalizeText(form.campaign_manifesto),
-    campaign_video_url: normalizeText(form.campaign_video_link),
-  };
+  const payload = new FormData();
+  payload.append("slogan", normalizeText(form.campaign_title));
+  payload.append("manifesto", normalizeText(form.campaign_manifesto));
+  if (form.campaign_video instanceof File) {
+    payload.append("campaign_video", form.campaign_video);
+  }
+  return payload;
 }
 
 export const adminCreateCandidate = (electionId, form, token) =>
   request(`/admin/elections/${electionId}/candidates/`, {
     method: "POST",
-    body: serializeAdminCandidatePayload(electionId, form),
+    body: serializeAdminCandidatePayload(form),
     token,
   });
 export const adminUpdateElectionSchedule = (id, form, token) =>

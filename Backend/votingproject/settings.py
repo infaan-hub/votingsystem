@@ -131,8 +131,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = clean_env_value("MEDIA_URL", "/media/")
+if not MEDIA_URL.startswith("/"):
+    MEDIA_URL = f"/{MEDIA_URL}"
+if not MEDIA_URL.endswith("/"):
+    MEDIA_URL = f"{MEDIA_URL}/"
+MEDIA_ROOT = Path(clean_env_value("MEDIA_ROOT", str(BASE_DIR / "media")))
 if importlib.util.find_spec("whitenoise"):
     STORAGES = {
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

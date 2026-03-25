@@ -277,6 +277,22 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
         if not election:
             raise serializers.ValidationError({"detail": "Election context is required."})
         position = None
+        attrs["username"] = attrs["username"].strip()
+        attrs["first_name"] = attrs["first_name"].strip()
+        attrs["last_name"] = attrs["last_name"].strip()
+        attrs["email"] = (attrs.get("email") or "").strip().lower()
+        attrs["slogan"] = (attrs.get("slogan") or "").strip()
+        attrs["manifesto"] = (attrs.get("manifesto") or "").strip()
+        if not attrs["username"]:
+            raise serializers.ValidationError({"username": "Username is required."})
+        if not attrs["first_name"]:
+            raise serializers.ValidationError({"first_name": "First name is required."})
+        if not attrs["last_name"]:
+            raise serializers.ValidationError({"last_name": "Last name is required."})
+        if User.objects.filter(username__iexact=attrs["username"]).exists():
+            raise serializers.ValidationError({"username": "This username is already in use."})
+        if attrs["email"] and User.objects.filter(email__iexact=attrs["email"]).exists():
+            raise serializers.ValidationError({"email": "This email is already in use."})
         position_name = (attrs.get("position_name") or "").strip()
         if position_name:
             position = Position.objects.filter(election=election, name__iexact=position_name).first()
@@ -364,6 +380,7 @@ class ElectionScheduleUpdateSerializer(serializers.ModelSerializer):
         fields = (
             "title",
             "description",
+            "image",
             "campaign_start_at",
             "campaign_end_at",
             "voting_start_at",
@@ -389,6 +406,7 @@ class ElectionScheduleUpdateSerializer(serializers.ModelSerializer):
 class AdminElectionScheduleSaveSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=180)
     description = serializers.CharField(required=False, allow_blank=True)
+    image = serializers.ImageField(required=False, allow_null=True)
     campaign_start_at = serializers.DateTimeField()
     campaign_end_at = serializers.DateTimeField()
     voting_start_at = serializers.DateTimeField()
@@ -449,17 +467,41 @@ class AdminElectionNoticeSaveSerializer(serializers.Serializer):
 
 
 class CandidateCampaignUpdateSerializer(serializers.ModelSerializer):
+    campaign_video = serializers.FileField(required=False, allow_null=True)
+    campaign_video_url = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Candidate
-        fields = ("slogan", "manifesto", "campaign_video_url")
+        fields = ("slogan", "manifesto", "campaign_video", "campaign_video_url")
+
+    def validate_campaign_video(self, value):
+        if not value:
+            return value
+        content_type = getattr(value, "content_type", "")
+        name = (getattr(value, "name", "") or "").lower()
+        if content_type != "video/mp4" and not name.endswith(".mp4"):
+            raise serializers.ValidationError("Campaign video must be an MP4 file.")
+        return value
 
     def update(self, instance, validated_data):
         instance.slogan = validated_data.get("slogan", instance.slogan)
         instance.manifesto = validated_data.get("manifesto", instance.manifesto)
-        instance.campaign_video_url = validated_data.get("campaign_video_url", instance.campaign_video_url)
+        if "campaign_video" in validated_data:
+            instance.campaign_video = validated_data.get("campaign_video")
+            instance.campaign_video_url = ""
         instance.full_clean()
-        instance.save(update_fields=["slogan", "manifesto", "campaign_video_url", "updated_at"])
+        instance.save(
+            update_fields=["slogan", "manifesto", "campaign_video", "campaign_video_url", "updated_at"]
+        )
         return instance
+
+    def get_campaign_video_url(self, obj):
+        if obj.campaign_video:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.campaign_video.url)
+            return obj.campaign_video.url
+        return obj.campaign_video_url or None
 
 
 class AnnouncementSerializer(serializers.ModelSerializer):
@@ -484,6 +526,7 @@ class CandidateSerializer(serializers.ModelSerializer):
     department = DepartmentSerializer(read_only=True)
     section = SectionSerializer(read_only=True)
     photo_url = serializers.SerializerMethodField()
+    campaign_video_url = serializers.SerializerMethodField()
     vote_total = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -522,6 +565,14 @@ class CandidateSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.photo.url)
         return obj.photo.url
 
+    def get_campaign_video_url(self, obj):
+        if obj.campaign_video:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.campaign_video.url)
+            return obj.campaign_video.url
+        return obj.campaign_video_url or None
+
 
 class PositionSerializer(serializers.ModelSerializer):
     department = DepartmentSerializer(read_only=True)
@@ -558,6 +609,7 @@ class ElectionListSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     seconds_until_start = serializers.SerializerMethodField()
     seconds_until_end = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Election
@@ -565,6 +617,7 @@ class ElectionListSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "image_url",
             "campaign_start_at",
             "campaign_end_at",
             "voting_start_at",
@@ -581,6 +634,14 @@ class ElectionListSerializer(serializers.ModelSerializer):
 
     def get_seconds_until_end(self, obj):
         return obj.seconds_until_end()
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
 
 
 class ElectionDetailSerializer(ElectionListSerializer):

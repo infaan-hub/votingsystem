@@ -49,6 +49,7 @@ const INITIAL_ANNOUNCEMENT_FORM = {
   is_pinned: false,
 };
 
+const CUSTOM_POSITION_VALUE = "__custom_position__";
 const MAX_CANDIDATE_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 
 function normalizeText(value) {
@@ -69,9 +70,14 @@ export default function AdminDashboardPage({
   const [success, setSuccess] = useState("");
   const [voterForm, setVoterForm] = useState(INITIAL_VOTER_FORM);
   const [candidateForm, setCandidateForm] = useState(INITIAL_CANDIDATE_FORM);
+  const [candidateElectionId, setCandidateElectionId] = useState(selectedElectionId || "");
+  const [candidateElectionDetail, setCandidateElectionDetail] = useState(null);
+  const [candidateUsesCustomPosition, setCandidateUsesCustomPosition] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
     title: "",
     description: "",
+    image: null,
+    image_url: "",
     campaign_start_at: "",
     campaign_end_at: "",
     voting_start_at: "",
@@ -110,6 +116,8 @@ export default function AdminDashboardPage({
       setScheduleForm({
         title: electionDetail.title || "",
         description: electionDetail.description || "",
+        image: null,
+        image_url: electionDetail.image_url || "",
         campaign_start_at: electionDetail.campaign_start_at?.slice(0, 16) || "",
         campaign_end_at: electionDetail.campaign_end_at?.slice(0, 16) || "",
         voting_start_at: electionDetail.voting_start_at?.slice(0, 16) || "",
@@ -135,6 +143,39 @@ export default function AdminDashboardPage({
       ignore = true;
     };
   }, [selectedElection, token]);
+
+  useEffect(() => {
+    if (!elections.length) {
+      setCandidateElectionId("");
+      return;
+    }
+    if (candidateElectionId && elections.some((item) => String(item.id) === String(candidateElectionId))) {
+      return;
+    }
+    setCandidateElectionId(String(selectedElectionId || elections[0].id));
+  }, [candidateElectionId, elections, selectedElectionId]);
+
+  useEffect(() => {
+    if (!candidateElectionId) {
+      setCandidateElectionDetail(null);
+      return;
+    }
+    let ignore = false;
+    fetchElectionDetail(candidateElectionId)
+      .then((result) => {
+        if (!ignore) {
+          setCandidateElectionDetail(result);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setCandidateElectionDetail(null);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [candidateElectionId]);
 
   useEffect(() => {
     if (!selectedElection) {
@@ -165,6 +206,14 @@ export default function AdminDashboardPage({
     };
   }, [selectedElection]);
 
+  useEffect(() => {
+    setCandidateUsesCustomPosition(false);
+    setCandidateForm((current) => ({
+      ...current,
+      position_name: "",
+    }));
+  }, [candidateElectionId]);
+
   async function handleCreateVoter(event) {
     event.preventDefault();
     setSubmitting("voter");
@@ -186,7 +235,10 @@ export default function AdminDashboardPage({
 
   async function handleCreateCandidate(event) {
     event.preventDefault();
-    if (!selectedElection) {
+    const candidateElection =
+      elections.find((item) => String(item.id) === String(candidateElectionId)) || null;
+
+    if (!candidateElection) {
       setError("Select an election before registering a candidate.");
       setSuccess("");
       return;
@@ -230,7 +282,7 @@ export default function AdminDashboardPage({
     setSuccess("");
     try {
       const response = await adminCreateCandidate(
-        selectedElection.id,
+        candidateElection.id,
         {
           ...candidateForm,
           position_name: normalizedCustomPosition,
@@ -245,7 +297,14 @@ export default function AdminDashboardPage({
       );
       setSuccess(`Candidate ${response.user.full_name} was registered successfully.`);
       setCandidateForm(INITIAL_CANDIDATE_FORM);
-      await loadElectionData(selectedElection.id);
+      setCandidateUsesCustomPosition(false);
+      const refreshTasks = [
+        fetchElectionDetail(candidateElection.id).then((result) => setCandidateElectionDetail(result)),
+      ];
+      if (selectedElection) {
+        refreshTasks.push(loadElectionData(selectedElection.id));
+      }
+      await Promise.all(refreshTasks);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -257,6 +316,18 @@ export default function AdminDashboardPage({
     event.preventDefault();
     if (!selectedElection) {
       return;
+    }
+    if (scheduleForm.image) {
+      if (!scheduleForm.image.type.startsWith("image/")) {
+        setError("Election image must be a valid image file.");
+        setSuccess("");
+        return;
+      }
+      if (scheduleForm.image.size > MAX_CANDIDATE_PHOTO_SIZE_BYTES) {
+        setError("Election image must be 5MB or smaller.");
+        setSuccess("");
+        return;
+      }
     }
     setSubmitting("schedule");
     setError("");
@@ -465,33 +536,62 @@ export default function AdminDashboardPage({
               <label className="field-label" htmlFor="admin-candidate-election-select">Election</label>
               <ElectionSelector
                 elections={elections}
-                selectedElectionId={selectedElectionId}
-                onSelectElection={onSelectElection}
+                selectedElectionId={candidateElectionId}
+                onSelectElection={setCandidateElectionId}
                 inputId="admin-candidate-election-select"
                 inputName="admin_candidate_election"
               />
+              <div className="info-note">
+                This candidate will be registered only under the selected election above.
+              </div>
               <label className="field-label" htmlFor="admin-candidate-position">Position</label>
-              <input
+              <select
                 id="admin-candidate-position"
-                name="position_name"
+                name="position_choice"
                 className="field-input"
-                list="candidate-position-options"
-                placeholder="Select or type position name"
-                value={candidateForm.position_name}
-                onChange={(event) =>
+                value={candidateUsesCustomPosition ? CUSTOM_POSITION_VALUE : candidateForm.position_name}
+                onChange={(event) => {
+                  if (event.target.value === CUSTOM_POSITION_VALUE) {
+                    setCandidateUsesCustomPosition(true);
+                    setCandidateForm((current) => ({
+                      ...current,
+                      position_name: "",
+                    }));
+                    return;
+                  }
+                  setCandidateUsesCustomPosition(false);
                   setCandidateForm((current) => ({
                     ...current,
                     position_name: event.target.value,
-                  }))
-                }
-                required
+                  }));
+                }}
                 disabled={submitting === "candidate"}
-              />
-              <datalist id="candidate-position-options">
-                {detail?.positions?.map((position) => (
-                  <option key={position.id} value={position.name} />
+              >
+                <option value="">Select position</option>
+                {candidateElectionDetail?.positions?.map((position) => (
+                  <option key={position.id} value={position.name}>
+                    {position.name}
+                  </option>
                 ))}
-              </datalist>
+                <option value={CUSTOM_POSITION_VALUE}>Create custom position</option>
+              </select>
+              {candidateUsesCustomPosition ? (
+                <input
+                  id="admin-candidate-custom-position"
+                  name="position_name"
+                  className="field-input"
+                  placeholder="Type new position name"
+                  value={candidateForm.position_name}
+                  onChange={(event) =>
+                    setCandidateForm((current) => ({
+                      ...current,
+                      position_name: event.target.value,
+                    }))
+                  }
+                  required
+                  disabled={submitting === "candidate"}
+                />
+              ) : null}
               <label className="field-label" htmlFor="admin-candidate-username">Username</label>
               <input
                 id="admin-candidate-username"
@@ -631,6 +731,24 @@ export default function AdminDashboardPage({
                 onChange={(event) => setScheduleForm((current) => ({ ...current, description: event.target.value }))}
                 disabled={submitting === "schedule"}
               />
+              <label className="field-label" htmlFor="admin-schedule-image">Election Image</label>
+              <input
+                id="admin-schedule-image"
+                name="image"
+                className="field-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) =>
+                  setScheduleForm((current) => ({
+                    ...current,
+                    image: event.target.files?.[0] || null,
+                  }))
+                }
+                disabled={submitting === "schedule"}
+              />
+              {scheduleForm.image_url ? (
+                <div className="info-note">Saved image is available for this election.</div>
+              ) : null}
               <label className="field-label" htmlFor="admin-schedule-campaign-start">Campaign Start</label>
               <input
                 id="admin-schedule-campaign-start"

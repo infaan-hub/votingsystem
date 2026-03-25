@@ -100,6 +100,10 @@ class CustomUser(AbstractUser):
 
     def clean(self):
         super().clean()
+        self.username = (self.username or "").strip()
+        self.email = (self.email or "").strip().lower()
+        self.registration_number = (self.registration_number or "").strip()
+        self.staff_id = (self.staff_id or "").strip()
         if self.section and self.department_id != self.section.department_id:
             raise ValidationError(
                 {"section": "The selected section must belong to the selected department."}
@@ -114,6 +118,7 @@ class Election(TimestampedModel):
 
     title = models.CharField(max_length=180)
     description = models.TextField(blank=True)
+    image = models.ImageField(upload_to="election_images/", blank=True, null=True)
     campaign_start_at = models.DateTimeField()
     campaign_end_at = models.DateTimeField()
     voting_start_at = models.DateTimeField()
@@ -155,6 +160,8 @@ class Election(TimestampedModel):
 
     def clean(self):
         super().clean()
+        self.title = (self.title or "").strip()
+        self.description = (self.description or "").strip()
         if self.campaign_start_at >= self.campaign_end_at:
             raise ValidationError(
                 {"campaign_end_at": "Campaign end time must be after campaign start time."}
@@ -230,6 +237,8 @@ class Position(TimestampedModel):
 
     def clean(self):
         super().clean()
+        self.name = (self.name or "").strip()
+        self.description = (self.description or "").strip()
         if self.section and self.department_id != self.section.department_id:
             raise ValidationError(
                 {"section": "The selected section must belong to the selected department."}
@@ -288,6 +297,7 @@ class Candidate(TimestampedModel):
     )
     slogan = models.CharField(max_length=180, blank=True)
     manifesto = models.TextField(blank=True)
+    campaign_video = models.FileField(upload_to="candidate_videos/", blank=True, null=True)
     campaign_video_url = models.URLField(blank=True)
     photo = models.ImageField(upload_to="candidate_photos/", blank=True, null=True)
     approved = models.BooleanField(default=False)
@@ -307,6 +317,9 @@ class Candidate(TimestampedModel):
 
     def clean(self):
         super().clean()
+        self.slogan = (self.slogan or "").strip()
+        self.manifesto = (self.manifesto or "").strip()
+        self.campaign_video_url = (self.campaign_video_url or "").strip()
         if self.position_id and self.election_id and self.position.election_id != self.election_id:
             raise ValidationError({"position": "The position must belong to the selected election."})
         if self.section and self.department_id != self.section.department_id:

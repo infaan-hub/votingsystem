@@ -570,6 +570,13 @@ class VotingApiTests(TestCase):
             {
                 "title": "Saved Through Dedicated Schedule API",
                 "description": "Dedicated schedule save endpoint.",
+                "image": SimpleUploadedFile(
+                    "election.gif",
+                    b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+                    b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                    b"\x00\x02\x02D\x01\x00;",
+                    content_type="image/gif",
+                ),
                 "campaign_start_at": (timezone.now() - timedelta(days=1)).isoformat(),
                 "campaign_end_at": (timezone.now() + timedelta(days=1)).isoformat(),
                 "voting_start_at": (timezone.now() + timedelta(days=2)).isoformat(),
@@ -583,6 +590,7 @@ class VotingApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["title"], "Saved Through Dedicated Schedule API")
+        self.assertTrue(response.json()["image_url"])
         self.assertFalse(response.json()["allow_live_results"])
         self.assertFalse(response.json()["announce_winners_automatically"])
 
@@ -677,3 +685,44 @@ class VotingApiTests(TestCase):
             response.json()["detail"],
             "Live statistics are not visible right now.",
         )
+
+    def test_candidate_can_upload_campaign_video_file(self):
+        campaign_user = CustomUser.objects.create_user(
+            username="campaign_owner",
+            password="Pass1234!",
+            first_name="Campaign",
+            last_name="Owner",
+            role=CustomUser.Role.STUDENT,
+            department=self.department,
+            section=self.section,
+        )
+        campaign_candidate = Candidate.objects.create(
+            user=campaign_user,
+            election=self.election,
+            position=self.position,
+            department=self.department,
+            section=self.section,
+            approved=True,
+        )
+        token = Token.objects.create(user=campaign_user)
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = client.patch(
+            f"/api/candidate/elections/{self.election.id}/campaign/",
+            {
+                "slogan": "Video campaign",
+                "manifesto": "Campaign with uploaded media.",
+                "campaign_video": SimpleUploadedFile(
+                    "campaign.mp4",
+                    b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom",
+                    content_type="video/mp4",
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["slogan"], "Video campaign")
+        self.assertTrue(response.json()["campaign_video_url"])
+        campaign_candidate.refresh_from_db()
+        self.assertTrue(bool(campaign_candidate.campaign_video))

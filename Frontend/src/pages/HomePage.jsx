@@ -85,6 +85,13 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
         <div className="panel-grid two-col">
           <div className="election-visual-card">
             <div className="election-visual-frame">
+              {activeElection?.image_url ? (
+                <img
+                  className="election-hero-image"
+                  src={activeElection.image_url}
+                  alt={activeElection.title}
+                />
+              ) : null}
               <div className="election-visual-badge">{formatStatus(activeElection?.status)}</div>
               <div className="election-visual-copy">
                 <h3>{activeElection?.title || "Election Hub Event"}</h3>

@@ -57,6 +57,15 @@ export default function VoterCampaignPage({ user, elections, selectedElectionId,
           </div>
           {error ? <div className="error-banner top-space">{error}</div> : null}
           <div className="campaign-column top-space">
+            {campaigns?.election?.image_url ? (
+              <div className="soft-panel">
+                <img
+                  className="election-hero-image"
+                  src={campaigns.election.image_url}
+                  alt={campaigns.election.title}
+                />
+              </div>
+            ) : null}
             {campaigns?.positions?.map((position) => (
               <div className="campaign-block" key={position.id}>
                 <div className="campaign-header">
@@ -66,6 +75,13 @@ export default function VoterCampaignPage({ user, elections, selectedElectionId,
                 <div className="campaign-list">
                   {position.candidates.map((candidate) => (
                     <article className="comment-card" key={candidate.id}>
+                      {candidate.photo_url ? (
+                        <img
+                          className="candidate-photo"
+                          src={candidate.photo_url}
+                          alt={candidate.user.full_name}
+                        />
+                      ) : null}
                       <h4>{candidate.user.full_name}</h4>
                       <p>{candidate.manifesto || "No manifesto published."}</p>
                     </article>

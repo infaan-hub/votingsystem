@@ -328,9 +328,12 @@ class AdminCreateCandidateView(APIView):
     permission_classes = [IsAdminRole]
 
     def post(self, request, pk=None, *args, **kwargs):
-        election = None
-        if pk is not None:
-            election = get_object_or_404(Election, pk=pk)
+        if pk is None:
+            return Response(
+                {"detail": "Election selection is required for candidate registration."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        election = get_object_or_404(Election, pk=pk)
         serializer = AdminCreateCandidateSerializer(
             data=request.data,
             context={"request": request, "election": election},
@@ -462,7 +465,7 @@ class ElectionCampaignView(APIView):
         )
         return Response(
             {
-                "election": ElectionListSerializer(election).data,
+                "election": ElectionListSerializer(election, context={"request": request}).data,
                 "positions": PositionSerializer(
                     positions,
                     many=True,
@@ -483,7 +486,7 @@ class ElectionBallotView(APIView):
         )
         return Response(
             {
-                "election": ElectionListSerializer(election).data,
+                "election": ElectionListSerializer(election, context={"request": request}).data,
                 "positions": PositionSerializer(
                     positions,
                     many=True,
@@ -535,7 +538,7 @@ class ElectionResultsView(APIView):
         serializer = ResultsSerializer({"election": election})
         return Response(
             {
-                "election": ElectionListSerializer(election).data,
+                "election": ElectionListSerializer(election, context={"request": request}).data,
                 "stats": build_election_stats(election),
                 "winners": serializer.get_winners(election),
             }
