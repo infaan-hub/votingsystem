@@ -630,6 +630,28 @@ class VotingApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["username"], ["A user with that username already exists."])
 
+    def test_admin_create_candidate_returns_validation_error_for_duplicate_username(self):
+        client = self.admin_client()
+
+        response = client.post(
+            "/api/admin/candidates/",
+            {
+                "election_id": self.election.id,
+                "position_name": "President",
+                "username": "candidate_a",
+                "email": "candidate@example.com",
+                "first_name": "Duplicate",
+                "last_name": "Candidate",
+                "password": "Candidate123!",
+                "confirm_password": "Candidate123!",
+                "approved": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("username", response.json())
+
     def test_ballot_and_vote_endpoints(self):
         client = self.auth_client()
         ballot_response = client.get(f"/api/elections/{self.election.id}/ballot/")

@@ -31,6 +31,14 @@ def _normalize_integrity_error(error):
     }
 
 
+def _normalize_django_validation_error(error):
+    if hasattr(error, "message_dict") and error.message_dict:
+        return error.message_dict
+    if getattr(error, "messages", None):
+        return {"detail": error.messages[0]}
+    return {"detail": "Submitted data is not valid."}
+
+
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
@@ -238,7 +246,10 @@ class AdminCreateVoterSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
         user = User(**validated_data)
         user.set_password(password)
-        user.full_clean()
+        try:
+            user.full_clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(_normalize_django_validation_error(exc)) from exc
         try:
             user.save()
         except IntegrityError as exc:
@@ -323,7 +334,10 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
                     section=position.section,
                 )
                 user.set_password(password)
-                user.full_clean()
+                try:
+                    user.full_clean()
+                except DjangoValidationError as exc:
+                    raise serializers.ValidationError(_normalize_django_validation_error(exc)) from exc
                 user.save()
 
                 candidate = Candidate(
@@ -337,7 +351,10 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
                     photo=photo,
                     approved=approved,
                 )
-                candidate.full_clean()
+                try:
+                    candidate.full_clean()
+                except DjangoValidationError as exc:
+                    raise serializers.ValidationError(_normalize_django_validation_error(exc)) from exc
                 candidate.save()
         except IntegrityError as exc:
             raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
