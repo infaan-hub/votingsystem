@@ -537,6 +537,9 @@ class VotingApiTests(TestCase):
         )
         self.assertEqual(candidate_with_photo_response.status_code, 201)
         self.assertTrue(candidate_with_photo_response.json()["photo_url"])
+        photo_response = self.client.get(candidate_with_photo_response.json()["photo"])
+        self.assertEqual(photo_response.status_code, 200)
+        self.assertEqual(photo_response["Content-Type"], "image/gif")
 
         schedule_response = client.patch(
             f"/api/admin/elections/{self.election.id}/schedule/",
@@ -591,6 +594,9 @@ class VotingApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["title"], "Saved Through Dedicated Schedule API")
         self.assertTrue(response.json()["image_url"])
+        image_response = self.client.get(response.json()["image"])
+        self.assertEqual(image_response.status_code, 200)
+        self.assertEqual(image_response["Content-Type"], "image/gif")
         self.assertFalse(response.json()["allow_live_results"])
         self.assertFalse(response.json()["announce_winners_automatically"])
 
@@ -724,5 +730,8 @@ class VotingApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["slogan"], "Video campaign")
         self.assertTrue(response.json()["campaign_video_url"])
+        video_response = self.client.get(response.json()["campaign_video_url"])
+        self.assertEqual(video_response.status_code, 200)
+        self.assertEqual(video_response["Content-Type"], "video/mp4")
         campaign_candidate.refresh_from_db()
-        self.assertTrue(bool(campaign_candidate.campaign_video))
+        self.assertTrue(bool(campaign_candidate.campaign_video_data))

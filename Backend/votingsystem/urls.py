@@ -45,10 +45,17 @@ urlpatterns = [
     path("auth/me/", views.CurrentUserView.as_view(), name="auth-me"),
     path("elections/", views.ElectionListView.as_view(), name="election-list"),
     path("elections/<int:pk>/", views.ElectionDetailView.as_view(), name="election-detail"),
+    path("elections/<int:pk>/image/", views.ElectionImageView.as_view(), name="election-image"),
     path("elections/<int:pk>/campaigns/", views.ElectionCampaignView.as_view(), name="election-campaigns"),
     path("elections/<int:pk>/ballot/", views.ElectionBallotView.as_view(), name="election-ballot"),
     path("elections/<int:pk>/results/", views.ElectionResultsView.as_view(), name="election-results"),
     path("elections/<int:pk>/stats/", views.ElectionStatsView.as_view(), name="election-stats"),
+    path("candidates/<int:pk>/photo/", views.CandidatePhotoView.as_view(), name="candidate-photo"),
+    path(
+        "candidates/<int:pk>/campaign-video/",
+        views.CandidateCampaignVideoView.as_view(),
+        name="candidate-campaign-video",
+    ),
     path(
         "elections/<int:pk>/stats-stream/",
         views.election_stats_stream,

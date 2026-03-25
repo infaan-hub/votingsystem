@@ -80,11 +80,16 @@ def _ordered_candidates_for_position(position: Position):
 def _safe_media_url(file_field):
     if not file_field:
         return None
-    storage = getattr(file_field, "storage", None)
     name = getattr(file_field, "name", "")
-    if not storage or not name or not storage.exists(name):
+    if not name:
         return None
     return file_field.url
+
+
+def _candidate_photo_path(candidate):
+    if candidate.photo_data:
+        return f"/api/candidates/{candidate.pk}/photo/"
+    return _safe_media_url(candidate.photo)
 
 
 def build_position_ranking(position: Position):
@@ -108,7 +113,7 @@ def build_position_ranking(position: Position):
                 "vote_total": candidate.total_votes,
                 "rank": current_rank,
                 "is_winner": candidate.id in winner_ids,
-                "photo_url": _safe_media_url(candidate.photo),
+                "photo_url": _candidate_photo_path(candidate),
             }
         )
     return results

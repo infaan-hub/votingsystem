@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.http import Http404, StreamingHttpResponse
+from django.http import Http404, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
@@ -556,6 +556,63 @@ class ElectionStatsView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response(build_election_stats(election))
+
+
+class ElectionImageView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk, is_published=True)
+        if election.image_data:
+            return HttpResponse(
+                bytes(election.image_data),
+                content_type=election.image_content_type or "image/jpeg",
+            )
+        if election.image:
+            return Response({"detail": "Election image is stored outside database media."}, status=302)
+        raise Http404
+
+
+class CandidatePhotoView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk, *args, **kwargs):
+        candidate = get_object_or_404(
+            Candidate.objects.select_related("election"),
+            pk=pk,
+            election__is_published=True,
+            approved=True,
+        )
+        if candidate.photo_data:
+            return HttpResponse(
+                bytes(candidate.photo_data),
+                content_type=candidate.photo_content_type or "image/jpeg",
+            )
+        if candidate.photo:
+            return Response({"detail": "Candidate photo is stored outside database media."}, status=302)
+        raise Http404
+
+
+class CandidateCampaignVideoView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk, *args, **kwargs):
+        candidate = get_object_or_404(
+            Candidate.objects.select_related("election"),
+            pk=pk,
+            election__is_published=True,
+            approved=True,
+        )
+        if candidate.campaign_video_data:
+            response = HttpResponse(
+                bytes(candidate.campaign_video_data),
+                content_type=candidate.campaign_video_content_type or "video/mp4",
+            )
+            response["Accept-Ranges"] = "bytes"
+            return response
+        if candidate.campaign_video:
+            return Response({"detail": "Campaign video is stored outside database media."}, status=302)
+        raise Http404
 
 
 def election_stats_stream(request, pk):

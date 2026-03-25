@@ -42,14 +42,25 @@ def _normalize_django_validation_error(error):
 def _build_media_url(file_field, request=None):
     if not file_field:
         return None
-    storage = getattr(file_field, "storage", None)
     name = getattr(file_field, "name", "")
-    if not storage or not name or not storage.exists(name):
+    if not name:
         return None
     file_url = file_field.url
-    if request:
+    if request and file_url.startswith("/"):
         return request.build_absolute_uri(file_url)
     return file_url
+
+
+def _build_binary_media_path(path):
+    return path or ""
+
+
+def _store_uploaded_binary(instance, *, field_name, content_type_field, filename_field, uploaded_file):
+    if uploaded_file is None:
+        return
+    setattr(instance, field_name, uploaded_file.read())
+    setattr(instance, content_type_field, getattr(uploaded_file, "content_type", "") or "")
+    setattr(instance, filename_field, getattr(uploaded_file, "name", "") or "")
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -366,8 +377,14 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
                     section=position.section,
                     slogan=slogan,
                     manifesto=manifesto,
-                    photo=photo,
                     approved=approved,
+                )
+                _store_uploaded_binary(
+                    candidate,
+                    field_name="photo_data",
+                    content_type_field="photo_content_type",
+                    filename_field="photo_filename",
+                    uploaded_file=photo,
                 )
                 try:
                     candidate.full_clean()
@@ -441,7 +458,16 @@ class AdminElectionScheduleSaveSerializer(serializers.Serializer):
     def save(self, **kwargs):
         election = self.context["election"]
         for field, value in self.validated_data.items():
+            if field == "image":
+                continue
             setattr(election, field, value)
+        _store_uploaded_binary(
+            election,
+            field_name="image_data",
+            content_type_field="image_content_type",
+            filename_field="image_filename",
+            uploaded_file=self.validated_data.get("image"),
+        )
         election.save()
         return election
 
@@ -500,15 +526,33 @@ class CandidateCampaignUpdateSerializer(serializers.ModelSerializer):
         instance.slogan = validated_data.get("slogan", instance.slogan)
         instance.manifesto = validated_data.get("manifesto", instance.manifesto)
         if "campaign_video" in validated_data:
-            instance.campaign_video = validated_data.get("campaign_video")
+            _store_uploaded_binary(
+                instance,
+                field_name="campaign_video_data",
+                content_type_field="campaign_video_content_type",
+                filename_field="campaign_video_filename",
+                uploaded_file=validated_data.get("campaign_video"),
+            )
+            instance.campaign_video = None
             instance.campaign_video_url = ""
         instance.full_clean()
         instance.save(
-            update_fields=["slogan", "manifesto", "campaign_video", "campaign_video_url", "updated_at"]
+            update_fields=[
+                "slogan",
+                "manifesto",
+                "campaign_video",
+                "campaign_video_url",
+                "campaign_video_data",
+                "campaign_video_content_type",
+                "campaign_video_filename",
+                "updated_at",
+            ]
         )
         return instance
 
     def get_campaign_video_url(self, obj):
+        if obj.campaign_video_data:
+            return _build_binary_media_path(f"/api/candidates/{obj.pk}/campaign-video/")
         media_url = _build_media_url(obj.campaign_video, self.context.get("request"))
         if media_url:
             return media_url
@@ -536,6 +580,7 @@ class CandidateSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     department = DepartmentSerializer(read_only=True)
     section = SectionSerializer(read_only=True)
+    photo = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     campaign_video_url = serializers.SerializerMethodField()
     vote_total = serializers.IntegerField(read_only=True)
@@ -551,6 +596,7 @@ class CandidateSerializer(serializers.ModelSerializer):
             "manifesto",
             "campaign_video_url",
             "approved",
+            "photo",
             "photo_url",
             "vote_total",
         )
@@ -568,10 +614,19 @@ class CandidateSerializer(serializers.ModelSerializer):
             "staff_id": obj.user.staff_id,
         }
 
+    def get_photo(self, obj):
+        if obj.photo_data:
+            return _build_binary_media_path(f"/api/candidates/{obj.pk}/photo/")
+        return _build_media_url(obj.photo)
+
     def get_photo_url(self, obj):
+        if obj.photo_data:
+            return _build_binary_media_path(f"/api/candidates/{obj.pk}/photo/")
         return _build_media_url(obj.photo, self.context.get("request"))
 
     def get_campaign_video_url(self, obj):
+        if obj.campaign_video_data:
+            return _build_binary_media_path(f"/api/candidates/{obj.pk}/campaign-video/")
         media_url = _build_media_url(obj.campaign_video, self.context.get("request"))
         if media_url:
             return media_url
@@ -642,10 +697,14 @@ class ElectionListSerializer(serializers.ModelSerializer):
         return obj.seconds_until_end()
 
     def get_image(self, obj):
+        if obj.image_data:
+            return _build_binary_media_path(f"/api/elections/{obj.pk}/image/")
         media_url = _build_media_url(obj.image)
         return media_url or ""
 
     def get_image_url(self, obj):
+        if obj.image_data:
+            return _build_binary_media_path(f"/api/elections/{obj.pk}/image/")
         return _build_media_url(obj.image, self.context.get("request"))
 
 
