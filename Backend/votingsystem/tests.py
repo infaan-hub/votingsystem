@@ -661,6 +661,36 @@ class VotingApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("username", response.json())
 
+    def test_admin_can_update_and_delete_candidate(self):
+        client = self.admin_client()
+
+        update_response = client.patch(
+            f"/api/admin/elections/{self.election.id}/candidates/{self.candidate.id}/",
+            {
+                "username": "candidate_a_updated",
+                "email": "candidate.updated@example.com",
+                "first_name": "Juma",
+                "last_name": "Updated",
+                "position_name": "Vice President",
+                "slogan": "Updated slogan",
+                "manifesto": "Updated manifesto",
+                "approved": True,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(update_response.json()["user"]["username"], "candidate_a_updated")
+        self.assertEqual(update_response.json()["slogan"], "Updated slogan")
+        self.assertTrue(Position.objects.filter(election=self.election, name="Vice President").exists())
+
+        delete_response = client.delete(
+            f"/api/admin/elections/{self.election.id}/candidates/{self.candidate.id}/"
+        )
+        self.assertEqual(delete_response.status_code, 204)
+        self.assertFalse(Candidate.objects.filter(pk=self.candidate.id).exists())
+        self.assertFalse(CustomUser.objects.filter(pk=self.candidate_user.id).exists())
+
     def test_ballot_and_vote_endpoints(self):
         client = self.auth_client()
         ballot_response = client.get(f"/api/elections/{self.election.id}/ballot/")

@@ -397,6 +397,124 @@ class AdminCreateCandidateSerializer(serializers.Serializer):
         return candidate
 
 
+class AdminCandidateManageSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source="user.username", required=False)
+    email = serializers.EmailField(source="user.email", required=False, allow_blank=True)
+    first_name = serializers.CharField(source="user.first_name", required=False)
+    last_name = serializers.CharField(source="user.last_name", required=False)
+    position_name = serializers.CharField(required=False, allow_blank=False)
+    photo = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = Candidate
+        fields = (
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "position_name",
+            "slogan",
+            "manifesto",
+            "photo",
+            "approved",
+        )
+        extra_kwargs = {
+            "slogan": {"required": False, "allow_blank": True},
+            "manifesto": {"required": False, "allow_blank": True},
+            "approved": {"required": False},
+        }
+
+    def validate(self, attrs):
+        election = self.context["election"]
+        user_data = attrs.get("user", {})
+        username = user_data.get("username")
+        email = user_data.get("email")
+        if username is not None:
+            username = username.strip()
+            if not username:
+                raise serializers.ValidationError({"username": "Username is required."})
+            if User.objects.filter(username__iexact=username).exclude(pk=self.instance.user_id).exists():
+                raise serializers.ValidationError({"username": "This username is already in use."})
+            user_data["username"] = username
+        if email is not None:
+            email = email.strip().lower()
+            if email and User.objects.filter(email__iexact=email).exclude(pk=self.instance.user_id).exists():
+                raise serializers.ValidationError({"email": "This email is already in use."})
+            user_data["email"] = email
+        for field_name in ("first_name", "last_name"):
+            if field_name in user_data:
+                user_data[field_name] = user_data[field_name].strip()
+        if "slogan" in attrs:
+            attrs["slogan"] = attrs["slogan"].strip()
+        if "manifesto" in attrs:
+            attrs["manifesto"] = attrs["manifesto"].strip()
+        if "position_name" in attrs:
+            position_name = attrs["position_name"].strip()
+            if not position_name:
+                raise serializers.ValidationError({"position_name": "Position is required."})
+            position = Position.objects.filter(election=election, name__iexact=position_name).first()
+            if not position:
+                position = Position(
+                    election=election,
+                    name=position_name,
+                    voter_group=Position.VoterGroup.ALL,
+                    max_winners=1,
+                )
+                position.full_clean()
+            attrs["position"] = position
+        return attrs
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop("user", {})
+        position = validated_data.pop("position", None)
+        photo = validated_data.pop("photo", serializers.empty)
+
+        for field_name, value in user_data.items():
+            setattr(instance.user, field_name, value)
+        if user_data:
+            try:
+                instance.user.full_clean()
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError(_normalize_django_validation_error(exc)) from exc
+            instance.user.save()
+
+        if position is not None:
+            if position.pk is None:
+                position.save()
+            instance.position = position
+            instance.department = position.department
+            instance.section = position.section
+
+        for field_name, value in validated_data.items():
+            setattr(instance, field_name, value)
+
+        if photo is not serializers.empty:
+            if photo is None:
+                instance.photo = None
+                instance.photo_data = None
+                instance.photo_content_type = ""
+                instance.photo_filename = ""
+            else:
+                instance.photo = None
+                _store_uploaded_binary(
+                    instance,
+                    field_name="photo_data",
+                    content_type_field="photo_content_type",
+                    filename_field="photo_filename",
+                    uploaded_file=photo,
+                )
+
+        try:
+            instance.full_clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(_normalize_django_validation_error(exc)) from exc
+        try:
+            instance.save()
+        except IntegrityError as exc:
+            raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
+        return instance
+
+
 class ElectionScheduleUpdateSerializer(serializers.ModelSerializer):
     SCHEDULE_FIELDS = {
         "campaign_start_at",

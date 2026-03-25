@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 from .models import Candidate, Election
 from .serializers import (
     AdminElectionNoticeSaveSerializer,
+    AdminCandidateManageSerializer,
     AdminElectionScheduleSaveSerializer,
     AdminCreateCandidateSerializer,
     AdminCreateVoterSerializer,
@@ -344,6 +345,35 @@ class AdminCreateCandidateView(APIView):
             CandidateSerializer(candidate, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class AdminCandidateDetailView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def patch(self, request, pk, candidate_id, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk)
+        candidate = get_object_or_404(
+            Candidate.objects.select_related("user", "position", "department", "section"),
+            pk=candidate_id,
+            election=election,
+        )
+        serializer = AdminCandidateManageSerializer(
+            candidate,
+            data=request.data,
+            partial=True,
+            context={"request": request, "election": election},
+        )
+        serializer.is_valid(raise_exception=True)
+        candidate = serializer.save()
+        return Response(CandidateSerializer(candidate, context={"request": request}).data)
+
+    def delete(self, request, pk, candidate_id, *args, **kwargs):
+        election = get_object_or_404(Election, pk=pk)
+        candidate = get_object_or_404(Candidate.objects.select_related("user"), pk=candidate_id, election=election)
+        linked_user = candidate.user
+        candidate.delete()
+        linked_user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CandidateCampaignUpdateView(APIView):

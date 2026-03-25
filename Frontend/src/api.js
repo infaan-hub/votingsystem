@@ -181,6 +181,28 @@ export function serializeAdminCandidatePayload(form) {
   return payload;
 }
 
+export function serializeAdminCandidateUpdatePayload(form) {
+  const payload = new FormData();
+  payload.append("position_name", normalizeText(form.position_name));
+  payload.append("username", normalizeText(form.username));
+  payload.append("first_name", normalizeText(form.first_name));
+  payload.append("last_name", normalizeText(form.last_name));
+  payload.append("approved", String(Boolean(form.approved)));
+
+  const email = normalizeText(form.email);
+  const slogan = normalizeText(form.slogan);
+  const manifesto = normalizeText(form.manifesto);
+
+  payload.append("email", email);
+  payload.append("slogan", slogan);
+  payload.append("manifesto", manifesto);
+  if (form.photo instanceof File) {
+    payload.append("photo", form.photo);
+  }
+
+  return payload;
+}
+
 export function serializeElectionSchedulePayload(form) {
   const payload = new FormData();
   payload.append("title", normalizeText(form.title));
@@ -227,6 +249,19 @@ export const adminCreateCandidate = (electionId, form, token) =>
     body: serializeAdminCandidatePayload(form),
     token,
     timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
+  });
+export const adminUpdateCandidate = (electionId, candidateId, form, token) =>
+  request(`/admin/elections/${electionId}/candidates/${candidateId}/`, {
+    method: "PATCH",
+    body: serializeAdminCandidateUpdatePayload(form),
+    token,
+    timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
+  });
+export const adminDeleteCandidate = (electionId, candidateId, token) =>
+  request(`/admin/elections/${electionId}/candidates/${candidateId}/`, {
+    method: "DELETE",
+    token,
+    timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
   });
 export const adminUpdateElectionSchedule = (id, form, token) =>
   request(`/admin/elections/${id}/schedule/save/`, {

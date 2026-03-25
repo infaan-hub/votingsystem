@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import {
   adminCreateAnnouncement,
   adminCreateCandidate,
+  adminDeleteCandidate,
+  adminUpdateCandidate,
   adminCreateVoter,
   adminUpdateElectionSchedule,
   fetchElectionDetail,
@@ -73,6 +75,7 @@ export default function AdminDashboardPage({
   const [candidateElectionId, setCandidateElectionId] = useState(selectedElectionId || "");
   const [candidateElectionDetail, setCandidateElectionDetail] = useState(null);
   const [candidateUsesCustomPosition, setCandidateUsesCustomPosition] = useState(false);
+  const [editingCandidateId, setEditingCandidateId] = useState(null);
   const [scheduleForm, setScheduleForm] = useState({
     title: "",
     description: "",
@@ -208,6 +211,7 @@ export default function AdminDashboardPage({
 
   useEffect(() => {
     setCandidateUsesCustomPosition(false);
+    setEditingCandidateId(null);
     setCandidateForm((current) => ({
       ...current,
       position_name: "",
@@ -281,23 +285,27 @@ export default function AdminDashboardPage({
     setError("");
     setSuccess("");
     try {
-      const response = await adminCreateCandidate(
-        candidateElection.id,
-        {
-          ...candidateForm,
-          position_name: normalizedCustomPosition,
-          username: normalizedUsername,
-          first_name: normalizedFirstName,
-          last_name: normalizedLastName,
-          email: normalizeText(candidateForm.email),
-          slogan: normalizeText(candidateForm.slogan),
-          manifesto: normalizeText(candidateForm.manifesto),
-        },
-        token,
+      const payload = {
+        ...candidateForm,
+        position_name: normalizedCustomPosition,
+        username: normalizedUsername,
+        first_name: normalizedFirstName,
+        last_name: normalizedLastName,
+        email: normalizeText(candidateForm.email),
+        slogan: normalizeText(candidateForm.slogan),
+        manifesto: normalizeText(candidateForm.manifesto),
+      };
+      const response = editingCandidateId
+        ? await adminUpdateCandidate(candidateElection.id, editingCandidateId, payload, token)
+        : await adminCreateCandidate(candidateElection.id, payload, token);
+      setSuccess(
+        editingCandidateId
+          ? `Candidate ${response.user.full_name} was updated successfully.`
+          : `Candidate ${response.user.full_name} was registered successfully.`,
       );
-      setSuccess(`Candidate ${response.user.full_name} was registered successfully.`);
       setCandidateForm(INITIAL_CANDIDATE_FORM);
       setCandidateUsesCustomPosition(false);
+      setEditingCandidateId(null);
       const refreshTasks = [
         fetchElectionDetail(candidateElection.id).then((result) => setCandidateElectionDetail(result)),
       ];
@@ -305,6 +313,50 @@ export default function AdminDashboardPage({
         refreshTasks.push(loadElectionData(selectedElection.id));
       }
       await Promise.all(refreshTasks);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting("");
+    }
+  }
+
+  function handleEditCandidate(candidate, positionName) {
+    setCandidateElectionId(String(selectedElection?.id || candidateElectionId));
+    setEditingCandidateId(candidate.id);
+    setCandidateUsesCustomPosition(
+      !candidateElectionDetail?.positions?.some((position) => position.name === positionName),
+    );
+    setCandidateForm({
+      position_name: positionName,
+      username: candidate.user.username || "",
+      email: candidate.user.email || "",
+      first_name: candidate.user.full_name?.split(" ")[0] || "",
+      last_name: candidate.user.full_name?.split(" ").slice(1).join(" ") || "",
+      password: "",
+      confirm_password: "",
+      slogan: candidate.slogan || "",
+      manifesto: candidate.manifesto || "",
+      photo: null,
+      approved: Boolean(candidate.approved),
+    });
+  }
+
+  async function handleDeleteCandidate(candidateId) {
+    if (!selectedElection) {
+      return;
+    }
+    setSubmitting(`delete-candidate-${candidateId}`);
+    setError("");
+    setSuccess("");
+    try {
+      await adminDeleteCandidate(selectedElection.id, candidateId, token);
+      setSuccess("Candidate deleted successfully.");
+      if (editingCandidateId === candidateId) {
+        setEditingCandidateId(null);
+        setCandidateForm(INITIAL_CANDIDATE_FORM);
+        setCandidateUsesCustomPosition(false);
+      }
+      await loadElectionData(selectedElection.id);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -704,8 +756,27 @@ export default function AdminDashboardPage({
                 disabled={submitting === "candidate"}
               />
               <button className="primary-button" type="submit" disabled={submitting === "candidate"}>
-                {submitting === "candidate" ? "Registering Candidate..." : "Register Candidate"}
+                {submitting === "candidate"
+                  ? editingCandidateId
+                    ? "Saving Candidate..."
+                    : "Registering Candidate..."
+                  : editingCandidateId
+                    ? "Update Candidate"
+                    : "Register Candidate"}
               </button>
+              {editingCandidateId ? (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setEditingCandidateId(null);
+                    setCandidateForm(INITIAL_CANDIDATE_FORM);
+                    setCandidateUsesCustomPosition(false);
+                  }}
+                >
+                  Cancel Edit
+                </button>
+              ) : null}
             </form>
 
             <form className="soft-panel form-stack" onSubmit={handleUpdateSchedule}>
@@ -928,6 +999,46 @@ export default function AdminDashboardPage({
 
         <ScreenCard
           step={5}
+          section="Administration"
+          title="Manage Candidates"
+          subtitle="Review all candidates for the selected election, update them, or delete them."
+        >
+          <div className="stack-sm">
+            {detail?.positions?.flatMap((position) =>
+              position.candidates.map((candidate) => (
+                <div className="list-row" key={`${position.id}-${candidate.id}`}>
+                  <div>
+                    <strong>{candidate.user.full_name}</strong>
+                    <div className="info-note">{position.name}</div>
+                  </div>
+                  <div className="candidate-admin-actions">
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => handleEditCandidate(candidate, position.name)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={submitting === `delete-candidate-${candidate.id}`}
+                      onClick={() => handleDeleteCandidate(candidate.id)}
+                    >
+                      {submitting === `delete-candidate-${candidate.id}` ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              )),
+            )}
+            {!detail?.positions?.some((position) => position.candidates.length) ? (
+              <div className="info-note">No candidates found for the selected election.</div>
+            ) : null}
+          </div>
+        </ScreenCard>
+
+        <ScreenCard
+          step={6}
           section="Oversight"
           title="Election Overview"
           subtitle="Read the published election structure, candidates, and visible totals."

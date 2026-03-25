@@ -17,6 +17,11 @@ urlpatterns = [
         name="admin-election-create-candidate",
     ),
     path(
+        "admin/elections/<int:pk>/candidates/<int:candidate_id>/",
+        views.AdminCandidateDetailView.as_view(),
+        name="admin-election-candidate-detail",
+    ),
+    path(
         "candidate/elections/<int:pk>/campaign/",
         views.CandidateCampaignUpdateView.as_view(),
         name="candidate-campaign-update",
