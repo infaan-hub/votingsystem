@@ -506,40 +506,29 @@ export default function AdminDashboardPage({
           title="Admin Dashboard"
           subtitle="Register candidates, register voters, set election time and review published data."
         >
-          <div className="panel-grid two-col">
-            <div className="soft-panel">
-              <label className="field-label" htmlFor="admin-election-select">
-                Current Election
-              </label>
-              <ElectionSelector
-                elections={elections}
-                selectedElectionId={selectedElectionId}
-                onSelectElection={onSelectElection}
-                inputId="admin-election-select"
-                inputName="admin_election"
-              />
-              <div className="metric-list top-space">
-                <div className="metric-card">
-                  <span>Countdown</span>
-                  <strong>{countdown}</strong>
-                </div>
-                <div className="metric-card">
-                  <span>Status</span>
-                  <strong>{formatStatus(selectedElection?.status)}</strong>
-                </div>
-                <div className="metric-card">
-                  <span>Voting Deadline</span>
-                  <strong>{formatDateTime(selectedElection?.voting_end_at)}</strong>
-                </div>
+          <div className="soft-panel">
+            <label className="field-label" htmlFor="admin-election-select">
+              Current Election
+            </label>
+            <ElectionSelector
+              elections={elections}
+              selectedElectionId={selectedElectionId}
+              onSelectElection={onSelectElection}
+              inputId="admin-election-select"
+              inputName="admin_election"
+            />
+            <div className="metric-list top-space">
+              <div className="metric-card">
+                <span>Countdown</span>
+                <strong>{countdown}</strong>
               </div>
-            </div>
-            <div className="soft-panel">
-              <h3>Admin Functions</h3>
-              <div className="action-note-list">
-                <div className="info-note">Register candidates for each election position.</div>
-                <div className="info-note">Register voters and prepare them for election access.</div>
-                <div className="info-note">Set election date, time, and deadline for all users.</div>
-                <div className="info-note">Post election notices and guide the shared countdown.</div>
+              <div className="metric-card">
+                <span>Status</span>
+                <strong>{formatStatus(selectedElection?.status)}</strong>
+              </div>
+              <div className="metric-card">
+                <span>Voting Deadline</span>
+                <strong>{formatDateTime(selectedElection?.voting_end_at)}</strong>
               </div>
             </div>
           </div>

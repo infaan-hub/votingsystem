@@ -393,8 +393,7 @@ button {
   border-radius: 28px;
 }
 
-.mini-step,
-.screen-step {
+.mini-step {
   display: inline-flex;
   align-items: center;
   justify-content: center;

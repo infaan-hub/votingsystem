@@ -98,7 +98,7 @@ async function request(path, options = {}) {
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Election Hub is taking too long to respond. Please try again.");
+      throw new Error("Request failed. Please try again.");
     }
     throw new Error("Election Hub is not reachable right now. Please try again shortly.");
   } finally {
