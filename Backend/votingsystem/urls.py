@@ -11,6 +11,8 @@ urlpatterns = [
     path("auth/register/admin/", views.AdminRegistrationView.as_view(), name="auth-register-admin"),
     path("auth/register/voter/", views.VoterRegistrationView.as_view(), name="auth-register-voter"),
     path("admin/voters/", views.AdminCreateVoterView.as_view(), name="admin-create-voter"),
+    path("admin/users/", views.AdminUserListView.as_view(), name="admin-user-list"),
+    path("admin/users/<int:user_id>/", views.AdminUserDetailView.as_view(), name="admin-user-detail"),
     path(
         "admin/elections/<int:pk>/candidates/",
         views.AdminCreateCandidateView.as_view(),

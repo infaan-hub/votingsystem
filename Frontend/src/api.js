@@ -151,6 +151,21 @@ export const resetPassword = (payload) =>
   request("/auth/forgot-password/", { method: "POST", body: payload });
 export const adminCreateVoter = (payload, token) =>
   request("/admin/voters/", { method: "POST", body: payload, token, timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS });
+export const fetchAdminUsers = (token) =>
+  request("/admin/users/", { token, timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS });
+export const adminUpdateUser = (userId, payload, token) =>
+  request(`/admin/users/${userId}/`, {
+    method: "PATCH",
+    body: payload,
+    token,
+    timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+  });
+export const adminDeleteUser = (userId, token) =>
+  request(`/admin/users/${userId}/`, {
+    method: "DELETE",
+    token,
+    timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+  });
 export function serializeAdminCandidatePayload(form) {
   const payload = new FormData();
   payload.append("position_name", normalizeText(form.position_name));

@@ -661,6 +661,53 @@ class VotingApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("username", response.json())
 
+    def test_admin_can_list_update_and_delete_users(self):
+        client = self.admin_client()
+
+        list_response = client.get("/api/admin/users/")
+
+        self.assertEqual(list_response.status_code, 200)
+        listed_usernames = {user["username"] for user in list_response.json()["users"]}
+        self.assertIn(self.voter.username, listed_usernames)
+        self.assertIn(self.candidate_user.username, listed_usernames)
+        self.assertNotIn(self.admin_user.username, listed_usernames)
+
+        update_response = client.patch(
+            f"/api/admin/users/{self.voter.id}/",
+            {
+                "username": "student_a_updated",
+                "email": "student.updated@example.com",
+                "first_name": "Asha",
+                "last_name": "Updated",
+                "role": CustomUser.Role.STAFF,
+                "staff_id": "STF-202",
+            },
+            format="json",
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.voter.refresh_from_db()
+        self.assertEqual(self.voter.username, "student_a_updated")
+        self.assertEqual(self.voter.role, CustomUser.Role.STAFF)
+        self.assertEqual(self.voter.staff_id, "STF-202")
+        self.assertEqual(self.voter.registration_number, "")
+
+        delete_response = client.delete(f"/api/admin/users/{self.voter.id}/")
+
+        self.assertEqual(delete_response.status_code, 204)
+        self.assertFalse(CustomUser.objects.filter(pk=self.voter.id).exists())
+
+    def test_admin_user_detail_rejects_admin_target(self):
+        client = self.admin_client()
+
+        response = client.patch(
+            f"/api/admin/users/{self.admin_user.id}/",
+            {"first_name": "Root"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
     def test_admin_can_update_and_delete_candidate(self):
         client = self.admin_client()
 

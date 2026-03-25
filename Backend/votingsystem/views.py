@@ -23,6 +23,7 @@ from .serializers import (
     AdminElectionScheduleSaveSerializer,
     AdminCreateCandidateSerializer,
     AdminCreateVoterSerializer,
+    AdminUserManageSerializer,
     AdminRegistrationSerializer,
     AnnouncementSerializer,
     AnnouncementCreateSerializer,
@@ -323,6 +324,40 @@ class AdminCreateVoterView(APIView):
             {"user": UserSummarySerializer(_serialize_user(user)).data},
             status=status.HTTP_201_CREATED,
         )
+
+
+class AdminUserListView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        users = (
+            User.objects.exclude(role=User.Role.ADMIN)
+            .select_related("department", "section")
+            .order_by("first_name", "last_name", "username")
+        )
+        return Response({"users": UserSummarySerializer([_serialize_user(user) for user in users], many=True).data})
+
+
+class AdminUserDetailView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def get_object(self, user_id):
+        return get_object_or_404(
+            User.objects.exclude(role=User.Role.ADMIN).select_related("department", "section"),
+            pk=user_id,
+        )
+
+    def patch(self, request, user_id, *args, **kwargs):
+        user = self.get_object(user_id)
+        serializer = AdminUserManageSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({"user": UserSummarySerializer(_serialize_user(user)).data})
+
+    def delete(self, request, user_id, *args, **kwargs):
+        user = self.get_object(user_id)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AdminCreateCandidateView(APIView):

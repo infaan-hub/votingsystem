@@ -4,9 +4,12 @@ import {
   adminCreateAnnouncement,
   adminCreateCandidate,
   adminDeleteCandidate,
+  adminDeleteUser,
   adminUpdateCandidate,
+  adminUpdateUser,
   adminCreateVoter,
   adminUpdateElectionSchedule,
+  fetchAdminUsers,
   fetchElectionDetail,
   fetchResults,
   fetchStats,
@@ -70,7 +73,9 @@ export default function AdminDashboardPage({
   const [results, setResults] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [users, setUsers] = useState([]);
   const [voterForm, setVoterForm] = useState(INITIAL_VOTER_FORM);
+  const [editingUserId, setEditingUserId] = useState(null);
   const [candidateForm, setCandidateForm] = useState(INITIAL_CANDIDATE_FORM);
   const [candidateElectionId, setCandidateElectionId] = useState(selectedElectionId || "");
   const [candidateElectionDetail, setCandidateElectionDetail] = useState(null);
@@ -132,6 +137,11 @@ export default function AdminDashboardPage({
     }
   }
 
+  async function loadUsers() {
+    const response = await fetchAdminUsers(token);
+    setUsers(response.users || []);
+  }
+
   useEffect(() => {
     if (!selectedElection || !token) {
       return;
@@ -146,6 +156,22 @@ export default function AdminDashboardPage({
       ignore = true;
     };
   }, [selectedElection, token]);
+
+  useEffect(() => {
+    if (!token) {
+      setUsers([]);
+      return;
+    }
+    let ignore = false;
+    loadUsers().catch((requestError) => {
+      if (!ignore) {
+        setError(requestError.message);
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (!elections.length) {
@@ -224,9 +250,65 @@ export default function AdminDashboardPage({
     setError("");
     setSuccess("");
     try {
-      const response = await adminCreateVoter(voterForm, token);
-      setSuccess(`Voter account created for ${response.user.full_name || response.user.username}.`);
+      const payload = editingUserId
+        ? {
+            username: voterForm.username,
+            email: voterForm.email,
+            first_name: voterForm.first_name,
+            last_name: voterForm.last_name,
+            registration_number: voterForm.registration_number,
+            staff_id: voterForm.staff_id,
+            role: voterForm.role,
+          }
+        : voterForm;
+      const response = editingUserId
+        ? await adminUpdateUser(editingUserId, payload, token)
+        : await adminCreateVoter(payload, token);
+      setSuccess(
+        editingUserId
+          ? `User ${response.user.full_name || response.user.username} was updated successfully.`
+          : `Voter account created for ${response.user.full_name || response.user.username}.`,
+      );
       setVoterForm(INITIAL_VOTER_FORM);
+      setEditingUserId(null);
+      await loadUsers();
+      if (selectedElection) {
+        await loadElectionData(selectedElection.id);
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting("");
+    }
+  }
+
+  function handleEditUser(managedUser) {
+    setEditingUserId(managedUser.id);
+    setVoterForm({
+      username: managedUser.username || "",
+      email: managedUser.email || "",
+      first_name: managedUser.full_name?.split(" ")[0] || "",
+      last_name: managedUser.full_name?.split(" ").slice(1).join(" ") || "",
+      registration_number: managedUser.registration_number || "",
+      staff_id: managedUser.staff_id || "",
+      password: "",
+      confirm_password: "",
+      role: managedUser.role || "student",
+    });
+  }
+
+  async function handleDeleteUser(userId) {
+    setSubmitting(`delete-user-${userId}`);
+    setError("");
+    setSuccess("");
+    try {
+      await adminDeleteUser(userId, token);
+      setSuccess("User deleted successfully.");
+      if (editingUserId === userId) {
+        setEditingUserId(null);
+        setVoterForm(INITIAL_VOTER_FORM);
+      }
+      await loadUsers();
       if (selectedElection) {
         await loadElectionData(selectedElection.id);
       }
@@ -475,7 +557,7 @@ export default function AdminDashboardPage({
           {error ? <div className="error-banner top-space">{error}</div> : null}
           <div className="panel-grid two-col">
             <form className="soft-panel form-stack" onSubmit={handleCreateVoter}>
-              <h3>Register Voter</h3>
+              <h3>{editingUserId ? "Edit User" : "Register Voter"}</h3>
               <label className="field-label" htmlFor="admin-voter-username">Username</label>
               <input
                 id="admin-voter-username"
@@ -562,7 +644,7 @@ export default function AdminDashboardPage({
                 autoComplete="new-password"
                 value={voterForm.password}
                 onChange={(event) => setVoterForm((current) => ({ ...current, password: event.target.value }))}
-                required
+                required={!editingUserId}
               />
               <label className="field-label" htmlFor="admin-voter-confirm-password">Confirm Password</label>
               <input
@@ -576,11 +658,29 @@ export default function AdminDashboardPage({
                 onChange={(event) =>
                   setVoterForm((current) => ({ ...current, confirm_password: event.target.value }))
                 }
-                required
+                required={!editingUserId}
               />
               <button className="primary-button" type="submit" disabled={submitting === "voter"}>
-                {submitting === "voter" ? "Registering Voter..." : "Register Voter"}
+                {submitting === "voter"
+                  ? editingUserId
+                    ? "Saving User..."
+                    : "Registering Voter..."
+                  : editingUserId
+                    ? "Save User"
+                    : "Register Voter"}
               </button>
+              {editingUserId ? (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setEditingUserId(null);
+                    setVoterForm(INITIAL_VOTER_FORM);
+                  }}
+                >
+                  Cancel Edit
+                </button>
+              ) : null}
             </form>
 
             <form className="soft-panel form-stack" onSubmit={handleCreateCandidate}>
@@ -1000,6 +1100,50 @@ export default function AdminDashboardPage({
         <ScreenCard
           step={5}
           section="Administration"
+          title="Manage Users"
+          subtitle="Edit or delete non-admin user accounts."
+        >
+          <div className="soft-panel">
+            <h3>User Accounts</h3>
+            <div className="stack-sm top-space">
+              {users.length ? (
+                users.map((managedUser) => (
+                  <div className="list-row" key={managedUser.id}>
+                    <div>
+                      <strong>{managedUser.full_name || managedUser.username}</strong>
+                      <div className="info-note">
+                        {managedUser.username} | {formatStatus(managedUser.role)}
+                      </div>
+                    </div>
+                    <div className="candidate-admin-actions">
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => handleEditUser(managedUser)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        disabled={submitting === `delete-user-${managedUser.id}`}
+                        onClick={() => handleDeleteUser(managedUser.id)}
+                      >
+                        {submitting === `delete-user-${managedUser.id}` ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="info-note">No managed users found.</div>
+              )}
+            </div>
+          </div>
+        </ScreenCard>
+
+        <ScreenCard
+          step={6}
+          section="Administration"
           title="Manage Candidates"
           subtitle="Review all candidates for the selected election, update them, or delete them."
         >
@@ -1038,7 +1182,7 @@ export default function AdminDashboardPage({
         </ScreenCard>
 
         <ScreenCard
-          step={6}
+          step={7}
           section="Oversight"
           title="Election Overview"
           subtitle="Read the published election structure, candidates, and visible totals."

@@ -256,14 +256,7 @@ class AdminCreateVoterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("confirm_password"):
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
-        if attrs["role"] == User.Role.STUDENT and not attrs.get("registration_number"):
-            raise serializers.ValidationError(
-                {"registration_number": "Registration number is required for student voters."}
-            )
-        if attrs["role"] in {User.Role.STAFF, User.Role.OFFICER} and not attrs.get("staff_id"):
-            raise serializers.ValidationError(
-                {"staff_id": "Staff ID is required for staff and officer voters."}
-            )
+        _validate_admin_managed_user_fields(attrs)
         return attrs
 
     def create(self, validated_data):
@@ -504,6 +497,92 @@ class AdminCandidateManageSerializer(serializers.ModelSerializer):
                     uploaded_file=photo,
                 )
 
+        try:
+            instance.full_clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(_normalize_django_validation_error(exc)) from exc
+        try:
+            instance.save()
+        except IntegrityError as exc:
+            raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
+        return instance
+
+
+def _validate_admin_managed_user_fields(attrs):
+    role = attrs.get("role")
+    registration_number = (attrs.get("registration_number") or "").strip()
+    staff_id = (attrs.get("staff_id") or "").strip()
+
+    attrs["registration_number"] = registration_number
+    attrs["staff_id"] = staff_id
+
+    if role == User.Role.STUDENT:
+        if not registration_number:
+            raise serializers.ValidationError(
+                {"registration_number": "Registration number is required for student voters."}
+            )
+        attrs["staff_id"] = ""
+    elif role in {User.Role.STAFF, User.Role.OFFICER}:
+        if not staff_id:
+            raise serializers.ValidationError(
+                {"staff_id": "Staff ID is required for staff and officer voters."}
+            )
+        attrs["registration_number"] = ""
+
+
+class AdminUserManageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "registration_number",
+            "staff_id",
+            "role",
+        )
+        extra_kwargs = {
+            "email": {"required": False, "allow_blank": True},
+            "registration_number": {"required": False, "allow_blank": True},
+            "staff_id": {"required": False, "allow_blank": True},
+            "role": {"required": False},
+        }
+
+    def validate(self, attrs):
+        if "username" in attrs:
+            attrs["username"] = attrs["username"].strip()
+            if not attrs["username"]:
+                raise serializers.ValidationError({"username": "Username is required."})
+            if User.objects.filter(username__iexact=attrs["username"]).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError({"username": "This username is already in use."})
+
+        if "email" in attrs:
+            attrs["email"] = attrs["email"].strip().lower()
+            if attrs["email"] and User.objects.filter(email__iexact=attrs["email"]).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError({"email": "This email is already in use."})
+
+        for field_name in ("first_name", "last_name"):
+            if field_name in attrs:
+                attrs[field_name] = attrs[field_name].strip()
+
+        merged_attrs = {
+            "role": attrs.get("role", self.instance.role),
+            "registration_number": attrs.get("registration_number", self.instance.registration_number),
+            "staff_id": attrs.get("staff_id", self.instance.staff_id),
+        }
+        _validate_admin_managed_user_fields(merged_attrs)
+        attrs["registration_number"] = merged_attrs["registration_number"]
+        attrs["staff_id"] = merged_attrs["staff_id"]
+
+        if attrs.get("role") == User.Role.ADMIN:
+            raise serializers.ValidationError({"role": "This endpoint cannot promote users to admin."})
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        for field_name, value in validated_data.items():
+            setattr(instance, field_name, value)
         try:
             instance.full_clean()
         except DjangoValidationError as exc:
