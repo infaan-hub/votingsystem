@@ -232,6 +232,17 @@ export default function App() {
           }
         />
         <Route
+          path="/voter/compain/:candidateId"
+          element={
+            <VoterCampaignPage
+              user={user}
+              elections={elections}
+              selectedElectionId={selectedElectionId}
+              onSelectElection={setSelectedElectionId}
+            />
+          }
+        />
+        <Route
           path="/candidate/dashboard"
           element={
             <CandidateDashboardPage

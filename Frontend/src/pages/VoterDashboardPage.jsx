@@ -208,7 +208,7 @@ export default function VoterDashboardPage({
                     <button
                       className="secondary-button top-space"
                       type="button"
-                      onClick={() => navigate("/voter/compain")}
+                      onClick={() => navigate(`/voter/compain/${candidate.id}`)}
                     >
                       View Campaign
                     </button>
