@@ -674,39 +674,6 @@ button {
   padding: 1.2rem;
 }
 
-.candidate-vote-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.92rem;
-  color: var(--muted);
-  width: fit-content;
-}
-
-.candidate-vote-toggle input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.candidate-vote-check {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  border: 2px solid rgba(79, 70, 229, 0.55);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  background: transparent;
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.candidate-vote-toggle input:checked + .candidate-vote-check {
-  background: rgba(79, 70, 229, 0.92);
-}
-
 .candidate-copy p,
 .comment-card p,
 .info-note,

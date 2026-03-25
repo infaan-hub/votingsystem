@@ -19,7 +19,6 @@ export default function VoterDashboardPage({
   const [ballot, setBallot] = useState(null);
   const [voteMessage, setVoteMessage] = useState("");
   const [error, setError] = useState("");
-  const [submittingPositionId, setSubmittingPositionId] = useState(null);
   const selectedElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
 
@@ -44,34 +43,16 @@ export default function VoterDashboardPage({
     };
   }, [selectedElection, token]);
 
-  async function handleVote(candidateId, positionId) {
-    if (!selectedElection || !token || !ballot?.is_voting_open || !positionId) {
-      return;
-    }
-    if (ballot?.voted_position_ids?.includes(positionId) || submittingPositionId === positionId) {
-      return;
-    }
-
-    setSubmittingPositionId(positionId);
-    setError("");
+  async function handleVote(candidateId) {
     try {
       const response = await voteForCandidate(candidateId, token);
-      setVoteMessage(`Voted for ${response.candidate}.`);
-      setBallot((current) =>
-        current
-          ? {
-              ...current,
-              voted_position_ids: Array.from(new Set([...(current.voted_position_ids || []), positionId])),
-            }
-          : current,
-      );
+      setVoteMessage(`Vote recorded for ${response.candidate}.`);
       const refreshedBallot = await fetchBallot(selectedElection.id, token);
       setBallot(refreshedBallot);
+      setError("");
     } catch (requestError) {
       setVoteMessage("");
       setError(requestError.message);
-    } finally {
-      setSubmittingPositionId(null);
     }
   }
 
@@ -137,9 +118,7 @@ export default function VoterDashboardPage({
             {campaigns?.positions?.flatMap((position) =>
               position.candidates.map((candidate) => {
                 const alreadyVoted = ballot?.voted_position_ids?.includes(position.id);
-                const isSubmittingVote = submittingPositionId === position.id;
                 const candidatePhoto = resolveMediaUrl(candidate.photo || candidate.photo_url);
-
                 return (
                   <article className="candidate-card" key={`${position.id}-${candidate.id}`}>
                     {candidatePhoto ? (
@@ -152,22 +131,6 @@ export default function VoterDashboardPage({
                       <div className="candidate-photo candidate-photo-placeholder" />
                     )}
                     <div className="candidate-copy">
-                      <label className="candidate-vote-toggle">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(alreadyVoted || isSubmittingVote)}
-                          onChange={() => {
-                            if (!alreadyVoted && ballot?.is_voting_open && !isSubmittingVote) {
-                              handleVote(candidate.id, position.id);
-                            }
-                          }}
-                          disabled={!ballot?.is_voting_open || alreadyVoted || isSubmittingVote}
-                        />
-                        <span className="candidate-vote-check" aria-hidden="true">
-                          {alreadyVoted || isSubmittingVote ? "X" : ""}
-                        </span>
-                        <span>{alreadyVoted ? "Voted" : isSubmittingVote ? "Voting..." : "Tick to vote"}</span>
-                      </label>
                       <div className="candidate-role">{position.name}</div>
                       <h3>{candidate.user.full_name}</h3>
                       <p>{candidate.slogan || "No slogan provided."}</p>
@@ -178,10 +141,10 @@ export default function VoterDashboardPage({
                       <button
                         className="primary-button"
                         type="button"
-                        disabled={!ballot?.is_voting_open || alreadyVoted || isSubmittingVote}
-                        onClick={() => handleVote(candidate.id, position.id)}
+                        disabled={!ballot?.is_voting_open || alreadyVoted}
+                        onClick={() => handleVote(candidate.id)}
                       >
-                        {alreadyVoted ? "Voted" : isSubmittingVote ? "Voting..." : "Vote Candidate"}
+                        {alreadyVoted ? "Vote Recorded" : "Vote Candidate"}
                       </button>
                       <button
                         className="secondary-button"
