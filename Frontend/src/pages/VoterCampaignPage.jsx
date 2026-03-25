@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { fetchCampaigns } from "../api";
+import { fetchCampaigns, resolveMediaUrl } from "../api";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
@@ -57,11 +57,11 @@ export default function VoterCampaignPage({ user, elections, selectedElectionId,
           </div>
           {error ? <div className="error-banner top-space">{error}</div> : null}
           <div className="campaign-column top-space">
-            {campaigns?.election?.image_url ? (
+            {resolveMediaUrl(campaigns?.election?.image || campaigns?.election?.image_url) ? (
               <div className="soft-panel">
                 <img
                   className="election-hero-image"
-                  src={campaigns.election.image_url}
+                  src={resolveMediaUrl(campaigns.election.image || campaigns.election.image_url)}
                   alt={campaigns.election.title}
                 />
               </div>
@@ -75,10 +75,10 @@ export default function VoterCampaignPage({ user, elections, selectedElectionId,
                 <div className="campaign-list">
                   {position.candidates.map((candidate) => (
                     <article className="comment-card" key={candidate.id}>
-                      {candidate.photo_url ? (
+                      {resolveMediaUrl(candidate.photo || candidate.photo_url) ? (
                         <img
                           className="candidate-photo"
-                          src={candidate.photo_url}
+                          src={resolveMediaUrl(candidate.photo || candidate.photo_url)}
                           alt={candidate.user.full_name}
                         />
                       ) : null}

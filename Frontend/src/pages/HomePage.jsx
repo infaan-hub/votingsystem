@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { fetchElectionDetail } from "../api";
+import { fetchElectionDetail, resolveMediaUrl } from "../api";
 import ScreenCard from "../components/ScreenCard";
 import { formatStatus, useCountdown } from "../utils";
 
@@ -13,9 +13,10 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
     ? {
         ...activeElection,
         ...activeElectionDetail,
-        image_url: activeElectionDetail.image_url || activeElection?.image_url || "",
+        image: activeElectionDetail.image || activeElection?.image || "",
       }
     : activeElection;
+  const displayElectionImage = resolveMediaUrl(displayElection?.image);
   const countdown = useCountdown(
     displayElection?.status === "upcoming"
       ? displayElection.voting_start_at
@@ -117,10 +118,10 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
         <div className="panel-grid two-col">
           <div className="election-visual-card">
             <div className="election-visual-frame">
-              {displayElection?.image_url ? (
+              {displayElectionImage ? (
                 <img
                   className="election-hero-image"
-                  src={displayElection.image_url}
+                  src={displayElectionImage}
                   alt={displayElection.title}
                 />
               ) : null}

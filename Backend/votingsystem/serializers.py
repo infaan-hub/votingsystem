@@ -610,6 +610,7 @@ class PositionSerializer(serializers.ModelSerializer):
 
 
 class ElectionListSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
     status = serializers.CharField(read_only=True)
     seconds_until_start = serializers.SerializerMethodField()
     seconds_until_end = serializers.SerializerMethodField()
@@ -621,6 +622,7 @@ class ElectionListSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "image",
             "image_url",
             "campaign_start_at",
             "campaign_end_at",
@@ -638,6 +640,10 @@ class ElectionListSerializer(serializers.ModelSerializer):
 
     def get_seconds_until_end(self, obj):
         return obj.seconds_until_end()
+
+    def get_image(self, obj):
+        media_url = _build_media_url(obj.image)
+        return media_url or ""
 
     def get_image_url(self, obj):
         return _build_media_url(obj.image, self.context.get("request"))

@@ -8,8 +8,34 @@ const API_BASE =
 
 const REQUEST_TIMEOUT_MS = 12000;
 
+function getApiOrigin() {
+  try {
+    return new URL(API_BASE).origin;
+  } catch {
+    return "";
+  }
+}
+
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+export function resolveMediaUrl(value) {
+  const normalizedValue = normalizeText(value);
+  if (!normalizedValue) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+  const apiOrigin = getApiOrigin();
+  if (!apiOrigin) {
+    return normalizedValue;
+  }
+  if (normalizedValue.startsWith("/")) {
+    return `${apiOrigin}${normalizedValue}`;
+  }
+  return `${apiOrigin}/${normalizedValue}`;
 }
 
 function serializeDateTime(value) {
