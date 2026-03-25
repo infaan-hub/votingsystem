@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const GOOGLE_SCRIPT_ID = "google-identity-service";
 const GOOGLE_CLIENT_ID =
@@ -18,27 +18,33 @@ function ensureGoogleScript() {
   document.head.appendChild(script);
 }
 
-export default function GoogleSignInButton({ role, onCode, disabled = false }) {
-  const clientRef = useRef(null);
+export default function GoogleSignInButton({ onCredential, disabled = false }) {
+  const buttonRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     ensureGoogleScript();
 
     const intervalId = window.setInterval(() => {
-      if (!window.google?.accounts?.oauth2) {
+      if (!window.google?.accounts?.id || !buttonRef.current) {
         return;
       }
 
-      clientRef.current = window.google.accounts.oauth2.initCodeClient({
+      window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        scope: "openid email profile",
-        ux_mode: "popup",
         callback: (response) => {
-          if (response.code) {
-            onCode(response.code);
+          if (response.credential) {
+            onCredential(response.credential);
           }
         },
+      });
+      buttonRef.current.innerHTML = "";
+      window.google.accounts.id.renderButton(buttonRef.current, {
+        theme: "outline",
+        size: "large",
+        shape: "pill",
+        width: 320,
+        text: "continue_with",
       });
       setIsReady(true);
       window.clearInterval(intervalId);
@@ -47,25 +53,11 @@ export default function GoogleSignInButton({ role, onCode, disabled = false }) {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [onCode]);
-
-  const buttonLabel = useMemo(() => {
-    return "Continue with Google";
-  }, [role]);
+  }, [onCredential]);
 
   return (
     <div className="google-signin-stack">
-      <button
-        type="button"
-        className="google-signin-button"
-        disabled={disabled || !isReady}
-        onClick={() => clientRef.current?.requestCode()}
-      >
-        <span className="google-signin-mark" aria-hidden="true">
-          G
-        </span>
-        <span>{buttonLabel}</span>
-      </button>
+      <div ref={buttonRef} className={disabled || !isReady ? "google-button-disabled" : ""} />
     </div>
   );
 }

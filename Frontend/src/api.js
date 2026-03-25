@@ -6,7 +6,8 @@ const API_BASE =
     ? "http://127.0.0.1:8000/api"
     : PRODUCTION_API_BASE);
 
-const REQUEST_TIMEOUT_MS = 12000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30000;
+const UPLOAD_REQUEST_TIMEOUT_MS = 120000;
 
 function getApiOrigin() {
   try {
@@ -72,11 +73,11 @@ function getErrorMessage(data, fallbackMessage) {
 }
 
 async function request(path, options = {}) {
-  const { method = "GET", body, token, headers = {} } = options;
+  const { method = "GET", body, token, headers = {}, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS } = options;
   const finalHeaders = { ...headers };
   let finalBody = body;
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   if (token) {
     finalHeaders.Authorization = `Token ${token}`;
@@ -149,7 +150,7 @@ export const loginWithGoogle = (payload) => request("/auth/google/", { method: "
 export const resetPassword = (payload) =>
   request("/auth/forgot-password/", { method: "POST", body: payload });
 export const adminCreateVoter = (payload, token) =>
-  request("/admin/voters/", { method: "POST", body: payload, token });
+  request("/admin/voters/", { method: "POST", body: payload, token, timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS });
 export function serializeAdminCandidatePayload(form) {
   const payload = new FormData();
   payload.append("position_name", normalizeText(form.position_name));
@@ -225,12 +226,14 @@ export const adminCreateCandidate = (electionId, form, token) =>
     method: "POST",
     body: serializeAdminCandidatePayload(form),
     token,
+    timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
   });
 export const adminUpdateElectionSchedule = (id, form, token) =>
   request(`/admin/elections/${id}/schedule/save/`, {
     method: "POST",
     body: serializeElectionSchedulePayload(form),
     token,
+    timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
   }).catch((error) => {
     if (error?.status !== 404) {
       throw error;
@@ -239,6 +242,7 @@ export const adminUpdateElectionSchedule = (id, form, token) =>
       method: "PATCH",
       body: serializeElectionSchedulePayload(form),
       token,
+      timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
     });
   });
 export const adminCreateAnnouncement = (id, form, token) =>
@@ -261,6 +265,7 @@ export const updateCandidateCampaign = (id, form, token) =>
     method: "PATCH",
     body: serializeCandidateCampaignPayload(form),
     token,
+    timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
   });
 export const registerAdmin = (payload) =>
   request("/auth/register/admin/", { method: "POST", body: payload });

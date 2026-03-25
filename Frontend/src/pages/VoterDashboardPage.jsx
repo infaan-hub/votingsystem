@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { fetchBallot, fetchCampaigns, voteForCandidate } from "../api";
+import { fetchBallot, fetchCampaigns, resolveMediaUrl, voteForCandidate } from "../api";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
@@ -13,6 +14,7 @@ export default function VoterDashboardPage({
   selectedElectionId,
   onSelectElection,
 }) {
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState(null);
   const [ballot, setBallot] = useState(null);
   const [voteMessage, setVoteMessage] = useState("");
@@ -116,10 +118,35 @@ export default function VoterDashboardPage({
             {campaigns?.positions?.flatMap((position) =>
               position.candidates.map((candidate) => {
                 const alreadyVoted = ballot?.voted_position_ids?.includes(position.id);
+                const candidatePhoto = resolveMediaUrl(candidate.photo || candidate.photo_url);
                 return (
                   <article className="candidate-card" key={`${position.id}-${candidate.id}`}>
-                    <div className="candidate-photo" />
+                    {candidatePhoto ? (
+                      <img
+                        className="candidate-photo"
+                        src={candidatePhoto}
+                        alt={candidate.user.full_name}
+                      />
+                    ) : (
+                      <div className="candidate-photo candidate-photo-placeholder" />
+                    )}
                     <div className="candidate-copy">
+                      <label className="candidate-vote-toggle">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(alreadyVoted)}
+                          onChange={() => {
+                            if (!alreadyVoted && ballot?.is_voting_open) {
+                              handleVote(candidate.id);
+                            }
+                          }}
+                          disabled={!ballot?.is_voting_open || alreadyVoted}
+                        />
+                        <span className="candidate-vote-check" aria-hidden="true">
+                          {alreadyVoted ? "✓" : ""}
+                        </span>
+                        <span>{alreadyVoted ? "Vote recorded" : "Tick to vote"}</span>
+                      </label>
                       <div className="candidate-role">{position.name}</div>
                       <h3>{candidate.user.full_name}</h3>
                       <p>{candidate.slogan || "No slogan provided."}</p>
@@ -134,6 +161,13 @@ export default function VoterDashboardPage({
                         onClick={() => handleVote(candidate.id)}
                       >
                         {alreadyVoted ? "Vote Recorded" : "Vote Candidate"}
+                      </button>
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => navigate("/voter/compain")}
+                      >
+                        View Campaign
                       </button>
                     </div>
                   </article>
