@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { fetchElectionDetail, resolveMediaUrl } from "../api";
+import CountdownClockCard from "../components/CountdownClockCard";
 import ScreenCard from "../components/ScreenCard";
-import { formatStatus, useCountdown } from "../utils";
+import { formatStatus } from "../utils";
 
 export default function HomePage({ elections, selectedElectionId, onSelectElection, user }) {
   const [activeElectionDetail, setActiveElectionDetail] = useState(null);
@@ -17,14 +18,6 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
       }
     : activeElection;
   const displayElectionImage = resolveMediaUrl(displayElection?.image);
-  const countdown = useCountdown(
-    displayElection?.status === "upcoming"
-      ? displayElection.voting_start_at
-      : displayElection?.status === "active"
-        ? displayElection.voting_end_at
-        : null,
-  );
-
   useEffect(() => {
     if (!activeElection?.id) {
       setActiveElectionDetail(null);
@@ -94,15 +87,26 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
               <div className="info-note top-space">Fetching the latest election list in the background.</div>
             ) : null}
             {activeElection ? (
-              <div className="stack-sm top-space">
-                <div className="metric-card">
-                  <span>Status</span>
-                  <strong>{formatStatus(displayElection?.status)}</strong>
-                </div>
-                <div className="metric-card">
-                  <span>Countdown</span>
-                  <strong>{countdown}</strong>
-                </div>
+              <div className="top-space">
+                <CountdownClockCard
+                  eyebrow="Election Clock"
+                  title={displayElection?.title || "Election Countdown"}
+                  status={displayElection?.status}
+                  targetLabel={displayElection?.status === "upcoming" ? "Voting opens" : "Voting deadline"}
+                  targetDate={
+                    displayElection?.status === "upcoming"
+                      ? displayElection?.voting_start_at
+                      : displayElection?.voting_end_at
+                  }
+                  countdownTarget={
+                    displayElection?.status === "upcoming"
+                      ? displayElection?.voting_start_at
+                      : displayElection?.status === "active"
+                        ? displayElection?.voting_end_at
+                        : null
+                  }
+                  helperText={`Status: ${formatStatus(displayElection?.status)}. Keep watching the clock and sign in before the ballot closes.`}
+                />
               </div>
             ) : null}
           </div>
@@ -134,10 +138,25 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
           </div>
           <div className="soft-panel">
             <div className="stack-sm">
-              <div className="metric-card">
-                <span>Countdown</span>
-                <strong>{countdown}</strong>
-              </div>
+              <CountdownClockCard
+                eyebrow="Spotlight Clock"
+                title={displayElection?.title || "Election Hub Event"}
+                status={displayElection?.status}
+                targetLabel={displayElection?.status === "upcoming" ? "Voting opens" : "Voting deadline"}
+                targetDate={
+                  displayElection?.status === "upcoming"
+                    ? displayElection?.voting_start_at
+                    : displayElection?.voting_end_at
+                }
+                countdownTarget={
+                  displayElection?.status === "upcoming"
+                    ? displayElection?.voting_start_at
+                    : displayElection?.status === "active"
+                      ? displayElection?.voting_end_at
+                      : null
+                }
+                helperText="Life moves fast. Stay on time, sign in early, and vote before the countdown ends."
+              />
               <div className="metric-card">
                 <span>Voting Opens</span>
                 <strong>

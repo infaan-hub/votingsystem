@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { fetchBallot, fetchCampaigns, resolveMediaUrl, voteForCandidate } from "../api";
+import CountdownClockCard from "../components/CountdownClockCard";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
@@ -21,6 +22,18 @@ export default function VoterDashboardPage({
   const [error, setError] = useState("");
   const selectedElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
+  const voterStatusLabel =
+    selectedElection?.status === "active"
+      ? "Vote now"
+      : selectedElection?.status === "ended"
+        ? "Ended"
+        : "Waiting voting time";
+  const voterStatusTone =
+    selectedElection?.status === "active"
+      ? "green"
+      : selectedElection?.status === "ended"
+        ? "red"
+        : "orange";
 
   async function loadVoterData(electionId) {
     const [campaignResult, ballotResult] = await Promise.allSettled([
@@ -94,7 +107,30 @@ export default function VoterDashboardPage({
               </div>
             </div>
             <div className="soft-panel">
-              <h3>Ballot Status</h3>
+              <CountdownClockCard
+                eyebrow="Voter Countdown"
+                title={selectedElection?.title || "Voting Clock"}
+                status={selectedElection?.status}
+                statusLabel={voterStatusLabel}
+                statusTone={voterStatusTone}
+                targetLabel={selectedElection?.status === "upcoming" ? "Voting opens" : "Voting deadline"}
+                targetDate={
+                  selectedElection?.status === "upcoming"
+                    ? selectedElection?.voting_start_at
+                    : selectedElection?.voting_end_at
+                }
+                countdownTarget={
+                  selectedElection?.status === "upcoming"
+                    ? selectedElection?.voting_start_at
+                    : selectedElection?.status === "active"
+                      ? selectedElection?.voting_end_at
+                      : null
+                }
+                helperText="Stay on time. Vote during the active window before the election closes."
+                liveLabel={ballot?.is_voting_open ? "Ballot open" : "Ballot closed"}
+                liveTone={ballot?.is_voting_open ? "green" : "dark"}
+              />
+              <h3 className="top-space">Ballot Status</h3>
               <div className="metric-list">
                 <div className="metric-card">
                   <span>Voting Open</span>

@@ -15,10 +15,11 @@ import {
   fetchStats,
   openStatsStream,
 } from "../api";
+import CountdownClockCard from "../components/CountdownClockCard";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
-import { formatDateTime, formatStatus, useCountdown } from "../utils";
+import { formatDateTime, formatStatus } from "../utils";
 
 const INITIAL_VOTER_FORM = {
   username: "",
@@ -97,14 +98,6 @@ export default function AdminDashboardPage({
 
   const selectedElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
-  const countdown = useCountdown(
-    selectedElection?.status === "upcoming"
-      ? selectedElection?.voting_start_at
-      : selectedElection?.status === "active"
-        ? selectedElection?.voting_end_at
-        : null,
-  );
-
   async function loadElectionData(electionId) {
     const [detailResult, statsResult, resultsResult] = await Promise.allSettled([
       fetchElectionDetail(electionId),
@@ -511,19 +504,26 @@ export default function AdminDashboardPage({
               inputId="admin-election-select"
               inputName="admin_election"
             />
-            <div className="metric-list top-space">
-              <div className="metric-card">
-                <span>Countdown</span>
-                <strong>{countdown}</strong>
-              </div>
-              <div className="metric-card">
-                <span>Status</span>
-                <strong>{formatStatus(selectedElection?.status)}</strong>
-              </div>
-              <div className="metric-card">
-                <span>Voting Deadline</span>
-                <strong>{formatDateTime(selectedElection?.voting_end_at)}</strong>
-              </div>
+            <div className="top-space">
+              <CountdownClockCard
+                eyebrow="Admin Countdown"
+                title={selectedElection?.title || "Election Countdown"}
+                status={selectedElection?.status}
+                targetLabel={selectedElection?.status === "upcoming" ? "Voting opens" : "Voting deadline"}
+                targetDate={
+                  selectedElection?.status === "upcoming"
+                    ? selectedElection?.voting_start_at
+                    : selectedElection?.voting_end_at
+                }
+                countdownTarget={
+                  selectedElection?.status === "upcoming"
+                    ? selectedElection?.voting_start_at
+                    : selectedElection?.status === "active"
+                      ? selectedElection?.voting_end_at
+                      : null
+                }
+                helperText={`Status: ${formatStatus(selectedElection?.status)}. Deadline: ${formatDateTime(selectedElection?.voting_end_at)}.`}
+              />
             </div>
           </div>
           {success ? <div className="success-banner top-space">{success}</div> : null}

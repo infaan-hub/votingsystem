@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { fetchCampaigns, fetchResults } from "../api";
+import CountdownClockCard from "../components/CountdownClockCard";
 import ElectionSelector from "../components/ElectionSelector";
 import RequireAuth from "../components/RequireAuth";
 import ScreenCard from "../components/ScreenCard";
@@ -69,20 +70,41 @@ export default function CandidateDashboardPage({
           title="Candidate Dashboard"
           subtitle="Countdown, voted count, and the decision winner or looser state."
         >
-          <div className="panel-grid three-col">
-            <div className="metric-card">
-              <span>Countdown</span>
-              <strong>{countdown}</strong>
-            </div>
-            <div className="metric-card">
-              <span>Voted Count</span>
-              <strong>{candidateResult?.vote_total ?? 0}</strong>
-            </div>
-            <div className="metric-card">
-              <span>Decision</span>
-              <strong>
-                {candidateResult ? (candidateResult.is_winner ? "Winner" : "Looser") : "Pending"}
-              </strong>
+          <div className="panel-grid two-col">
+            <CountdownClockCard
+              eyebrow="Candidate Countdown"
+              title={selectedElection?.title || "Campaign Clock"}
+              status={selectedElection?.status}
+              targetLabel={selectedElection?.status === "upcoming" ? "Voting opens" : "Voting deadline"}
+              targetDate={
+                selectedElection?.status === "upcoming"
+                  ? selectedElection?.voting_start_at
+                  : selectedElection?.voting_end_at
+              }
+              countdownTarget={
+                selectedElection?.status === "upcoming"
+                  ? selectedElection?.voting_start_at
+                  : selectedElection?.status === "active"
+                    ? selectedElection?.voting_end_at
+                    : null
+              }
+              helperText="Track the election clock and monitor how close the race is getting."
+            />
+            <div className="stack-sm">
+              <div className="metric-card">
+                <span>Countdown</span>
+                <strong>{countdown}</strong>
+              </div>
+              <div className="metric-card">
+                <span>Voted Count</span>
+                <strong>{candidateResult?.vote_total ?? 0}</strong>
+              </div>
+              <div className="metric-card">
+                <span>Decision</span>
+                <strong>
+                  {candidateResult ? (candidateResult.is_winner ? "Winner" : "Looser") : "Pending"}
+                </strong>
+              </div>
             </div>
           </div>
           <div className="soft-panel top-space">

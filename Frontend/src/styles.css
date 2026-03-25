@@ -340,6 +340,197 @@ button {
   background: linear-gradient(135deg, #15803d, #22c55e);
 }
 
+.countdown-clock-card {
+  padding: 1.5rem;
+  border-radius: 34px;
+  background: #efedea;
+  color: #0a0a0a;
+  box-shadow:
+    0 0 0 1px rgba(10, 10, 10, 0.05),
+    0 24px 60px rgba(15, 23, 42, 0.08);
+}
+
+.countdown-clock-topline,
+.countdown-clock-meta,
+.countdown-clock-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.countdown-clock-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.countdown-clock-brand::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0a0a0a;
+  box-shadow: inset 0 0 0 5px #efedea;
+}
+
+.countdown-clock-actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.countdown-clock-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.08);
+  color: #0a0a0a;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.countdown-clock-pill.is-neutral {
+  background: rgba(10, 10, 10, 0.08);
+  color: #0a0a0a;
+}
+
+.countdown-clock-pill.is-dark {
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.countdown-clock-pill.is-green {
+  background: #166534;
+  color: #fff;
+}
+
+.countdown-clock-pill.is-red {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.countdown-clock-pill.is-orange {
+  background: #ea580c;
+  color: #fff;
+}
+
+.countdown-clock-digits {
+  margin-top: 1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  overflow: hidden;
+}
+
+.countdown-clock-segment {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.countdown-clock-segment span,
+.countdown-clock-segment em {
+  font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 0.88;
+  letter-spacing: -0.06em;
+}
+
+.countdown-clock-segment span {
+  font-size: clamp(3.5rem, 10vw, 8.4rem);
+}
+
+.countdown-clock-segment em {
+  font-size: clamp(2.5rem, 7vw, 6rem);
+  margin: 0 0.12em;
+}
+
+.countdown-clock-meta {
+  margin-top: 1rem;
+  align-items: flex-start;
+}
+
+.countdown-clock-meta div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.countdown-clock-meta span,
+.countdown-clock-copy p,
+.countdown-mini-tile span {
+  color: rgba(10, 10, 10, 0.58);
+  font-size: 0.8rem;
+}
+
+.countdown-clock-meta strong {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.countdown-clock-divider {
+  height: 1px;
+  margin: 1.35rem 0;
+  background: rgba(10, 10, 10, 0.09);
+}
+
+.countdown-clock-footer {
+  align-items: flex-end;
+}
+
+.countdown-clock-copy {
+  max-width: 22rem;
+}
+
+.countdown-clock-copy h3 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 3.2rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.countdown-clock-copy p {
+  margin: 0.75rem 0 0;
+  line-height: 1.6;
+}
+
+.countdown-clock-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(88px, 1fr));
+  gap: 0.8rem;
+  width: min(100%, 520px);
+}
+
+.countdown-mini-tile {
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(10, 10, 10, 0.06);
+}
+
+.countdown-mini-tile strong {
+  display: block;
+  margin-top: 0.55rem;
+  font-size: 2rem;
+  font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.05em;
+}
+
+.countdown-mini-tile.is-active {
+  background: #0a0a0a;
+}
+
+.countdown-mini-tile.is-active span,
+.countdown-mini-tile.is-active strong {
+  color: #fff;
+}
+
 .page-stack {
   display: grid;
   gap: 1.5rem;

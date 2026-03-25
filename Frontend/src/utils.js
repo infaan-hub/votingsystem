@@ -26,6 +26,11 @@ export function formatStatus(status) {
 }
 
 export function useCountdown(targetDate) {
+  const countdown = useCountdownParts(targetDate);
+  return countdown.display;
+}
+
+export function useCountdownParts(targetDate) {
   const [tick, setTick] = useState(Date.now());
 
   useEffect(() => {
@@ -35,17 +40,39 @@ export function useCountdown(targetDate) {
 
   return useMemo(() => {
     if (!targetDate) {
-      return "Not available";
+      return {
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        display: "Not available",
+        isComplete: false,
+      };
     }
     const target = new Date(targetDate).getTime();
     if (Number.isNaN(target)) {
-      return "Not available";
+      return {
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        display: "Not available",
+        isComplete: false,
+      };
     }
-    const diff = Math.max(0, target - tick);
+    const rawDiff = target - tick;
+    const diff = Math.max(0, rawDiff);
     const days = Math.floor(diff / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
-    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    return {
+      days,
+      hours,
+      minutes,
+      seconds,
+      display: `${days}d ${hours}h ${minutes}m ${seconds}s`,
+      isComplete: rawDiff <= 0,
+    };
   }, [targetDate, tick]);
 }
