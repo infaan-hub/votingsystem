@@ -18,34 +18,43 @@ function ensureGoogleScript() {
   document.head.appendChild(script);
 }
 
-export default function GoogleSignInButton({ onCredential, disabled = false }) {
-  const buttonRef = useRef(null);
+export default function GoogleSignInButton({ onCredential, onCode, disabled = false }) {
+  const codeClientRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     ensureGoogleScript();
 
     const intervalId = window.setInterval(() => {
-      if (!window.google?.accounts?.id || !buttonRef.current) {
+      if (!window.google?.accounts?.oauth2) {
         return;
       }
 
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          if (response.credential) {
-            onCredential(response.credential);
-          }
-        },
-      });
-      buttonRef.current.innerHTML = "";
-      window.google.accounts.id.renderButton(buttonRef.current, {
-        theme: "outline",
-        size: "large",
-        shape: "pill",
-        width: 320,
-        text: "continue_with",
-      });
+      if (onCode) {
+        codeClientRef.current = window.google.accounts.oauth2.initCodeClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: "openid email profile",
+          ux_mode: "popup",
+          callback: (response) => {
+            if (response.code) {
+              onCode(response.code);
+            }
+          },
+        });
+      } else if (onCredential) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (response) => {
+            if (response.credential) {
+              onCredential(response.credential);
+            }
+          },
+        });
+      } else {
+        window.clearInterval(intervalId);
+        return;
+      }
+
       setIsReady(true);
       window.clearInterval(intervalId);
     }, 250);
@@ -53,11 +62,34 @@ export default function GoogleSignInButton({ onCredential, disabled = false }) {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [onCredential]);
+  }, [onCode, onCredential]);
+
+  function handleClick() {
+    if (disabled || !isReady) {
+      return;
+    }
+
+    if (onCode && codeClientRef.current) {
+      codeClientRef.current.requestCode();
+      return;
+    }
+
+    if (onCredential && window.google?.accounts?.id) {
+      window.google.accounts.id.prompt();
+    }
+  }
 
   return (
     <div className="google-signin-stack">
-      <div ref={buttonRef} className={disabled || !isReady ? "google-button-disabled" : ""} />
+      <button
+        className={`google-signin-button ${disabled || !isReady ? "google-button-disabled" : ""}`}
+        type="button"
+        onClick={handleClick}
+        disabled={disabled || !isReady}
+      >
+        <span className="google-signin-mark">G</span>
+        <span>Continue with Google</span>
+      </button>
     </div>
   );
 }

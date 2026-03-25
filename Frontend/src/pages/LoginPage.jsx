@@ -76,11 +76,11 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
     }
   }
 
-  async function handleGoogleCredential(credential) {
+  async function handleGoogleCode(code) {
     setSubmitting(true);
     setError("");
     try {
-      const nextUser = await onGoogleLogin({ credential, role });
+      const nextUser = await onGoogleLogin({ code, role });
       if (role === "admin" && nextUser.role !== "admin") {
         throw new Error("This account does not have admin access.");
       }
@@ -150,7 +150,7 @@ export default function LoginPage({ role, user, onLogin, onGoogleLogin }) {
             </form>
 
             <div className="auth-divider">or</div>
-            <GoogleSignInButton onCredential={handleGoogleCredential} disabled={submitting} />
+            <GoogleSignInButton onCode={handleGoogleCode} disabled={submitting} />
 
             <p className="auth-support-text">
               <Link to="/forgot-password">Request a New Password</Link>
