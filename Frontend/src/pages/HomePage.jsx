@@ -1,18 +1,50 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { fetchElectionDetail } from "../api";
 import ScreenCard from "../components/ScreenCard";
 import { formatStatus, useCountdown } from "../utils";
 
 export default function HomePage({ elections, selectedElectionId, onSelectElection, user }) {
+  const [activeElectionDetail, setActiveElectionDetail] = useState(null);
   const activeElection =
     elections.find((item) => String(item.id) === String(selectedElectionId)) || elections[0] || null;
+  const displayElection = activeElectionDetail
+    ? {
+        ...activeElection,
+        ...activeElectionDetail,
+        image_url: activeElectionDetail.image_url || activeElection?.image_url || "",
+      }
+    : activeElection;
   const countdown = useCountdown(
-    activeElection?.status === "upcoming"
-      ? activeElection.voting_start_at
-      : activeElection?.status === "active"
-        ? activeElection.voting_end_at
+    displayElection?.status === "upcoming"
+      ? displayElection.voting_start_at
+      : displayElection?.status === "active"
+        ? displayElection.voting_end_at
         : null,
   );
+
+  useEffect(() => {
+    if (!activeElection?.id) {
+      setActiveElectionDetail(null);
+      return;
+    }
+    let ignore = false;
+    fetchElectionDetail(activeElection.id)
+      .then((response) => {
+        if (!ignore) {
+          setActiveElectionDetail(response);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setActiveElectionDetail(null);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [activeElection?.id]);
 
   return (
     <div className="page-stack">
@@ -64,7 +96,7 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
               <div className="stack-sm top-space">
                 <div className="metric-card">
                   <span>Status</span>
-                  <strong>{formatStatus(activeElection.status)}</strong>
+                  <strong>{formatStatus(displayElection?.status)}</strong>
                 </div>
                 <div className="metric-card">
                   <span>Countdown</span>
@@ -85,17 +117,17 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
         <div className="panel-grid two-col">
           <div className="election-visual-card">
             <div className="election-visual-frame">
-              {activeElection?.image_url ? (
+              {displayElection?.image_url ? (
                 <img
                   className="election-hero-image"
-                  src={activeElection.image_url}
-                  alt={activeElection.title}
+                  src={displayElection.image_url}
+                  alt={displayElection.title}
                 />
               ) : null}
-              <div className="election-visual-badge">{formatStatus(activeElection?.status)}</div>
+              <div className="election-visual-badge">{formatStatus(displayElection?.status)}</div>
               <div className="election-visual-copy">
-                <h3>{activeElection?.title || "Election Hub Event"}</h3>
-                <p>{activeElection?.description || "Stay ready for the next important voting event."}</p>
+                <h3>{displayElection?.title || "Election Hub Event"}</h3>
+                <p>{displayElection?.description || "Stay ready for the next important voting event."}</p>
               </div>
             </div>
           </div>
@@ -108,7 +140,7 @@ export default function HomePage({ elections, selectedElectionId, onSelectElecti
               <div className="metric-card">
                 <span>Voting Opens</span>
                 <strong>
-                  {activeElection?.status === "upcoming" ? "When the countdown ends" : "Voting is live or completed"}
+                  {displayElection?.status === "upcoming" ? "When the countdown ends" : "Voting is live or completed"}
                 </strong>
               </div>
               <div className="info-note">
