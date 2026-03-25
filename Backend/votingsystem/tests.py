@@ -462,7 +462,7 @@ class VotingApiTests(TestCase):
             "/api/admin/candidates/",
             {
                 "election_id": self.election.id,
-                "position_id": self.position.id,
+                "position_name": self.position.name,
                 "username": "new_candidate",
                 "email": "candidate@example.com",
                 "first_name": "New",

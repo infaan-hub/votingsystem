@@ -49,6 +49,12 @@ const INITIAL_ANNOUNCEMENT_FORM = {
   is_pinned: false,
 };
 
+const MAX_CANDIDATE_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+
+function normalizeText(value) {
+  return value.trim();
+}
+
 export default function AdminDashboardPage({
   user,
   token,
@@ -185,11 +191,58 @@ export default function AdminDashboardPage({
       setSuccess("");
       return;
     }
+
+    const normalizedCustomPosition = normalizeText(candidateForm.position_name);
+    const normalizedUsername = normalizeText(candidateForm.username);
+    const normalizedFirstName = normalizeText(candidateForm.first_name);
+    const normalizedLastName = normalizeText(candidateForm.last_name);
+
+    if (!normalizedCustomPosition) {
+      setError("Select or enter a position name.");
+      setSuccess("");
+      return;
+    }
+    if (!normalizedUsername || !normalizedFirstName || !normalizedLastName) {
+      setError("Username, first name, and last name are required.");
+      setSuccess("");
+      return;
+    }
+    if (candidateForm.password !== candidateForm.confirm_password) {
+      setError("Candidate passwords do not match.");
+      setSuccess("");
+      return;
+    }
+    if (candidateForm.photo) {
+      if (!candidateForm.photo.type.startsWith("image/")) {
+        setError("Candidate photo must be a valid image file.");
+        setSuccess("");
+        return;
+      }
+      if (candidateForm.photo.size > MAX_CANDIDATE_PHOTO_SIZE_BYTES) {
+        setError("Candidate photo must be 5MB or smaller.");
+        setSuccess("");
+        return;
+      }
+    }
+
     setSubmitting("candidate");
     setError("");
     setSuccess("");
     try {
-      const response = await adminCreateCandidate(selectedElection.id, candidateForm, token);
+      const response = await adminCreateCandidate(
+        selectedElection.id,
+        {
+          ...candidateForm,
+          position_name: normalizedCustomPosition,
+          username: normalizedUsername,
+          first_name: normalizedFirstName,
+          last_name: normalizedLastName,
+          email: normalizeText(candidateForm.email),
+          slogan: normalizeText(candidateForm.slogan),
+          manifesto: normalizeText(candidateForm.manifesto),
+        },
+        token,
+      );
       setSuccess(`Candidate ${response.user.full_name} was registered successfully.`);
       setCandidateForm(INITIAL_CANDIDATE_FORM);
       await loadElectionData(selectedElection.id);
@@ -415,10 +468,13 @@ export default function AdminDashboardPage({
                 name="position_name"
                 className="field-input"
                 list="candidate-position-options"
-                placeholder="Type Position"
+                placeholder="Select or type position name"
                 value={candidateForm.position_name}
                 onChange={(event) =>
-                  setCandidateForm((current) => ({ ...current, position_name: event.target.value }))
+                  setCandidateForm((current) => ({
+                    ...current,
+                    position_name: event.target.value,
+                  }))
                 }
                 required
                 disabled={submitting === "candidate"}
