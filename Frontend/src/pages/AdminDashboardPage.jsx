@@ -462,6 +462,14 @@ export default function AdminDashboardPage({
 
             <form className="soft-panel form-stack" onSubmit={handleCreateCandidate}>
               <h3>Register Candidate</h3>
+              <label className="field-label" htmlFor="admin-candidate-election-select">Election</label>
+              <ElectionSelector
+                elections={elections}
+                selectedElectionId={selectedElectionId}
+                onSelectElection={onSelectElection}
+                inputId="admin-candidate-election-select"
+                inputName="admin_candidate_election"
+              />
               <label className="field-label" htmlFor="admin-candidate-position">Position</label>
               <input
                 id="admin-candidate-position"
