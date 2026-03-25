@@ -4,7 +4,7 @@ services:
     env: python
     rootDir: Backend
     buildCommand: ./build.sh
-    startCommand: gunicorn votingproject.wsgi:application
+    startCommand: mkdir -p "$MEDIA_ROOT" && gunicorn votingproject.wsgi:application
     disk:
       name: voting-system-media
       mountPath: /var/data/media
