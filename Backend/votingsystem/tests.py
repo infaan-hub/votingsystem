@@ -286,7 +286,6 @@ class VotingApiTests(TestCase):
                 "last_name": "Suleiman",
                 "username": "neema_2026",
                 "email": "neema@example.com",
-                "registration_number": "REG-909",
                 "password": "VotePass123!",
                 "confirm_password": "VotePass123!",
             },
@@ -295,7 +294,6 @@ class VotingApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         payload = response.json()
         self.assertEqual(payload["user"]["role"], CustomUser.Role.STUDENT)
-        self.assertEqual(payload["user"]["registration_number"], "REG-909")
         self.assertTrue(payload["token"])
 
     @override_settings(GOOGLE_OAUTH_CLIENT_ID="google-client-id")
@@ -448,7 +446,6 @@ class VotingApiTests(TestCase):
                 "email": "newvoter@example.com",
                 "first_name": "New",
                 "last_name": "Voter",
-                "registration_number": "REG-101",
                 "password": "VotePass123!",
                 "confirm_password": "VotePass123!",
                 "role": CustomUser.Role.STUDENT,
@@ -629,7 +626,6 @@ class VotingApiTests(TestCase):
                 "email": "duplicate@example.com",
                 "first_name": "Duplicate",
                 "last_name": "User",
-                "registration_number": "REG-202",
                 "password": "VotePass123!",
                 "confirm_password": "VotePass123!",
                 "role": CustomUser.Role.STUDENT,
@@ -680,7 +676,6 @@ class VotingApiTests(TestCase):
                 "first_name": "Asha",
                 "last_name": "Updated",
                 "role": CustomUser.Role.STAFF,
-                "staff_id": "STF-202",
             },
             format="json",
         )
@@ -689,8 +684,6 @@ class VotingApiTests(TestCase):
         self.voter.refresh_from_db()
         self.assertEqual(self.voter.username, "student_a_updated")
         self.assertEqual(self.voter.role, CustomUser.Role.STAFF)
-        self.assertEqual(self.voter.staff_id, "STF-202")
-        self.assertEqual(self.voter.registration_number, "")
 
         delete_response = client.delete(f"/api/admin/users/{self.voter.id}/")
 

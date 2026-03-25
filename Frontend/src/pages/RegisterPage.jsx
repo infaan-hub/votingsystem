@@ -31,12 +31,6 @@ const FIELD_CONFIG = {
     { key: "username", placeholder: "Username", autoComplete: "username", required: true },
     { key: "email", placeholder: "Email", type: "email", autoComplete: "email", required: true },
     {
-      key: "registration_number",
-      placeholder: "Registration Number",
-      autoComplete: "off",
-      required: true,
-    },
-    {
       key: "password",
       placeholder: "Password",
       type: "password",
@@ -60,7 +54,6 @@ const INITIAL_FORM = {
   username: "",
   email: "",
   staff_id: "",
-  registration_number: "",
   password: "",
   confirm_password: "",
 };
@@ -99,7 +92,7 @@ export default function RegisterPage({ role, onRegister, onGoogleLogin }) {
       footerText: "Have an account?",
       footerLink: "Log in here",
       description:
-        "Use your name, username, email, registration number, and password to create your voter account.",
+        "Use your name, username, email, and password to create your voter account.",
     },
   }[role];
 

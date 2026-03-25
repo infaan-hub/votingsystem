@@ -25,8 +25,6 @@ const INITIAL_VOTER_FORM = {
   email: "",
   first_name: "",
   last_name: "",
-  registration_number: "",
-  staff_id: "",
   password: "",
   confirm_password: "",
   role: "student",
@@ -256,8 +254,6 @@ export default function AdminDashboardPage({
             email: voterForm.email,
             first_name: voterForm.first_name,
             last_name: voterForm.last_name,
-            registration_number: voterForm.registration_number,
-            staff_id: voterForm.staff_id,
             role: voterForm.role,
           }
         : voterForm;
@@ -289,8 +285,6 @@ export default function AdminDashboardPage({
       email: managedUser.email || "",
       first_name: managedUser.full_name?.split(" ")[0] || "",
       last_name: managedUser.full_name?.split(" ").slice(1).join(" ") || "",
-      registration_number: managedUser.registration_number || "",
-      staff_id: managedUser.staff_id || "",
       password: "",
       confirm_password: "",
       role: managedUser.role || "student",
@@ -603,26 +597,6 @@ export default function AdminDashboardPage({
                 <option value="staff">Staff</option>
                 <option value="officer">Election Officer</option>
               </select>
-              <label className="field-label" htmlFor="admin-voter-registration-number">Registration Number</label>
-              <input
-                id="admin-voter-registration-number"
-                name="registration_number"
-                className="field-input"
-                placeholder="Registration Number"
-                value={voterForm.registration_number}
-                onChange={(event) =>
-                  setVoterForm((current) => ({ ...current, registration_number: event.target.value }))
-                }
-              />
-              <label className="field-label" htmlFor="admin-voter-staff-id">Staff ID</label>
-              <input
-                id="admin-voter-staff-id"
-                name="staff_id"
-                className="field-input"
-                placeholder="Staff ID"
-                value={voterForm.staff_id}
-                onChange={(event) => setVoterForm((current) => ({ ...current, staff_id: event.target.value }))}
-              />
               <label className="field-label" htmlFor="admin-voter-password">Password</label>
               <input
                 id="admin-voter-password"

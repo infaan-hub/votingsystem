@@ -176,7 +176,6 @@ class VoterRegistrationSerializer(RegistrationSerializer):
             "confirm_password",
             "first_name",
             "last_name",
-            "registration_number",
         )
 
     default_role = User.Role.STUDENT
@@ -187,10 +186,6 @@ class VoterRegistrationSerializer(RegistrationSerializer):
             raise serializers.ValidationError({"first_name": "First name is required."})
         if not attrs.get("last_name"):
             raise serializers.ValidationError({"last_name": "Last name is required."})
-        if not attrs.get("registration_number"):
-            raise serializers.ValidationError(
-                {"registration_number": "Registration number is required."}
-            )
         return attrs
 
 
@@ -241,22 +236,17 @@ class AdminCreateVoterSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
-            "registration_number",
-            "staff_id",
             "password",
             "confirm_password",
             "role",
         )
         extra_kwargs = {
             "email": {"required": False, "allow_blank": True},
-            "registration_number": {"required": False, "allow_blank": True},
-            "staff_id": {"required": False, "allow_blank": True},
         }
 
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("confirm_password"):
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
-        _validate_admin_managed_user_fields(attrs)
         return attrs
 
     def create(self, validated_data):
@@ -507,29 +497,6 @@ class AdminCandidateManageSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(_normalize_integrity_error(exc)) from exc
         return instance
 
-
-def _validate_admin_managed_user_fields(attrs):
-    role = attrs.get("role")
-    registration_number = (attrs.get("registration_number") or "").strip()
-    staff_id = (attrs.get("staff_id") or "").strip()
-
-    attrs["registration_number"] = registration_number
-    attrs["staff_id"] = staff_id
-
-    if role == User.Role.STUDENT:
-        if not registration_number:
-            raise serializers.ValidationError(
-                {"registration_number": "Registration number is required for student voters."}
-            )
-        attrs["staff_id"] = ""
-    elif role in {User.Role.STAFF, User.Role.OFFICER}:
-        if not staff_id:
-            raise serializers.ValidationError(
-                {"staff_id": "Staff ID is required for staff and officer voters."}
-            )
-        attrs["registration_number"] = ""
-
-
 class AdminUserManageSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -538,14 +505,10 @@ class AdminUserManageSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
-            "registration_number",
-            "staff_id",
             "role",
         )
         extra_kwargs = {
             "email": {"required": False, "allow_blank": True},
-            "registration_number": {"required": False, "allow_blank": True},
-            "staff_id": {"required": False, "allow_blank": True},
             "role": {"required": False},
         }
 
@@ -565,15 +528,6 @@ class AdminUserManageSerializer(serializers.ModelSerializer):
         for field_name in ("first_name", "last_name"):
             if field_name in attrs:
                 attrs[field_name] = attrs[field_name].strip()
-
-        merged_attrs = {
-            "role": attrs.get("role", self.instance.role),
-            "registration_number": attrs.get("registration_number", self.instance.registration_number),
-            "staff_id": attrs.get("staff_id", self.instance.staff_id),
-        }
-        _validate_admin_managed_user_fields(merged_attrs)
-        attrs["registration_number"] = merged_attrs["registration_number"]
-        attrs["staff_id"] = merged_attrs["staff_id"]
 
         if attrs.get("role") == User.Role.ADMIN:
             raise serializers.ValidationError({"role": "This endpoint cannot promote users to admin."})
