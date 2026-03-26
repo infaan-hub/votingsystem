@@ -164,7 +164,13 @@ export default function VoterDashboardPage({
                 const candidatePhoto = resolveMediaUrl(candidate.photo || candidate.photo_url);
                 return (
                   <article className="ballot-flyer-card" key={`${position.id}-${candidate.id}`}>
-                    <div className="ballot-flyer-brand">VOTE</div>
+                    <div className="ballot-flyer-brand">
+                      <span className="ballot-flyer-brand-mark">✓</span>
+                      <span className="ballot-flyer-brand-copy">
+                        <strong>VOTE</strong>
+                        <em>FOR CANDIDATE</em>
+                      </span>
+                    </div>
                     <div className="ballot-flyer-banner">
                       <span className="ballot-flyer-number-badge">NUMBER {candidateIndex + 1}</span>
                       <strong>ON THE BALLOT</strong>
