@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 if importlib.util.find_spec("whitenoise"):
@@ -58,7 +59,6 @@ if importlib.util.find_spec("whitenoise"):
 
 MIDDLEWARE += [
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -152,6 +152,9 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'https://electionhub-xi.vercel.app',
     *env_list("CORS_ALLOWED_ORIGINS"),
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
 ]
 CORS_ALLOW_CREDENTIALS = True
 if DEBUG and os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() in {"1", "true", "yes", "on"}:
