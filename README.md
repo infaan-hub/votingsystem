@@ -17,6 +17,7 @@ npm run dev              # http://localhost:3000
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string (Neon or local). |
+| `TEST_DATABASE_URL` | Separate database for `npm test`. Must not equal `DATABASE_URL`; its name must end in `_test`. |
 | `GOOGLE_OAUTH_CLIENT_ID` | Server-side Google ID token verification. Empty disables Google sign-in (API returns 503). |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Server-side Google OAuth secret. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Client id exposed to the browser for the Google Identity Services button. |
@@ -24,11 +25,13 @@ npm run dev              # http://localhost:3000
 ## Tests
 
 ```powershell
+npm run db:test-setup   # one-time: creates voting_test and applies migrations
 npm test
 ```
 
-The suite deletes every row from every table before each test. Only run it
-against a throwaway database.
+The suite deletes every row from every table before each test. It refuses to
+run unless `TEST_DATABASE_URL` is set and its database name ends in `_test`,
+which is what stops a test run from wiping production.
 
 ## Scripts
 

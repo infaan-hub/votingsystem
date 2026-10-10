@@ -17,6 +17,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma migrate deploy && tsx prisma/seed.ts",
+    "db:test-setup": "node scripts/setup-test-db.mjs",
     "db:inspect": "node scripts/pg-inspect.mjs"
   },
   "dependencies": {
