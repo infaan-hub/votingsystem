@@ -21,6 +21,8 @@ npm run dev              # http://localhost:3000
 | `GOOGLE_OAUTH_CLIENT_ID` | Server-side Google ID token verification. Empty disables Google sign-in (API returns 503). |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Server-side Google OAuth secret. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Client id exposed to the browser for the Google Identity Services button. |
+| `NEXT_PUBLIC_API_BASE` | Base URL the browser uses to reach the API. Default `/api`. |
+| `PBKDF2_ITERATIONS` | Password hashing cost. Default `720000`. Tests force `1000`. |
 
 ## Tests
 
@@ -98,6 +100,11 @@ campaigns, admin management.
 | `GOOGLE_OAUTH_CLIENT_ID` | no | OAuth client ID from Google Cloud Console. Leave empty to disable Google sign-in. |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | no | Matching OAuth client secret. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | no | Same client ID as above — this one is exposed to the browser for the sign-in button. |
+| `NEXT_PUBLIC_API_BASE` | no | Base URL the browser uses to reach the API. Default `/api`. |
+| `PBKDF2_ITERATIONS` | no | Password hashing cost. Default `720000`. |
+
+Do not set `TEST_DATABASE_URL` on Vercel — it is only read by the local test
+suite, which wipes every table and therefore never runs in deployment.
 
 `npm run build` runs `prisma generate` (produces the client) but does **not**
 apply migrations. Apply them once per schema change from your machine:
