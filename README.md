@@ -1,116 +1,80 @@
 # Voting System
 
-University voting and election management system with:
+University voting and election management system. Single Next.js 16 full-stack
+application: App Router API routes, React pages, Prisma 7, PostgreSQL (Neon).
 
-- Django REST API in [Backend](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Backend)
-- React + Vite frontend in [Frontend](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Frontend)
-
-## Local setup
-
-Backend:
+## Setup
 
 ```powershell
-cd Backend
-.\myvenv\Scripts\python.exe -m pip install -r requirements.txt
-.\myvenv\Scripts\python.exe manage.py migrate
-.\myvenv\Scripts\python.exe manage.py seed_demo
-.\myvenv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
-```
-
-Frontend:
-
-```powershell
-cd Frontend
 npm install
-npm run dev
+copy .env.example .env   # then fill in DATABASE_URL and the Google OAuth values
+npm run db:setup         # prisma migrate deploy && seed demo data
+npm run dev              # http://localhost:3000
 ```
+
+### Environment
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string (Neon or local) |
+| `GOOGLE_OAUTH_CLIENT_ID` | Server-side Google ID token verification. Empty disables Google sign-in (API returns 503). |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Server-side Google OAuth secret. |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Client id exposed to the browser for the Google Identity Services button. |
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Dev server |
+| `npm run build` | `prisma generate` then `next build` |
+| `npm start` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest suite (needs a reachable `DATABASE_URL`) |
+| `npm run db:generate` | Regenerate the Prisma client |
+| `npm run db:migrate` | Create/apply a migration against the dev database |
+| `npm run db:deploy` | Apply pending migrations |
+| `npm run db:seed` | Seed demo data |
+| `npm run db:setup` | Deploy migrations, then seed |
+| `npm run pg:inspect` | Print row counts for every table |
 
 ## Demo accounts
 
-- Admin: `admin` / `Admin123!`
-- Student voter/candidate: `student_a` / `Pass1234!`
-- Student voter/candidate: `student_b` / `Pass1234!`
-- Staff voter/candidate: `staff_a` / `Pass1234!`
-- Staff voter/candidate: `staff_b` / `Pass1234!`
+Seeded by `npm run db:seed`. Passwords in brackets:
 
-## Render deployment
+- Admin: `admin` [`Admin123!`]
+- Student voter/candidate: `student_a` [`Pass1234!`]
+- Student voter/candidate: `student_b` [`Pass1234!`]
+- Staff voter/candidate: `staff_a` [`Pass1234!`]
+- Staff voter/candidate: `staff_b` [`Pass1234!`]
 
-Files added:
+## Routes
 
-- [render.yaml](/c:/Users/Hp/OneDrive/Desktop/Voting-system/render.yaml)
-- [build.sh](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Backend/build.sh)
-- [Backend/.env.example](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Backend/.env.example)
+Both trailing-slash and non-trailing-slash URLs work
+(`skipTrailingSlashRedirect: true`).
 
-Backend service settings:
+| Path | Notes |
+| --- | --- |
+| `/home` | Landing page |
+| `/admin/login`, `/admin/register`, `/admin/dashboard` | Admin portal |
+| `/voter/login`, `/voter/register`, `/voter/dashboard` | Voter portal |
+| `/voter/compain`, `/voter/compain/[candidateId]` | Campaign browsing |
+| `/candidate/login`, `/candidate/dashboard` | Candidate portal |
+| `/forgot-password` | Password reset |
 
-1. Create a new Render Web Service from this repo.
-2. Use `Backend` as the root directory.
-3. Build command: `./build.sh`
-4. Start command: `gunicorn votingproject.wsgi:application`
-5. Add environment variables:
+Legacy URL spellings are kept as aliases so existing bookmarks continue to
+resolve: `/voter/dashboad`, `/voter/compain`, `/candidate/dashboad`,
+`/candidate/compaindetails`.
 
-```text
-SECRET_KEY=...
-DEBUG=False
-ALLOWED_HOSTS=your-render-service.onrender.com
-CORS_ALLOWED_ORIGINS=https://your-frontend-app.vercel.app
-CSRF_TRUSTED_ORIGINS=https://your-frontend-app.vercel.app
-DATABASE_URL=postgresql://...
-DATABASE_SSL_REQUIRE=True
-```
+API routes live under `/api/` — health, auth, elections, ballots, votes,
+campaigns, admin management.
 
-Notes:
+## Deploy
 
-- [settings.py](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Backend/votingproject/settings.py) now supports environment-based `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, and `DATABASE_URL`.
-- `whitenoise`, `gunicorn`, and `dj-database-url` were added in [requirements.txt](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Backend/requirements.txt).
+`render.yaml` describes a Node web service: build `npm ci && npm run build`,
+start `npm start`, `DATABASE_URL` synced from the dashboard. Give the service
+at least 512 MB; the PBKDF2 password hashing is CPU-bound.
 
-## Vercel deployment
-
-Files added:
-
-- [Frontend/vercel.json](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Frontend/vercel.json)
-- [Frontend/.env.production.example](/c:/Users/Hp/OneDrive/Desktop/Voting-system/Frontend/.env.production.example)
-
-Frontend project settings:
-
-1. Create a Vercel project from this repo.
-2. Set the root directory to `Frontend`.
-3. Framework preset: `Vite`.
-4. Build command: `npm run build`
-5. Output directory: `dist`
-6. Add environment variable:
-
-```text
-VITE_API_BASE=https://your-render-service.onrender.com/api
-VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
-```
-
-Backend Google sign-in variable:
-
-```text
-GOOGLE_OAUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
-GOOGLE_OAUTH_CLIENT_SECRET=your-google-client-secret
-```
-
-`vercel.json` rewrites all routes to `index.html`, which is required for React Router routes like:
-
-- `/admin/dashboard`
-- `/voter/dashboard`
-- `/candidate/campaigndetails`
-
-## API health check
-
-Health endpoint:
-
-- `GET /api/health/`
-
-## Backend test status
-
-Run:
-
-```powershell
-cd Backend
-.\myvenv\Scripts\python.exe manage.py test
-```
-
-The test suite covers auth, elections, campaigns, stats, results, ballot voting, and health.
+`.github/workflows/keep-alive.yml` pings the database on a schedule so the
+Neon branch does not scale to zero. Set a repository secret named
+`DATABASE_URL`.

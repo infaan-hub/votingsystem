@@ -1,9 +1,45 @@
-Backend/myvenv/
-Backend/db.sqlite3
-Backend/media/
-Backend/staticfiles/
-Backend/.tmp/
-Frontend/node_modules/
-Frontend/dist/
-__pycache__/
-*.pyc
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# database
+prisma/dev.db
+prisma/dev.db-journal
+*.db
+*.db-journal
+
+# generated prisma client
+src/generated/
+
+# test output
+coverage/
+playwright-report/
+test-results/
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.devserver.log
+.smoke.log
+
+# local database backups produced by scripts
+*.sql
+*.sqlite3
