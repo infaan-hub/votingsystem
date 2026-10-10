@@ -1,6 +1,10 @@
-// Tests run against the Postgres database in DATABASE_URL. Schema is applied
-// with `prisma migrate deploy` (run once before the suite) and each test file
-// starts from a clean slate via resetDb() in beforeEach hooks.
+// Tests run against the Postgres database in DATABASE_URL.
+// Schema is applied with `prisma migrate deploy` (run once before the suite)
+// and each test file starts from a clean slate via resetDb() in beforeEach
+// hooks.
+//
+// WARNING: resetDb() deletes every row from every table. Only run the suite
+// against a throwaway database.
 
 // Keep password hashing fast in tests (the production iteration count is
 // overkill for unit tests; the algorithm/format stays identical).

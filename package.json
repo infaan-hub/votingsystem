@@ -12,13 +12,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma migrate deploy && tsx prisma/seed.ts",
-    "pg:inspect": "node scripts/pg-inspect.mjs"
+    "db:inspect": "node scripts/pg-inspect.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
