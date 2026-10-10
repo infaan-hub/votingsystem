@@ -1,55 +1,172 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: toggled by the inline script in layout.tsx. */
 @custom-variant dark (&:where(.dark, .dark *));
+/* Requested high-contrast mode (prefers-contrast: more), also toggled by that
+   script so the `.hc` variant is available to Tailwind utilities. */
+@custom-variant hc (&:where(.hc, .hc *));
+
+/* ---------------------------------------------------------------------------
+   Semantic colour tokens
+   --------------------------------------------------------------------------- */
 
 :root {
-  --background: oklch(0.98 0.005 260);
-  --foreground: oklch(0.18 0.02 260);
+  /* Surfaces */
+  --background: oklch(0.98 0.004 260);
+  --foreground: oklch(0.19 0.02 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 260);
+  --card-foreground: oklch(0.19 0.02 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 260);
-  --primary: oklch(0.42 0.18 265);
-  --primary-foreground: oklch(0.98 0.005 260);
+  --popover-foreground: oklch(0.19 0.02 260);
+  --muted: oklch(0.955 0.006 260);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --accent: oklch(0.94 0.01 260);
+  --accent-foreground: oklch(0.26 0.03 260);
   --secondary: oklch(0.95 0.01 260);
-  --secondary-foreground: oklch(0.25 0.03 260);
-  --muted: oklch(0.95 0.01 260);
-  --muted-foreground: oklch(0.52 0.02 260);
-  --accent: oklch(0.95 0.01 260);
-  --accent-foreground: oklch(0.25 0.03 260);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0.005 260);
-  --success: oklch(0.45 0.15 155);
-  --success-foreground: oklch(0.98 0.005 260);
-  --border: oklch(0.9 0.01 260);
-  --input: oklch(0.9 0.01 260);
-  --ring: oklch(0.42 0.18 265);
+  --secondary-foreground: oklch(0.26 0.03 260);
+
+  /* Brand */
+  --primary: oklch(0.44 0.17 264);
+  --primary-foreground: oklch(0.985 0.004 260);
+  --ring: oklch(0.44 0.17 264);
+
+  /* Feedback */
+  --destructive: oklch(0.55 0.22 26);
+  --destructive-foreground: oklch(0.985 0.004 260);
+  --success: oklch(0.47 0.13 158);
+  --success-foreground: oklch(0.985 0.004 260);
+
+  /* Structure — borders carry the layering in light mode too, which keeps
+     elevation consistent when the theme flips. */
+  --border: oklch(0.9 0.008 260);
+  --input: oklch(0.9 0.008 260);
+
+  /* Elevation. Shadows are intentionally light in light mode; dark mode relies
+     on borders and surface steps instead (see `.dark` below). */
+  --shadow-color: 250 40% 20%;
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-md: 0 2px 8px hsl(var(--shadow-color) / 0.08);
+  --shadow-lg: 0 8px 24px hsl(var(--shadow-color) / 0.1);
+
+  /* Election lifecycle status ramp — 8 distinct states, each with a matched
+     foreground so text on a status surface stays legible. */
+  --status-draft: oklch(0.55 0.015 260);
+  --status-draft-fg: oklch(0.985 0.004 260);
+  --status-published: oklch(0.58 0.13 235);
+  --status-published-fg: oklch(0.985 0.004 260);
+  --status-nominations: oklch(0.56 0.15 300);
+  --status-nominations-fg: oklch(0.985 0.004 260);
+  --status-ready: oklch(0.68 0.15 75);
+  --status-ready-fg: oklch(0.24 0.05 75);
+  --status-open: oklch(0.55 0.14 155);
+  --status-open-fg: oklch(0.985 0.004 260);
+  --status-closed: oklch(0.58 0.2 20);
+  --status-closed-fg: oklch(0.985 0.004 260);
+  --status-results: oklch(0.53 0.16 265);
+  --status-results-fg: oklch(0.985 0.004 260);
+  --status-archived: oklch(0.62 0.02 260);
+  --status-archived-fg: oklch(0.985 0.004 260);
+
+  /* Categorical chart palette. Perceptually spaced hues, each ≥3:1 against
+     both --background and --card so they work as graphical objects in both
+     themes. Vote bars pair these with an explicit text label, so colour is
+     never the only carrier of meaning. */
+  --chart-1: oklch(0.55 0.16 250);
+  --chart-2: oklch(0.55 0.13 155);
+  --chart-3: oklch(0.62 0.15 75);
+  --chart-4: oklch(0.58 0.2 20);
+  --chart-5: oklch(0.55 0.16 305);
+  --chart-6: oklch(0.58 0.12 205);
+  --chart-7: oklch(0.62 0.16 40);
+  --chart-8: oklch(0.55 0.13 185);
+
   --radius: 0.625rem;
 }
 
 .dark {
-  --background: oklch(0.12 0.02 260);
+  --background: oklch(0.14 0.02 260);
   --foreground: oklch(0.95 0.005 260);
-  --card: oklch(0.15 0.02 260);
+  --card: oklch(0.18 0.02 260);
   --card-foreground: oklch(0.95 0.005 260);
-  --popover: oklch(0.15 0.02 260);
+  --popover: oklch(0.18 0.02 260);
   --popover-foreground: oklch(0.95 0.005 260);
-  --primary: oklch(0.6 0.18 265);
-  --primary-foreground: oklch(0.98 0.005 260);
-  --secondary: oklch(0.2 0.02 260);
-  --secondary-foreground: oklch(0.95 0.005 260);
-  --muted: oklch(0.2 0.02 260);
-  --muted-foreground: oklch(0.65 0.02 260);
-  --accent: oklch(0.2 0.02 260);
+  --muted: oklch(0.23 0.02 260);
+  --muted-foreground: oklch(0.68 0.02 260);
+  --accent: oklch(0.23 0.02 260);
   --accent-foreground: oklch(0.95 0.005 260);
-  --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: oklch(0.98 0.005 260);
-  --success: oklch(0.55 0.15 155);
-  --success-foreground: oklch(0.98 0.005 260);
-  --border: oklch(0.25 0.02 260);
-  --input: oklch(0.25 0.02 260);
-  --ring: oklch(0.6 0.18 265);
+  --secondary: oklch(0.22 0.02 260);
+  --secondary-foreground: oklch(0.95 0.005 260);
+
+  --primary: oklch(0.62 0.17 264);
+  --primary-foreground: oklch(0.16 0.02 260);
+  --ring: oklch(0.62 0.17 264);
+
+  --destructive: oklch(0.62 0.2 25);
+  --destructive-foreground: oklch(0.16 0.02 260);
+  --success: oklch(0.62 0.14 158);
+  --success-foreground: oklch(0.16 0.02 260);
+
+  --border: oklch(0.3 0.02 260);
+  --input: oklch(0.32 0.02 260);
+
+  /* Elevation in dark mode comes from surface steps and borders, not shadows,
+     which would otherwise read as mud against dark surfaces. */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px oklch(0 0 0 / 0.45);
+  --shadow-lg: 0 8px 24px oklch(0 0 0 / 0.5);
+
+  /* Brighter surfaces so status text on them keeps contrast. */
+  --status-draft: oklch(0.42 0.015 260);
+  --status-draft-fg: oklch(0.93 0.005 260);
+  --status-published: oklch(0.48 0.13 235);
+  --status-published-fg: oklch(0.93 0.005 260);
+  --status-nominations: oklch(0.46 0.15 300);
+  --status-nominations-fg: oklch(0.93 0.005 260);
+  --status-ready: oklch(0.5 0.13 75);
+  --status-ready-fg: oklch(0.93 0.01 75);
+  --status-open: oklch(0.45 0.13 155);
+  --status-open-fg: oklch(0.9 0.05 155);
+  --status-closed: oklch(0.47 0.18 20);
+  --status-closed-fg: oklch(0.93 0.01 20);
+  --status-results: oklch(0.45 0.15 265);
+  --status-results-fg: oklch(0.93 0.01 265);
+  --status-archived: oklch(0.45 0.015 260);
+  --status-archived-fg: oklch(0.9 0.005 260);
+
+  /* Chart hues lift in lightness to stay visible on dark surfaces. */
+  --chart-1: oklch(0.66 0.15 250);
+  --chart-2: oklch(0.68 0.13 155);
+  --chart-3: oklch(0.74 0.14 75);
+  --chart-4: oklch(0.66 0.18 20);
+  --chart-5: oklch(0.66 0.15 305);
+  --chart-6: oklch(0.68 0.12 205);
+  --chart-7: oklch(0.72 0.15 40);
+  --chart-8: oklch(0.66 0.12 185);
 }
+
+/* Requested high contrast: stronger separations and brighter accents. */
+.hc {
+  --border: oklch(0.7 0.02 260);
+  --input: oklch(0.55 0.03 260);
+  --muted-foreground: oklch(0.38 0.03 260);
+  --primary: oklch(0.35 0.2 264);
+  --destructive: oklch(0.45 0.26 26);
+  --success: oklch(0.38 0.16 158);
+  --shadow-sm: 0 0 0 1px hsl(var(--shadow-color) / 0.4);
+  --shadow-md: 0 0 0 1px hsl(var(--shadow-color) / 0.5);
+  --shadow-lg: 0 0 0 2px hsl(var(--shadow-color) / 0.6);
+}
+.dark.hc {
+  --border: oklch(0.55 0.03 260);
+  --input: oklch(0.6 0.03 260);
+  --muted-foreground: oklch(0.82 0.02 260);
+  --primary: oklch(0.76 0.16 264);
+  --foreground: oklch(1 0 0);
+}
+
+/* ---------------------------------------------------------------------------
+   Tokens exposed to Tailwind
+   --------------------------------------------------------------------------- */
 
 @theme inline {
   --color-background: var(--background);
@@ -73,26 +190,192 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --color-status-draft: var(--status-draft);
+  --color-status-draft-foreground: var(--status-draft-fg);
+  --color-status-published: var(--status-published);
+  --color-status-published-foreground: var(--status-published-fg);
+  --color-status-nominations: var(--status-nominations);
+  --color-status-nominations-foreground: var(--status-nominations-fg);
+  --color-status-ready: var(--status-ready);
+  --color-status-ready-foreground: var(--status-ready-fg);
+  --color-status-open: var(--status-open);
+  --color-status-open-foreground: var(--status-open-fg);
+  --color-status-closed: var(--status-closed);
+  --color-status-closed-foreground: var(--status-closed-fg);
+  --color-status-results: var(--status-results);
+  --color-status-results-foreground: var(--status-results-fg);
+  --color-status-archived: var(--status-archived);
+  --color-status-archived-foreground: var(--status-archived-fg);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-soft: var(--shadow-sm);
+  --shadow-panel: var(--shadow-md);
+  --shadow-float: var(--shadow-lg);
+
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-* {
-  border-color: var(--border);
+/* Fluid type scale: each step scales continuously between 360px and ~1600px
+   instead of snapping at breakpoints. */
+@theme {
+  --text-fluid-xs: clamp(0.75rem, 0.72rem + 0.12vw, 0.85rem);
+  --text-fluid-sm: clamp(0.875rem, 0.84rem + 0.18vw, 1rem);
+  --text-fluid-base: clamp(1rem, 0.96rem + 0.22vw, 1.125rem);
+  --text-fluid-lg: clamp(1.125rem, 1.05rem + 0.35vw, 1.375rem);
+  --text-fluid-xl: clamp(1.25rem, 1.13rem + 0.55vw, 1.625rem);
+  --text-fluid-2xl: clamp(1.5rem, 1.3rem + 0.9vw, 2.125rem);
+  --text-fluid-3xl: clamp(1.875rem, 1.5rem + 1.6vw, 2.875rem);
+  --text-fluid-4xl: clamp(2.25rem, 1.6rem + 2.8vw, 4rem);
 }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-}
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
+
+  html {
+    /* Stops iOS rubber-band scroll from dragging the app shell behind the
+       sticky header. */
+    overscroll-behavior-y: contain;
+    -webkit-text-size-adjust: 100%;
+    /* Removes the 300ms tap delay and grey flash on mobile WebKit/Android. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    overscroll-behavior-y: none;
+    /* Prevents accidental text selection while tapping controls quickly. */
+    -webkit-touch-callout: none;
+  }
+
+  /* Every interactive element clears the 24px WCAG 2.2 AA target minimum and
+     avoids the double-tap zoom delay. */
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  summary,
+  label[for] {
+    touch-action: manipulation;
+  }
+
+  /* Visible, consistent focus indicator on keyboard navigation only. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Motion-sensitive users get static transitions. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Safe-area utilities
+   --------------------------------------------------------------------------- */
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+@utility pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+@utility px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+@utility h-safe-screen {
+  height: 100dvh;
+}
+
+/* ---------------------------------------------------------------------------
+   Component helpers
+   --------------------------------------------------------------------------- */
+
+@utility panel {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Dark mode layers with borders rather than shadows. */
+@utility panel-raised {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+@utility text-display {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+@utility text-display-tight {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+
+/* Vote counts and metrics use monospaced digits so streaming results do not
+   reflow the layout. */
+@utility nums-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@utility pb-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
+@utility tap {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+/* Election lifecycle status pill: colour plus a label, never colour alone. */
+@utility status-surface {
+  border: 1px solid color-mix(in oklab, currentColor 35%, transparent);
 }

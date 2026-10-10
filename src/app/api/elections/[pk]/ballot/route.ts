@@ -5,15 +5,20 @@ import { requireStateUser } from "@/src/lib/auth";
 import { eligiblePositionsForUser } from "@/src/lib/services";
 import { isVotingOpen, serializeElectionList, serializePosition } from "@/src/lib/serializers";
 
+/**
+ * Accepts either an integer id or a public slug in `[pk]`, so clients can
+ * address an election the same way the public pages do. Invalid identifiers
+ * simply match nothing and return the standard 404 model error.
+ */
 export const GET = makeRoute({
   permission: "authenticated",
-  intParams: ["pk"],
   handlers: {
     GET: async (_req, params, state) => {
       const user = requireStateUser(state);
-      const pk = Number(params.pk);
+      const raw = (params.pk ?? "").trim();
+
       const election = await prisma.election.findFirst({
-        where: { id: pk, isPublished: true },
+        where: raw && /^\d+$/.test(raw) ? { id: Number(raw), isPublished: true } : { slug: raw, isPublished: true },
       });
       if (!election) throw notFoundModel("Election");
 

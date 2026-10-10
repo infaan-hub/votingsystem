@@ -47,17 +47,22 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+    <div className="mx-auto flex min-h-[80dvh] max-w-md flex-col justify-center px-4 pb-nav lg:pb-0">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Create account</CardTitle>
+          <CardTitle className="text-display text-fluid-2xl">Create account</CardTitle>
           <CardDescription>Register to participate in elections</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
-            )}
+            {error ? (
+              <p
+                role="alert"
+                className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+              >
+                {error}
+              </p>
+            ) : null}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="reg-first">First name</Label>

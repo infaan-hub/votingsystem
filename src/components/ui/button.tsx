@@ -16,10 +16,16 @@ const buttonVariants = cva(
         success: "bg-success text-success-foreground hover:bg-success/90",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        /** 48px — the primary touch size, meets iOS HIG and Android 48dp. */
+        default: "h-12 px-5",
+        /** 44px — still meets the iOS HIG minimum for secondary actions. */
+        sm: "h-11 px-4",
+        lg: "h-13 px-7",
+        icon: "h-12 w-12",
+        /** 36px — for dense table rows where the WCAG 2.2 AA 24px floor applies. */
+        dense: "h-9 px-3",
+        /** Explicit 44px touch target for nav and floating controls. */
+        touch: "h-11 min-w-11 px-3",
       },
     },
     defaultVariants: {

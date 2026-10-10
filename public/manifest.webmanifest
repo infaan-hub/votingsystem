@@ -1,0 +1,26 @@
+{
+  "name": "Election Hub — General-Purpose Election Platform",
+  "short_name": "Election Hub",
+  "description": "Configurable elections for organizations, associations, companies, communities, unions, clubs, boards, and schools.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "categories": ["productivity", "government", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

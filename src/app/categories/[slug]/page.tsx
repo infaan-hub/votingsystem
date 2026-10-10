@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
 import { prisma } from "@/src/lib/db";
-import { serializeElectionList } from "@/src/lib/serializers";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { ElectionCard } from "@/src/components/election-card";
 
 export const dynamic = "force-dynamic";
 
@@ -21,58 +22,59 @@ export default async function CategoryDetailPage({
   const elections = await prisma.election.findMany({
     where: { categoryId: category.id, isPublished: true },
     orderBy: { votingStartAt: "asc" },
-    include: { _count: { select: { positions: true } } },
+    include: {
+      organization: true,
+      _count: { select: { positions: true } },
+    },
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <Link href="/categories" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Back to categories
+    <div className="mx-auto max-w-7xl px-4 pb-nav lg:pb-0">
+      <Link
+        href="/categories"
+        className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Back to categories
       </Link>
 
-      <div className="mt-4">
-        <h1 className="text-3xl font-bold tracking-tight">{category.name}</h1>
-        {category.description && <p className="mt-2 text-muted-foreground">{category.description}</p>}
-      </div>
+      <header className="mt-4 mb-8 max-w-2xl">
+        <p className="text-4xl" aria-hidden="true">
+          {category.icon || "📋"}
+        </p>
+        <h1 className="mt-2 text-display text-fluid-3xl">{category.name}</h1>
+        {category.description ? (
+          <p className="mt-2 text-muted-foreground">{category.description}</p>
+        ) : null}
+        <p className="nums-tabular mt-2 text-sm font-medium">
+          {elections.length} published election{elections.length === 1 ? "" : "s"}
+        </p>
+      </header>
 
       {elections.length === 0 ? (
-        <Card className="mt-8">
+        <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
-            No elections in this category yet.
+            No published elections in this category yet.
           </CardContent>
         </Card>
       ) : (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {elections.map((election) => {
-            const serialized = serializeElectionList(election);
-            return (
-              <Link key={election.id} href={`/elections/${election.slug}`}>
-                <Card className="transition-shadow hover:shadow-md">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-lg">{election.title}</CardTitle>
-                      <Badge
-                        variant={
-                          serialized.status === "active"
-                            ? "success"
-                            : serialized.status === "ended"
-                              ? "muted"
-                              : "secondary"
-                        }
-                      >
-                        {serialized.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {election._count?.positions ?? 0} position{(election._count?.positions ?? 0) !== 1 ? "s" : ""}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {elections.map((election) => (
+            <ElectionCard
+              key={election.id}
+              election={{
+                id: election.id,
+                title: election.title,
+                description: election.description,
+                slug: election.slug,
+                status: election.status,
+                categoryName: category.name,
+                categoryIcon: category.icon,
+                positionCount: election._count?.positions ?? 0,
+                organizationName: election.organization?.name ?? null,
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

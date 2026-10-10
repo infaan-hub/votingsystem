@@ -177,12 +177,9 @@ export function serializeCandidate(
     photo_url: candidatePhotoPath(candidate),
   };
 
-  // `vote_total` is computed upstream and omitted when the caller has no
-  // ranking annotation (which happens outside list/detail serializers).
-  if (voteTotal !== undefined) {
-    return { ...base, vote_total: voteTotal };
-  }
-  return base;
+  // `vote_total` is always emitted so consumers (result bars, ballot clients)
+  // can rely on it; it defaults to 0 when the caller has no ranking annotation.
+  return { ...base, vote_total: voteTotal ?? 0 };
 }
 
 type PositionRow = Position & {
@@ -216,6 +213,9 @@ export async function serializePosition(position: PositionRow) {
     voter_group: position.voterGroup,
     voter_group_label: voterGroupLabel(position.voterGroup),
     max_winners: position.maxWinners,
+    ballot_type: position.ballotType,
+    max_selections: position.maxSelections,
+    allow_write_in: position.allowWriteIn,
     candidates: candidates.map((candidate) =>
       serializeCandidate(candidate, candidate._count.votes),
     ),
