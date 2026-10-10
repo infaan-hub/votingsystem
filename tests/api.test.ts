@@ -81,6 +81,7 @@ async function seedApi() {
   const election = await prisma.election.create({
     data: {
       title: "University Leadership Election 2026",
+      slug: "university-leadership-election-2026",
       description:
         "Digital voting for students and staff with real-time campaign visibility.",
       campaignStartAt: new Date(now - 3 * DAY),
@@ -93,12 +94,14 @@ async function seedApi() {
   const hiddenElection = await prisma.election.create({
     data: {
       title: "Hidden Results Election",
+      slug: "hidden-results-election",
       description: "Results should stay hidden to guests while voting is active.",
       campaignStartAt: new Date(now - DAY),
       campaignEndAt: new Date(now + DAY),
       votingStartAt: new Date(now - HOUR),
       votingEndAt: new Date(now + HOUR),
       allowLiveResults: false,
+      resultVisibility: "hidden",
     },
   });
   const position = await prisma.position.create({

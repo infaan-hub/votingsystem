@@ -5,6 +5,7 @@ import type {
   Candidate,
   Department,
   Election,
+  ElectionCategory,
   Position,
   Section,
   User,
@@ -57,6 +58,23 @@ export function serializeUserSummary(user: UserWithRelations) {
     registration_number: user.registrationNumber,
     staff_id: user.staffId,
     auth_provider: user.authProvider,
+  };
+}
+
+export function serializeCategory(
+  category: ElectionCategory & { _count?: { elections: number } },
+) {
+  return {
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    description: category.description,
+    icon: category.icon,
+    is_active: category.isActive,
+    is_system: category.isSystem,
+    election_count: category._count?.elections ?? 0,
+    created_at: formatDateTime(category.createdAt),
+    updated_at: formatDateTime(category.updatedAt),
   };
 }
 
@@ -258,13 +276,21 @@ export async function serializeElectionDetail(election: Election, now = new Date
 export function serializeVote(vote: {
   id: number;
   createdAt: Date;
-  candidate: CandidateRow;
+  candidate: CandidateRow | null;
+  ballotOption?: { label: string } | null;
+  writeInText?: string;
   position: Position;
   election: Election;
 }) {
+  // The selection is a candidate, a ballot option, or a write-in. The legacy
+  // `candidate` field keeps its name for contract compatibility but carries the
+  // human-readable choice label regardless of kind.
+  const choice = vote.candidate
+    ? displayName(vote.candidate.user)
+    : (vote.ballotOption?.label ?? vote.writeInText ?? "");
   return {
     id: vote.id,
-    candidate: displayName(vote.candidate.user),
+    candidate: choice,
     position: vote.position.name,
     election: vote.election.title,
     created_at: formatDateTime(vote.createdAt),

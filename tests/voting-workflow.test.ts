@@ -20,6 +20,7 @@ async function seedWorkflow() {
   const election = await prisma.election.create({
     data: {
       title: "Campus Leaders 2026",
+      slug: "campus-leaders-2026",
       description: "Department and class leadership elections.",
       campaignStartAt: new Date(now - 2 * DAY),
       campaignEndAt: new Date(now + DAY),

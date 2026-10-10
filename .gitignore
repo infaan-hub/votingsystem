@@ -43,3 +43,5 @@ yarn-error.log*
 # local database backups produced by scripts
 *.sql
 *.sqlite3
+# ...but Prisma migration SQL must be tracked.
+!prisma/migrations/**/*.sql

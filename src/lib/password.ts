@@ -9,10 +9,9 @@ function iterations(): number {
 
 function randomSalt(length = 12): string {
   const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const bytes = crypto.randomBytes(length);
   let salt = "";
   for (let i = 0; i < length; i += 1) {
-    salt += alphabet[bytes[i] % alphabet.length];
+    salt += alphabet[crypto.randomInt(alphabet.length)];
   }
   return salt;
 }

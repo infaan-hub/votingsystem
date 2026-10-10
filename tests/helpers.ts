@@ -67,12 +67,18 @@ export async function resetDb(): Promise<void> {
   await prisma.$transaction(
     [
       prisma.vote.deleteMany(),
+      prisma.ballotOption.deleteMany(),
       prisma.announcement.deleteMany(),
       prisma.candidate.deleteMany(),
+      prisma.eligibleVoter.deleteMany(),
+      prisma.membership.deleteMany(),
+      prisma.auditLog.deleteMany(),
       prisma.position.deleteMany(),
       prisma.token.deleteMany(),
       prisma.user.deleteMany(),
       prisma.election.deleteMany(),
+      prisma.electionCategory.deleteMany(),
+      prisma.organization.deleteMany(),
       prisma.section.deleteMany(),
       prisma.department.deleteMany(),
     ],

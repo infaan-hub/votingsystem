@@ -55,6 +55,20 @@ async function upsertUser(
 }
 
 async function main() {
+  // Ensure the migration-seeded default categories exist so the seeded
+  // election can be assigned to a real category.
+  const educationCategory = await prisma.electionCategory.upsert({
+    where: { slug: "education" },
+    update: {},
+    create: {
+      name: "Education",
+      slug: "education",
+      description: "University and school elections.",
+      icon: "graduation-cap",
+      isSystem: true,
+    },
+  });
+
   const cs = await upsertDepartment("Computer Science", "CS", "School of computing and software engineering.");
   const business = await upsertDepartment("Business Administration", "BUS", "Business and entrepreneurship studies.");
   const staff = await upsertDepartment("Administration", "ADM", "Administrative and support staff.");
@@ -68,8 +82,14 @@ async function main() {
     election = await prisma.election.create({
       data: {
         title: electionTitle,
+        slug: "university-leadership-election-2026",
         description:
           "Digital voting for students and staff with real-time campaign, turnout, and ranking visibility.",
+        categoryId: educationCategory.id,
+        status: "OPEN",
+        eligibilityPolicy: "legacy_academic",
+        resultVisibility: "live",
+        timezone: "UTC",
         campaignStartAt: new Date(now - 5 * DAY),
         campaignEndAt: new Date(now + 2 * DAY),
         votingStartAt: new Date(now - 3600000),
@@ -252,7 +272,219 @@ async function main() {
   await ensureVote(staffB.id, candStaffA.id, staffRepresentative.id);
   void candStaffB;
 
+  await seedCorporateElection(now);
+
   console.log("Demo election data seeded successfully.");
+}
+
+/**
+ * Demonstrates the general-purpose platform: a corporate election that uses a
+ * custom category, an organization, an organization-membership eligibility
+ * policy, a yes/no referendum (ballot options rather than candidates), and a
+ * written policy instead of a traditional title/description — none of which
+ * involve any education-specific field.
+ */
+async function seedCorporateElection(now: number) {
+  const corporateSlug = "northwind-works-council-2026";
+
+  const org = await prisma.organization.upsert({
+    where: { slug: "northwind" },
+    update: {},
+    create: {
+      name: "Northwind Industrial",
+      slug: "northwind",
+      description: "Manufacturing company with a worker works council.",
+      orgType: "company",
+    },
+  });
+
+  const existing = await prisma.election.findUnique({ where: { slug: corporateSlug } });
+  let election = existing;
+  if (!election) {
+    const category = await prisma.electionCategory.upsert({
+      where: { slug: "corporate" },
+      update: {},
+      create: {
+        name: "Corporate",
+        slug: "corporate",
+        description: "Corporate and employee representative elections.",
+        icon: "building-2",
+        isSystem: true,
+      },
+    });
+
+    election = await prisma.election.create({
+      data: {
+        title: "Northwind Works Council Election 2026",
+        slug: corporateSlug,
+        description:
+          "Elect two district employee representatives and settle the flexible-working referendum.",
+        instructions:
+          "You may choose up to two representatives and answer the referendum question. Both are required.",
+        categoryId: category.id,
+        organizationId: org.id,
+        status: "OPEN",
+        eligibilityPolicy: "org_members",
+        resultVisibility: "hidden",
+        timezone: "Europe/London",
+        campaignStartAt: new Date(now - 4 * DAY),
+        campaignEndAt: new Date(now + 1 * DAY),
+        votingStartAt: new Date(now - 3600000),
+        votingEndAt: new Date(now + 2 * DAY),
+        isPublished: true,
+      },
+    });
+  }
+
+  const existingRepPosition = await prisma.position.findFirst({
+    where: { electionId: election.id, name: "Works Council Representative" },
+  });
+  const repPosition = existingRepPosition
+    ?? (await prisma.position.create({
+      data: {
+        electionId: election.id,
+        name: "Works Council Representative",
+        description: "Two representatives for the shop-floor district.",
+        ballotType: "candidate",
+        maxSelections: 2,
+        maxWinners: 2,
+        order: 1,
+      },
+    }));
+
+  const existingReferendum = await prisma.position.findFirst({
+    where: { electionId: election.id, name: "Flexible working hours" },
+  });
+  const referendum = existingReferendum
+    ?? (await prisma.position.create({
+      data: {
+        electionId: election.id,
+        name: "Flexible working hours",
+        description: "Should the company trial flexible working hours for six months?",
+        ballotType: "yes_no",
+        maxSelections: 1,
+        order: 2,
+      },
+    }));
+
+  // Yes / No ballot options prove a non-candidate ballot works end to end.
+  for (const [order, label, description] of [
+    [1, "Yes", "Trial flexible working hours for six months."],
+    [2, "No", "Keep the current fixed schedule."],
+  ] as const) {
+    const found = await prisma.ballotOption.findFirst({
+      where: { positionId: referendum.id, label },
+    });
+    if (!found) {
+      await prisma.ballotOption.create({
+        data: { positionId: referendum.id, label, description, order },
+      });
+    }
+  }
+
+  // Organization members are the eligible voters here — no department or
+  // section anywhere in this election.
+  const membersByUsername = ["kezia", "marcus", "priya", "tomas"];
+  const members = [];
+  for (const username of membersByUsername) {
+    const member = await upsertUser(username, {
+      password: "Works2026!",
+      firstName: username[0].toUpperCase() + username.slice(1),
+      lastName: "Ford",
+      email: `${username}@northwind.example`,
+      role: "staff",
+      registrationNumber: "",
+      staffId: `NW-${username.toUpperCase()}`,
+    });
+    members.push(member);
+  }
+  for (const member of members) {
+    const membership = await prisma.membership.findFirst({
+      where: { userId: member.id, organizationId: org.id },
+    });
+    if (!membership) {
+      await prisma.membership.create({
+        data: {
+          userId: member.id,
+          organizationId: org.id,
+          memberRole: "member",
+          status: "approved",
+        },
+      });
+    }
+  }
+
+  // Two approved candidates draw from the same member pool, mirroring how a
+  // works council nominates sitting employees.
+  const repCandidates = [
+    {
+      username: "kezia",
+      firstName: "Kezia",
+      slogan: "Safer, quieter production lines",
+      manifesto: "Fund hearing protection and redesign the loud-press layout.",
+    },
+    {
+      username: "marcus",
+      firstName: "Marcus",
+      slogan: "Transparent overtime rules",
+      manifesto: "Publish overtime allocations 30 days in advance every month.",
+    },
+    {
+      username: "priya",
+      firstName: "Priya",
+      slogan: "Skills and apprenticeships",
+      manifesto: "Expand paid apprenticeships and internal promotion routes.",
+    },
+  ];
+  const createdCandidates = [];
+  for (const [index, rep] of repCandidates.entries()) {
+    const candidateUser = await upsertUser(`${rep.username}c`, {
+      password: "Works2026!",
+      firstName: rep.firstName,
+      lastName: "Ford",
+      email: `${rep.username}c@northwind.example`,
+      role: "staff",
+      registrationNumber: "",
+      staffId: `NW-${rep.username.toUpperCase()}C`,
+    });
+    const alreadyCandidate = await prisma.candidate.findFirst({
+      where: { positionId: repPosition.id, userId: candidateUser.id },
+    });
+    createdCandidates.push(
+      alreadyCandidate ??
+        (await prisma.candidate.create({
+          data: {
+            userId: candidateUser.id,
+            electionId: election.id,
+            positionId: repPosition.id,
+            approved: true,
+            featuredOrder: index,
+            slogan: rep.slogan,
+            manifesto: rep.manifesto,
+          },
+        })),
+    );
+  }
+
+  // A few recorded ballots so published-result rendering has real data.
+  const ballots = [
+    [members[1].id, createdCandidates[0].id],
+    [members[2].id, createdCandidates[0].id],
+    [members[3].id, createdCandidates[1].id],
+  ];
+  for (const [voterId, candidateId] of ballots) {
+    if (voterId === undefined || candidateId === undefined) continue;
+    const existingVote = await prisma.vote.findFirst({
+      where: { voterId, electionId: election.id, positionId: repPosition.id },
+    });
+    if (!existingVote) {
+      await prisma.vote.create({
+        data: { voterId, candidateId, electionId: election.id, positionId: repPosition.id },
+      });
+    }
+  }
+
+  console.log("Corporate (non-education) demo election seeded with ballot options.");
 }
 
 main()

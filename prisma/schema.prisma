@@ -7,6 +7,12 @@ datasource db {
   provider = "postgresql"
 }
 
+// ---------------------------------------------------------------------------
+// Legacy academic structures. RETAINED as OPTIONAL, organization-specific
+// metadata for backward compatibility. A general-purpose election works with
+// none of these populated.
+// ---------------------------------------------------------------------------
+
 model Department {
   id          Int       @id @default(autoincrement())
   name        String    @unique
@@ -15,9 +21,12 @@ model Department {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  sections  Section[]
-  users     User[]
-  positions Position[]
+  organizationId Int?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  sections   Section[]
+  users      User[]
+  positions  Position[]
   candidates Candidate[]
 }
 
@@ -38,33 +47,141 @@ model Section {
   @@unique([departmentId, code])
 }
 
+// ---------------------------------------------------------------------------
+// General-purpose platform domain
+// ---------------------------------------------------------------------------
+
+model ElectionCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  description String   @default("")
+  icon        String   @default("")
+  isActive    Boolean  @default(true)
+  /// Seeded platform defaults cannot be deleted while referenced.
+  isSystem    Boolean  @default(false)
+  createdBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator  User?      @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  elections Election[]
+
+  @@index([isActive])
+}
+
+model Organization {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  description String   @default("")
+  /// Free-form: company, association, club, community, union, board, custom...
+  orgType     String   @default("association")
+  isActive    Boolean  @default(true)
+  createdBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator     User?         @relation("OrgCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  departments Department[]
+  elections   Election[]
+  memberships Membership[]
+
+  @@index([isActive])
+}
+
+model Membership {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  organizationId Int
+  /// Owner / manager / member — org-scoped, distinct from platform role.
+  memberRole     String   @default("member")
+  /// pending / approved / rejected / suspended
+  status         String   @default("approved")
+  joinedAt       DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, status])
+}
+
+/// Allow-list for elections using the `voter_list` eligibility policy.
+model EligibleVoter {
+  id         Int      @id @default(autoincrement())
+  electionId Int
+  userId     Int?
+  /// Email or external identifier for invited participants not yet registered.
+  identifier String   @default("")
+  status     String   @default("approved")
+  addedBy    Int?
+  createdAt  DateTime @default(now())
+
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([electionId, userId])
+  @@unique([electionId, identifier])
+  @@index([electionId, status])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int?
+  action     String
+  entityType String
+  entityId   String   @default("")
+  /// Never stores ballot selections or secrets — metadata only.
+  metadata   Json?
+  ipAddress  String   @default("")
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Accounts
+// ---------------------------------------------------------------------------
+
 model User {
-  id                Int       @id @default(autoincrement())
-  password          String    @default("")
-  lastLogin         DateTime?
-  isSuperuser       Boolean   @default(false)
-  username          String    @unique
-  firstName         String    @default("")
-  lastName          String    @default("")
-  email             String    @default("")
-  isStaff           Boolean   @default(false)
-  isActive          Boolean   @default(true)
-  dateJoined        DateTime  @default(now())
-  role              String    @default("student")
-  departmentId      Int?
-  sectionId         Int?
-  registrationNumber String   @default("")
-  staffId           String    @default("")
-  phoneNumber       String    @default("")
-  googleId          String?   @unique
-  authProvider      String    @default("local")
+  id                 Int       @id @default(autoincrement())
+  password           String    @default("")
+  lastLogin          DateTime?
+  isSuperuser        Boolean   @default(false)
+  username           String    @unique
+  firstName          String    @default("")
+  lastName           String    @default("")
+  email              String    @default("")
+  isStaff            Boolean   @default(false)
+  isActive           Boolean   @default(true)
+  dateJoined         DateTime  @default(now())
+  /// Platform role: student / staff / officer / admin (legacy-compatible).
+  role               String    @default("student")
+  departmentId       Int?
+  sectionId          Int?
+  registrationNumber String    @default("")
+  staffId            String    @default("")
+  phoneNumber        String    @default("")
+  googleId           String?   @unique
+  authProvider       String    @default("local")
 
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
-  votes      Vote[]
-  candidateProfiles Candidate[]
-  token      Token?
+  votes              Vote[]
+  candidateProfiles  Candidate[]
+  token              Token?
+  memberships        Membership[]
+  eligibleVoterRows  EligibleVoter[]
+  categoriesCreated  ElectionCategory[] @relation("CategoryCreator")
+  organizationsCreated Organization[]    @relation("OrgCreator")
+  electionsCreated   Election[]
+  auditLogs          AuditLog[]
 
   @@index([role])
 }
@@ -76,35 +193,78 @@ model Token {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Election {
-  id                       Int       @id @default(autoincrement())
-  title                    String
-  description              String    @default("")
-  image                    String?
-  imageBytes               Bytes?
-  imageContentType         String    @default("")
-  imageFilename            String    @default("")
-  campaignStartAt          DateTime
-  campaignEndAt            DateTime
-  votingStartAt            DateTime
-  votingEndAt              DateTime
-  allowLiveResults         Boolean   @default(true)
-  announceWinnersAutomatically Boolean @default(true)
-  isPublished              Boolean   @default(true)
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+// ---------------------------------------------------------------------------
+// Elections
+// ---------------------------------------------------------------------------
 
-  positions    Position[]
-  candidates   Candidate[]
-  votes        Vote[]
-  announcements Announcement[]
+model Election {
+  id    Int    @id @default(autoincrement())
+  /// Public, stable identifier used in routes (`/vote/[slug]`).
+  slug  String @unique @default("")
+  title String
+  description   String @default("")
+  instructions  String @default("")
+  image         String?
+  imageBytes    Bytes?
+  imageContentType String @default("")
+  imageFilename    String @default("")
+
+  categoryId       Int?
+  organizationId   Int?
+  /// DRAFT / PUBLISHED / NOMINATIONS / READY / OPEN / CLOSED / RESULTS_PUBLISHED / ARCHIVED
+  status           String   @default("DRAFT")
+  /// registered / org_members / voter_list / invite_only / open / legacy_academic
+  eligibilityPolicy String  @default("registered")
+  /// hidden / admin_only / officers / live / published / public
+  resultVisibility  String  @default("live")
+  secretBallot      Boolean @default(false)
+  /// IANA timezone; scheduling evaluated against this + server time.
+  timezone          String  @default("UTC")
+  /// Deliberate, documented exception. Default: administrators cannot vote.
+  allowAdminsToVote Boolean @default(false)
+
+  campaignStartAt DateTime
+  campaignEndAt   DateTime
+  votingStartAt   DateTime
+  votingEndAt     DateTime
+  registrationStartAt DateTime?
+  registrationEndAt   DateTime?
+
+  allowLiveResults            Boolean   @default(true)
+  announceWinnersAutomatically Boolean  @default(true)
+  isPublished                 Boolean   @default(true)
+  archivedAt                  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category       ElectionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  creator        User?             @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  createdBy      Int?
+
+  positions      Position[]
+  candidates     Candidate[]
+  votes          Vote[]
+  eligibleVoters EligibleVoter[]
+  announcements  Announcement[]
+
+  @@index([categoryId])
+  @@index([organizationId])
+  @@index([status])
 }
 
 model Position {
-  id           Int      @id @default(autoincrement())
+  id           Int    @id @default(autoincrement())
   electionId   Int
   name         String
   description  String   @default("")
+  /// candidate / yes_no / multiple_choice
+  ballotType   String   @default("candidate")
+  /// Max selections a voter may make for this question.
+  maxSelections Int     @default(1)
+  allowWriteIn Boolean  @default(false)
+  /// Display + tally order within the election.
+  order        Int      @default(0)
   departmentId Int?
   sectionId    Int?
   voterGroup   String   @default("all")
@@ -112,15 +272,34 @@ model Position {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  election   Election   @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
-  candidates Candidate[]
-  votes      Vote[]
+  candidates     Candidate[]
+  votes          Vote[]
+  ballotOptions  BallotOption[]
 
   @@unique([electionId, name, departmentId, sectionId])
   @@index([electionId])
+}
+
+/// Non-candidate ballot choices: Yes/No referendums, multiple-choice polls.
+model BallotOption {
+  id          Int     @id @default(autoincrement())
+  positionId  Int
+  label       String
+  description String  @default("")
+  order       Int     @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+
+  @@unique([positionId, label])
+  @@index([positionId])
 }
 
 model Candidate {
@@ -134,8 +313,8 @@ model Candidate {
   manifesto               String   @default("")
   campaignVideo           String?
   campaignVideoUrl        String   @default("")
-          campaignVideoBytes      Bytes?
-  campaignVideoContentType String   @default("")
+  campaignVideoBytes      Bytes?
+  campaignVideoContentType String  @default("")
   campaignVideoFilename   String   @default("")
   photo                   String?
   photoBytes              Bytes?
@@ -146,9 +325,9 @@ model Candidate {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
-  election   Election   @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  position   Position   @relation(fields: [positionId], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position   Position    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
@@ -158,23 +337,42 @@ model Candidate {
   @@index([positionId])
 }
 
-model Vote {
-  id          Int      @id @default(autoincrement())
-  voterId     Int
-  candidateId Int
-  electionId  Int
-  positionId  Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// ---------------------------------------------------------------------------
+// Voting
+//
+// A Vote is one selection by one voter for one question (position). Uniqueness
+// (voterId, electionId, positionId) is the authoritative duplicate-vote gate,
+// enforced by the database and relied on inside a transaction so concurrent
+// submissions cannot both succeed. candidateId is nullable so a vote may target
+// a BallotOption (yes/no, multiple-choice) instead of a candidate.
+//
+// Secret-ballot separation (unlinking voter identity from selections) and
+// multi-select ballots are documented future enhancements; the current model
+// intentionally preserves the working single-select candidate flow.
+// ---------------------------------------------------------------------------
 
-  voter     User     @relation(fields: [voterId], references: [id], onDelete: Cascade)
-  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  election  Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  position  Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+model Vote {
+  id         Int      @id @default(autoincrement())
+  voterId    Int
+  electionId Int
+  positionId Int
+  /// Selection target: exactly one of candidateId / ballotOptionId / writeInText.
+  candidateId    Int?
+  ballotOptionId Int?
+  writeInText    String   @default("")
+  createdAt  DateTime @default(now())
+
+  voter        User         @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  election     Election     @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position     Position     @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  candidate    Candidate?   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  ballotOption BallotOption? @relation(fields: [ballotOptionId], references: [id], onDelete: Cascade)
 
   @@unique([voterId, electionId, positionId])
   @@index([electionId])
+  @@index([positionId])
   @@index([candidateId])
+  @@index([ballotOptionId])
 }
 
 model Announcement {

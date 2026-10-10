@@ -91,9 +91,21 @@ export async function visibleAnnouncements(
 
 export function resultsVisible(election: Election, user?: UserWithRelations | null): boolean {
   const status = electionStatus(election);
-  if (status === "ended" || election.allowLiveResults) return true;
+  const policy = election.resultVisibility;
+
+  // Final states always publish to everyone.
+  if (status === "ended") return true;
+  if (policy === "public" || policy === "published") return true;
+  if (policy === "live") return true; // live aggregate during voting
+  if (policy === "hidden") return false;
+
   if (!user) return false;
-  return user.role === "admin" || user.role === "officer";
+  if (policy === "admin_only") return user.role === "admin";
+  if (policy === "officers") return user.role === "admin" || user.role === "officer";
+
+  // Legacy fallback: honor the old allowLiveResults flag when resultVisibility
+  // is unrecognized. This keeps pre-migration elections working.
+  return election.allowLiveResults || user.role === "admin" || user.role === "officer";
 }
 
 export async function castVote(voter: UserWithRelations, candidate: Candidate) {
@@ -134,11 +146,14 @@ export async function castVote(voter: UserWithRelations, candidate: Candidate) {
   });
   if (existing) {
     throw ValidationError.fromDict({
-      __all__: "Vote with this voter, election and position already exists.",
+      __all__: "You have already voted for this position in this election.",
     });
   }
 
   try {
+    // The (voterId, electionId, positionId) unique constraint is the
+    // authoritative duplicate guard: two concurrent submissions cannot both
+    // persist, so the loser surfaces here as a P2002 uniqueness violation.
     return await prisma.vote.create({
       data: {
         voterId: voter.id,
@@ -150,7 +165,7 @@ export async function castVote(voter: UserWithRelations, candidate: Candidate) {
   } catch (error) {
     if (isUniqueConstraintViolation(error)) {
       throw ValidationError.fromDict({
-        detail: "You have already voted for this position in this election.",
+        __all__: "You have already voted for this position in this election.",
       });
     }
     throw error;
@@ -263,8 +278,8 @@ async function votesGroupedBy(electionId: number, groupBy: "department" | "secti
   for (const vote of votes) {
     const label =
       groupBy === "department"
-        ? vote.candidate.department?.name
-        : vote.candidate.section?.name;
+        ? vote.candidate?.department?.name
+        : vote.candidate?.section?.name;
     if (!label) continue;
     totals.set(label, (totals.get(label) ?? 0) + 1);
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ApiError, htmlNotFound, unauthenticated } from "@/src/lib/http";
+import { ApiError, unauthenticated } from "@/src/lib/http";
 import {
   authenticateRequest,
   requireStateAdmin,
@@ -20,14 +20,19 @@ export type Permission = "public" | "authenticated" | "admin";
 
 export type ViewConfig = {
   permission?: Permission;
-  /** Integer URL params: rejects anything that is not a bare decimal integer. */
   intParams?: string[];
   handlers: Partial<Record<HttpMethod, ApiHandler>>;
 };
 
 const METHOD_ORDER: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
-/** `HEAD` is auto-allowed wherever `GET` is, matching conventional REST routers. */
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+};
+
 function allowHeader(handlers: Partial<Record<HttpMethod, ApiHandler>>): string {
   const allowed: string[] = [];
   for (const method of METHOD_ORDER) {
@@ -41,12 +46,10 @@ function allowHeader(handlers: Partial<Record<HttpMethod, ApiHandler>>): string 
   return allowed.join(", ");
 }
 
-/**
- * Builds a Next.js route module that dispatches like a conventional REST
- * handler: URL-converter checks run first (a non-integer id returns the HTML
- * 404 page before any handler logic), then permission, then the method.
- * Every response, including errors, carries an `Allow` header.
- */
+function jsonError(status: number, detail: string): ApiError {
+  return new ApiError(status, { detail });
+}
+
 export function makeRoute(config: ViewConfig) {
   const permission = config.permission ?? "public";
   const handlers = config.handlers;
@@ -68,7 +71,7 @@ export function makeRoute(config: ViewConfig) {
         for (const key of config.intParams) {
           const raw = params[key];
           if (raw === undefined || !/^-?\d+$/.test(raw)) {
-            throw htmlNotFound();
+            throw jsonError(404, `No resource matches the given identifier.`);
           }
         }
       }
@@ -84,34 +87,46 @@ export function makeRoute(config: ViewConfig) {
       if (req.method === "OPTIONS") {
         return new NextResponse(null, {
           status: 200,
-          headers: { Allow: allow },
+          headers: {
+            Allow: allow,
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": allow,
+            "Access-Control-Allow-Headers": "Authorization, Content-Type",
+            "Access-Control-Max-Age": "86400",
+            ...SECURITY_HEADERS,
+          },
         });
       }
 
       const key = req.method === "HEAD" && handlers.GET ? "GET" : req.method;
       const handler = handlers[key as HttpMethod];
       if (!handler) {
-        throw new ApiError(405, { detail: `Method "${req.method}" not allowed.` }, { Allow: allow });
+        throw jsonError(405, `Method "${req.method}" not allowed.`);
       }
-      return await handler(req, params, state);
+      const response = await handler(req, params, state);
+      const headers = new Headers(response.headers);
+      for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+        if (!headers.has(k)) headers.set(k, v);
+      }
+      return new Response(response.body, { status: response.status, headers });
     } catch (error) {
       if (error instanceof ApiError) {
         const headers: Record<string, string> = { ...error.headers };
         const contentType = headers["Content-Type"] ?? "";
         if (contentType.includes("text/html")) {
-          return new Response(String(error.body), {
-            status: error.status,
-            headers,
-          });
+          return new Response(String(error.body), { status: error.status, headers });
         }
         headers.Allow = headers.Allow ?? allow;
         if (error.status === 401) headers["WWW-Authenticate"] = "Token";
+        for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+          if (!headers[k]) headers[k] = v;
+        }
         return NextResponse.json(error.body, { status: error.status, headers });
       }
       console.error("API handler failed:", error);
       return NextResponse.json(
         { detail: "A server error occurred." },
-        { status: 500, headers: { Allow: allow } },
+        { status: 500, headers: { Allow: allow, ...SECURITY_HEADERS } },
       );
     }
   };

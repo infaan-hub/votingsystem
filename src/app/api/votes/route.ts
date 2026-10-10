@@ -63,6 +63,7 @@ export const POST = makeRoute({
               section: { include: { department: true } },
             },
           },
+          ballotOption: true,
           position: true,
           election: true,
         },

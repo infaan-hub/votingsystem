@@ -4,10 +4,9 @@ import crypto from "node:crypto";
 const TOKEN_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 export function generateTokenKey(): string {
-  const bytes = crypto.randomBytes(40);
   let key = "";
   for (let i = 0; i < 40; i += 1) {
-    key += TOKEN_ALPHABET[bytes[i] % TOKEN_ALPHABET.length];
+    key += TOKEN_ALPHABET[crypto.randomInt(TOKEN_ALPHABET.length)];
   }
   return key;
 }

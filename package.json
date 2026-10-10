@@ -23,11 +23,18 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "google-auth-library": "^11.2.0",
+    "lucide-react": "^1.55.0",
     "next": "^16.4.0",
     "pg": "^8.23.1",
+    "postcss": "^8.5.29",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
