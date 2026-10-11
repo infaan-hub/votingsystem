@@ -273,6 +273,7 @@ async function main() {
   void candStaffB;
 
   await seedCorporateElection(now);
+  await seedPartiesRatingsAndOpinions();
 
   console.log("Demo election data seeded successfully.");
 }
@@ -485,6 +486,121 @@ async function seedCorporateElection(now: number) {
   }
 
   console.log("Corporate (non-education) demo election seeded with ballot options.");
+}
+
+/**
+ * Region-agnostic ballot groups, rating dimensions, and public opinions.
+ *
+ * Party names are deliberately invented and generic — nothing on the ballot is
+ * tied to a country, and the tenant renames the concept via `config/tenant.ts`.
+ */
+async function seedPartiesRatingsAndOpinions() {
+  const parties = [
+    { name: "Progress Alliance", slug: "progress-alliance", code: "PA", color: "#1F4FD8" },
+    { name: "Civic Union", slug: "civic-union", code: "CU", color: "#18C48F" },
+    { name: "Reform Bloc", slug: "reform-bloc", code: "RB", color: "#F5A524" },
+  ];
+
+  for (const party of parties) {
+    await prisma.party.upsert({
+      where: { slug: party.slug },
+      update: {},
+      create: party,
+    });
+  }
+
+  // Attach the first two parties to approved candidates so badges and the
+  // group filters have something to show.
+  const approved = await prisma.candidate.findMany({
+    where: { approved: true, partyId: null },
+    orderBy: { createdAt: "asc" },
+    take: 6,
+  });
+  for (const [index, candidate] of approved.entries()) {
+    const party = parties[index % parties.length];
+    if (!party) continue;
+    await prisma.candidate.update({
+      where: { id: candidate.id },
+      data: { partyId: (await prisma.party.findUnique({ where: { slug: party.slug } }))!.id },
+    });
+  }
+
+  // Rating dimensions per position, scoped so a referendum stays unrated.
+  const positions = await prisma.position.findMany({
+    where: { ballotType: "candidate" },
+    take: 3,
+    include: { candidates: { where: { approved: true }, take: 2 } },
+  });
+
+  for (const position of positions) {
+    const dimensions = ["Vision", "Track record", "Communication"];
+    for (const [order, name] of dimensions.entries()) {
+      await prisma.ratingCategory.upsert({
+        where: { positionId_name: { positionId: position.id, name } },
+        update: { order },
+        create: { positionId: position.id, name, order },
+      });
+    }
+
+    if (position.candidates.length === 0) continue;
+
+    const categories = await prisma.ratingCategory.findMany({
+      where: { positionId: position.id },
+      orderBy: { order: "asc" },
+    });
+
+    // A handful of deterministic ratings so the bars render real averages.
+    const scores = [4, 5, 3, 4, 5];
+    for (const candidate of position.candidates) {
+      for (const [categoryIndex, category] of categories.entries()) {
+        const scalar = scores[(categoryIndex + 1) % scores.length];
+        const score = typeof scalar === "number" ? scalar : 4;
+        const existing = await prisma.candidateRating.findFirst({
+          where: {
+            candidateId: candidate.id,
+            categoryId: category.id,
+            voterId: candidate.userId,
+          },
+        });
+        if (existing) {
+          await prisma.candidateRating.update({
+            where: { id: existing.id },
+            data: { score },
+          });
+        } else {
+          await prisma.candidateRating.create({
+            data: {
+              candidateId: candidate.id,
+              categoryId: category.id,
+              voterId: candidate.userId,
+              score,
+            },
+          });
+        }
+      }
+    }
+
+    // One public opinion per candidate so the tab is not empty.
+    for (const candidate of position.candidates) {
+      const existingOpinion = await prisma.opinion.findFirst({
+        where: { candidateId: candidate.id },
+      });
+      if (existingOpinion) continue;
+      // Opinions need a voter; reuse the candidate's own account for the demo
+      // rather than inventing a new identity.
+      await prisma.opinion.create({
+        data: {
+          candidateId: candidate.id,
+          voterId: candidate.userId,
+          body: "Clear plan and responsive to questions from members.",
+          up: 12,
+          down: 1,
+        },
+      });
+    }
+  }
+
+  console.log("Parties, rating categories, and opinions seeded.");
 }
 
 main()

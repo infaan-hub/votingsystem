@@ -21,6 +21,7 @@ const CANDIDATE_INCLUDE = {
   user: { include: { department: true, section: { include: { department: true } } } },
   department: true,
   section: { include: { department: true } },
+  party: true,
 } as const;
 
 type CandidateRow = Candidate & {
@@ -30,6 +31,7 @@ type CandidateRow = Candidate & {
   };
   department: Department | null;
   section: (Section & { department: Department | null }) | null;
+  party: { id: number; name: string; code: string; color: string } | null;
 };
 
 export const PATCH = makeRoute({

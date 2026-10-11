@@ -1,73 +1,76 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Manrope } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import AppShell from "@/src/components/AppShell";
 import { AppProvider } from "@/src/components/AppProvider";
 import { ToastProvider } from "@/src/components/ui/toast";
+import tenant, { t } from "@/config/tenant";
 import "./globals.css";
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-sans",
+  variable: "--nv-font",
 });
 
 export const metadata: Metadata = {
-  title: "Election Hub",
-  description:
-    "Configurable election platform for organizations, associations, companies, communities, unions, clubs, boards, and schools.",
+  title: {
+    default: `${tenant.name} — ${tenant.tagline}`,
+    template: `%s · ${tenant.name}`,
+  },
+  description: tenant.tagline,
   manifest: "/manifest.webmanifest",
+  applicationName: tenant.name,
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon-maskable.svg", type: "image/svg+xml" }],
+    icon: [{ url: tenant.logo, type: "image/svg+xml" }],
+    apple: [{ url: tenant.logo, type: "image/svg+xml" }],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Election Hub",
+    title: tenant.shortName,
   },
 };
 
-/**
- * `viewportFit: "cover"` is required before `env(safe-area-inset-*)` resolves to
- * a non-zero value on notched iPhones — the app draws edge-to-edge and the
- * `*-safe` utility classes add the inset back where needed.
- */
+/** Edge-to-edge so `env(safe-area-inset-*)` resolves on notched devices. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1120" },
+    { media: "(prefers-color-scheme: light)", color: tenant.themeColor },
+    { media: "(prefers-color-scheme: dark)", color: "#0F1020" },
   ],
 };
 
-/** Applies the stored (or OS) theme before first paint so there is no flash. */
+/**
+ * Applies the stored or OS theme before first paint so there is no flash, and
+ * seeds the requested-contrast class.
+ */
 const themeScript = `
 (function () {
   try {
     var stored = localStorage.getItem("election-hub-theme");
-    var dark = stored
-      ? stored === "dark"
+    var explicit = localStorage.getItem("election-hub-theme-explicit");
+    var dark = explicit && stored ? stored === "dark"
       : window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var contrast = window.matchMedia("(prefers-contrast: more)").matches;
     var root = document.documentElement;
     root.classList.toggle("dark", dark);
-    root.classList.toggle("hc", contrast);
+    root.classList.toggle("hc", window.matchMedia("(prefers-contrast: more)").matches);
     root.style.colorScheme = dark ? "dark" : "light";
+    root.lang = "${t.locales[0]}";
   } catch (e) {}
 })();
 `;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={tenant.defaultLocale} dir={tenant.direction} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${manrope.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased`}>
         <AppProvider>
           <ToastProvider>
             <AppShell>{children}</AppShell>

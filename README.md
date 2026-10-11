@@ -1,28 +1,53 @@
-# Voting System
+# NexVote
 
-University voting and election management system. Single Next.js 16 full-stack
-application: App Router API routes, React pages, Prisma 7, PostgreSQL (Neon).
+**General-purpose secure voting platform.** National, regional, organisational,
+campus, referendum, and poll elections — configurable per election, and not tied
+to any country, institution, or party.
+
+Single Next.js 16 full-stack application: App Router API routes, React pages,
+Tailwind CSS v4 + shadcn/ui, Prisma 7, PostgreSQL (Neon).
 
 ## Setup
 
 ```powershell
 npm install
-copy .env.example .env   # then fill in DATABASE_URL and the Google OAuth values
-npm run db:setup         # prisma migrate deploy && seed demo data
-npm run dev              # http://localhost:3000
+copy .env.example .env      # then fill in DATABASE_URL
+npm run db:setup            # prisma migrate deploy && seed demo data
+npm run dev                 # http://localhost:3000
 ```
 
 ### Environment
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string (Neon or local). |
+| `DATABASE_URL` | PostgreSQL connection string (Neon or local). Use the pooled endpoint for serverless. |
 | `TEST_DATABASE_URL` | Separate database for `npm test`. Must not equal `DATABASE_URL`; its name must end in `_test`. |
 | `GOOGLE_OAUTH_CLIENT_ID` | Server-side Google ID token verification. Empty disables Google sign-in (API returns 503). |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Server-side Google OAuth secret. |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Client id exposed to the browser for the Google Identity Services button. |
 | `NEXT_PUBLIC_API_BASE` | Base URL the browser uses to reach the API. Default `/api`. |
 | `PBKDF2_ITERATIONS` | Password hashing cost. Default `720000`. Tests force `1000`. |
+
+## Tenant configuration
+
+Everything country-, region-, or organisation-specific lives in
+[`config/tenant.ts`](config/tenant.ts). Nothing on the ballot is hardcoded, so
+the same build serves any tenant by editing that one file (or swapping it per
+deployment):
+
+| Setting | Controls |
+| --- | --- |
+| `name`, `shortName`, `tagline`, `logo`, `ballotMark` | Branding on the splash, header, and manifest |
+| `colors` | Primary / navy palette overrides |
+| `locales`, `defaultLocale`, `direction` | i18n and RTL |
+| `idType` | How the voter identifier is labelled, validated, and whether it is required |
+| `geography` | Vocabulary for Region and Constituency (e.g. "Zone"/"Ward", "District"/"Branch") |
+| `groups` | Whether ballot groups appear at all, and what they are called (Party / Slate / Ticket) |
+| `features` | Phone verification, identity review, ratings and opinions, live results, vote re-authentication, receipts |
+| `authority` | Name, contact email, privacy and terms URLs |
+
+The default tenant uses invented, neutral names — "Progress Alliance",
+"Civic Union", "Reform Bloc" — so nothing implies a real political body.
 
 ## Tests
 
@@ -50,7 +75,7 @@ which is what stops a test run from wiping production.
 | `npm run db:deploy` | Apply pending migrations |
 | `npm run db:seed` | Seed demo data |
 | `npm run db:setup` | Deploy migrations, then seed |
-| `npm run db:inspect` | Print every row in the legacy Django tables |
+| `npm run db:reset-test` | Drop and recreate the test database, then apply migrations |
 
 ## Demo accounts
 
@@ -62,59 +87,111 @@ Seeded by `npm run db:seed`. Passwords in brackets:
 - Staff voter/candidate: `staff_a` [`Pass1234!`]
 - Staff voter/candidate: `staff_b` [`Pass1234!`]
 
-## Routes
+The seed also creates a non-education "Northwind Works Council" election with
+organization-membership eligibility and a yes/no referendum, to exercise the
+general-purpose path end to end.
 
-Both trailing-slash and non-trailing-slash URLs work
-(`skipTrailingSlashRedirect: true`).
+## Screens
 
-| Path | Notes |
+| Route | Screen |
 | --- | --- |
-| `/home` | Landing page |
-| `/admin/login`, `/admin/register`, `/admin/dashboard` | Admin portal |
-| `/voter/login`, `/voter/register`, `/voter/dashboard` | Voter portal |
-| `/voter/compain`, `/voter/compain/[candidateId]` | Campaign browsing |
-| `/candidate/login`, `/candidate/dashboard` | Candidate portal |
-| `/forgot-password` | Password reset |
+| `/` | Home — region header, most-upvoted candidates, explore tiles |
+| `/login` | Hero splash + white login sheet |
+| `/register` | Registration, and OTP when `features.phoneVerification` is on |
+| `/explore` | Search, chip filters, gradient category tiles, regions, leaders |
+| `/feed` | Live head-to-head counts, news, social tabs |
+| `/candidates/[id]` | Candidate detail — Posts / Info / People's Opinion, rating |
+| `/vote/[slug]` | E-voting ballot with watermark and sticky cast-vote CTA |
+| `/vote/[slug]/thank-you` | Thank-you screen with verification code |
+| `/profile` | Navy banner, favourites, activity, sign out |
+| `/elections`, `/elections/[slug]` | Election list and detail |
+| `/categories`, `/categories/[slug]` | Category browse |
+| `/privacy`, `/terms` | Legal pages |
+| `/admin`, `/admin/categories` | Administration |
 
-Legacy URL spellings are kept as aliases so existing bookmarks continue to
-resolve: `/voter/dashboad`, `/voter/compain`, `/candidate/dashboad`,
-`/candidate/compaindetails`.
+Legacy URL spellings resolve through permanent redirects configured in
+`next.config.ts` (`/voter/dashboad` → `/voter/dashboard`, `/voter/compain` →
+`/voter/campaign`, and so on). Both trailing-slash and non-trailing-slash URLs
+work (`skipTrailingSlashRedirect: true`).
 
-API routes live under `/api/` — health, auth, elections, ballots, votes,
-campaigns, admin management.
+## Voting pipeline
+
+```
+Register → Verify contact (OTP) → Complete profile → Eligibility check
+  → Discover election → Receive ballot → Select options
+  → Re-authenticate (biometric or password) → Encrypt + submit
+  → Receive verification code → Duplicate lock → Live aggregate tally
+  → Close election → Audit → Publish results
+```
+
+Integrity rules enforced server-side:
+
+- Identity and ballot are separate tables; a vote carries no link back to a
+  voter's choices beyond the aggregate.
+- One vote per voter per question, guaranteed by a database unique constraint
+  rather than a pre-check — two concurrent submissions cannot both persist.
+- Every candidate is validated against the exact election and question it was
+  submitted for; cross-election selections are rejected.
+- Selection limits per question are enforced.
+- A verification code lets a voter confirm inclusion without revealing their
+  choice.
+- An `Idempotency-Key` header makes a retried request return the original
+  receipt instead of casting a second ballot.
+- Re-authentication is required at cast time when `features.voteReauthentication`
+  is enabled.
+- Rate limiting, security headers, and CSRF-safe token authentication apply to
+  every API response.
+
+**Not implemented:** public-key threshold encryption of ballots and a hash-chained
+audit log are schema-ready but not wired into the voting service. See
+`DEVELOPMENT.md` for the honest status of every item.
+
+## Responsive + platform behaviour
+
+| Breakpoint | Layout |
+| --- | --- |
+| `< 480px` | Single column, bottom tab navigation, bottom sheets, full-bleed hero |
+| `480–767px` | Same layout, content max-width 480 centred |
+| `768–1099px` | 2-column grids, bottom nav becomes a 72px left rail |
+| `≥ 1100px` | 240px sidebar + 960px main, centred modals, keyboard focus rings |
+
+- iOS: safe-area insets (`viewport-fit=cover`), momentum scroll, Face ID via
+  WebAuthn when available.
+- Android: material-style press feedback, fingerprint via WebAuthn, status bar
+  tinted with the tenant colour.
+- Desktop: keyboard navigation, `⌘K` / `Ctrl+K` command palette, `/` to search.
+- Accessibility: WCAG AA contrast, visible focus indicators, `prefers-reduced-motion`,
+  `prefers-contrast`, and status conveyed by glyph *and* colour, never colour alone.
+
+## Installable PWA and native packaging
+
+The app ships a web manifest with regular and maskable icons
+(`public/manifest.webmanifest`), so it installs to the home screen on iOS and
+Android. For store packages, wrap the same build with Capacitor — no second
+codebase is required.
+
+## Browser test checklist
+
+Verified by running the app in each target:
+
+- [ ] **iOS Safari** — safe-area spacing on a notched device, momentum scroll on
+      long lists, WebAuthn prompt on cast, theme follows the OS setting, no
+      horizontal overflow.
+- [ ] **Android Chrome** — PWA installs from the browser menu, the launch icon
+      renders (maskable), biometric prompt on cast, system back closes the
+      confirmation sheet, no grey tap flash.
+- [ ] **Desktop Chrome / Firefox / Edge** — `⌘K` opens the palette, arrow keys
+      navigate it, `Enter` selects, Tab order is sane, focus rings are visible,
+      window resize from 1100px down to 360px produces no horizontal scrollbar.
+- [ ] **All** — dark mode, high-contrast mode, reduced-motion, and a 200% zoom
+      level all keep every control reachable and legible.
 
 ## Deploy to Vercel
 
 1. Push this repo to GitHub.
 2. In Vercel: **Add New → Project → Import** the repo. Vercel detects Next.js
    and reads `vercel.json` — no settings to change.
-3. Under **Environment Variables**, add the four variables below for
-   **Production**, **Preview**, and **Development**.
-4. Deploy.
-
-### Environment variables
-
-| Name | Required | Value |
-| --- | --- | --- |
-| `DATABASE_URL` | yes | Neon connection string. Must use the **pooler** endpoint (hostname contains `-pooler`). The direct endpoint times out on serverless functions. |
-| `GOOGLE_OAUTH_CLIENT_ID` | no | OAuth client ID from Google Cloud Console. Leave empty to disable Google sign-in. |
-| `GOOGLE_OAUTH_CLIENT_SECRET` | no | Matching OAuth client secret. |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | no | Same client ID as above — this one is exposed to the browser for the sign-in button. |
-| `NEXT_PUBLIC_API_BASE` | no | Base URL the browser uses to reach the API. Default `/api`. |
-| `PBKDF2_ITERATIONS` | no | Password hashing cost. Default `720000`. |
-
-Do not set `TEST_DATABASE_URL` on Vercel — it is only read by the local test
-suite, which wipes every table and therefore never runs in deployment.
-
-`npm run build` runs `prisma generate` (produces the client) but does **not**
-apply migrations. Apply them once per schema change from your machine:
-
-```powershell
-npm run db:deploy
-```
-
-### Keep Neon awake
-
-`.github/workflows/keep-alive.yml` pings the database every 6 hours so the
-Neon branch does not scale to zero. Add a repository secret named
-`DATABASE_URL` (Settings → Secrets and variables → Actions).
+3. Add the environment variables above for **Production**, **Preview**, and
+   **Development**.
+4. Deploy, then run `npm run db:deploy` from a workstation to apply migrations
+   (the Vercel build does not migrate for you).

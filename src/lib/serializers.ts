@@ -148,6 +148,7 @@ type CandidateRow = Candidate & {
   user: User & { department: Department | null; section: (Section & { department: Department | null }) | null };
   department: Department | null;
   section: (Section & { department: Department | null }) | null;
+  party: { id: number; name: string; code: string; color: string } | null | undefined;
 };
 
 export function serializeCandidate(
@@ -169,7 +170,14 @@ export function serializeCandidate(
     },
     department: serializeDepartment(candidate.department),
     section: serializeSection(candidate.section),
-    slogan: candidate.slogan,
+    party: candidate.party
+      ? {
+          id: candidate.party.id,
+          name: candidate.party.name,
+          code: candidate.party.code,
+          color: candidate.party.color,
+        }
+      : null,    slogan: candidate.slogan,
     manifesto: candidate.manifesto,
     campaign_video_url: candidateVideoPath(candidate),
     approved: candidate.approved,
@@ -194,6 +202,7 @@ export async function serializePosition(position: PositionRow) {
       user: { include: { department: true, section: { include: { department: true } } } },
       department: true,
       section: { include: { department: true } },
+      party: true,
       _count: { select: { votes: true } },
     },
   });

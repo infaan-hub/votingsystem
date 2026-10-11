@@ -1,213 +1,241 @@
 import Link from "next/link";
-import { ArrowRight, Lock, Sliders, Tags } from "lucide-react";
+import { ChevronRight, Search, Sparkles } from "lucide-react";
 
-import { Button } from "@/src/components/ui/button";
-import { Badge } from "@/src/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { ElectionCard } from "@/src/components/election-card";
 import { prisma } from "@/src/lib/db";
+import { serializeElectionList } from "@/src/lib/serializers";
+import { candidatePhotoPath } from "@/src/lib/serializers";
+import { CandidateCard, type CandidateCardData } from "@/src/components/candidate-card";
+import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Tile, type TileData } from "@/src/components/ui/tile";
+import { t } from "@/config/tenant";
 
 export const dynamic = "force-dynamic";
 
-async function getLandingData() {
-  const [elections, categories] = await Promise.all([
-    prisma.election.findMany({
-      where: { isPublished: true },
-      orderBy: { votingStartAt: "asc" },
-      take: 6,
-      include: {
-        category: true,
-        organization: true,
-        _count: { select: { positions: true } },
+export default async function HomePage() {
+  const election = await prisma.election.findFirst({
+    where: { isPublished: true },
+    orderBy: { votingStartAt: "desc" },
+    include: {
+      category: true,
+      organization: true,
+      positions: {
+        orderBy: { order: "asc" },
+        include: {
+          candidates: {
+            where: { approved: true },
+            include: {
+              user: { include: { department: true, section: true } },
+              department: true,
+              section: true,
+              _count: { select: { votes: true } },
+            },
+          },
+        },
       },
-    }),
-    prisma.electionCategory.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      include: { _count: { select: { elections: true } } },
-    }),
-  ]);
-  return { elections, categories };
-}
+    },
+  });
 
-export default async function Home() {
-  const { elections, categories } = await getLandingData();
+  // Featured: highest-voted approved candidates across the election.
+  const featured: CandidateCardData[] = election
+    ? election.positions
+        .flatMap((position) =>
+          position.candidates.map((candidate) => ({
+            candidate,
+            positionName: position.name,
+            votes: candidate._count.votes,
+          })),
+        )
+        .sort((a, b) => b.votes - a.votes)
+        .slice(0, 6)
+        .map(({ candidate, positionName }) => ({
+          id: candidate.id,
+          name: displayName(candidate.user),
+          role: positionName,
+          photoUrl: candidatePhotoPath(candidate),
+          href: `/candidates/${candidate.id}`,
+          rating: null,
+        }))
+    : [];
+
+  const firstPosition = election?.positions[0];
+  const listed: CandidateCardData[] = firstPosition
+    ? firstPosition.candidates.map((candidate) => ({
+        id: candidate.id,
+        name: displayName(candidate.user),
+        party: candidate.user.department?.name ?? null,
+        partyCode: candidate.user.department?.code?.slice(0, 3) ?? null,
+        role: firstPosition.name,
+        photoUrl: candidatePhotoPath(candidate),
+        href: `/candidates/${candidate.id}`,
+      }))
+    : [];
+
+  // Explore tiles come from real categories, so nothing here is fabricated.
+  const categories = await prisma.electionCategory.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    take: 6,
+    include: { _count: { select: { elections: true } } },
+  });
+  const tiles: TileData[] = categories.map((category) => ({
+    id: category.id,
+    label: category.name,
+    meta: `${category._count.elections}`,
+    href: `/categories/${category.slug}`,
+  }));
+
+  const openElection = election ? serializeElectionList(election) : null;
+  const isOpen = election?.status === "OPEN";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-nav lg:pb-0">
-      {/* ---------------- Hero ---------------- */}
-      <section className="relative -mx-4 mb-16 overflow-hidden border-b px-4 py-20 sm:py-28">
-        <div
-          className="absolute inset-0 -z-10"
-          aria-hidden="true"
-          style={{
-            background:
-              "radial-gradient(60rem 30rem at 15% -10%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 60%), radial-gradient(45rem 25rem at 90% 10%, color-mix(in oklab, var(--status-nominations) 14%, transparent), transparent 65%)",
-          }}
-        />
-        <div className="max-w-3xl">
-          <Badge variant="secondary" className="mb-5">
-            Secure · Transparent · Configurable
-          </Badge>
-          <h1 className="text-display-tight text-fluid-4xl">
-            Elections for every
-            <span className="text-primary"> kind of organization</span>
-          </h1>
-          <p className="mt-6 max-w-2xl text-fluid-base text-muted-foreground">
-            Run secure, configurable elections — from universities to corporations,
-            associations to communities, unions to boards. Configure eligibility,
-            ballots, and result visibility per election, without touching code.
+    <div className="space-y-7">
+      {/* ---------------- Header ---------------- */}
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-nv-muted">
+            {t.constituency}
           </p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link href="/elections">
-                Explore elections
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/admin">Create an election</Link>
-            </Button>
-          </div>
+          <h1 className="mt-0.5 truncate text-[26px] font-extrabold leading-8 tracking-tight text-nv-ink">
+            {election?.organization?.name ?? election?.title ?? "All regions"}
+          </h1>
+          <p className="mt-1 text-[13px] text-nv-muted">
+            {openElection
+              ? `${election?.positions.length ?? 0} question${
+                  (election?.positions.length ?? 0) === 1 ? "" : "s"
+                } on this ballot`
+              : "No open election right now"}
+          </p>
         </div>
-      </section>
+        <Button asChild variant="subtle" size="icon" aria-label="Search">
+          <Link href="/explore">
+            <Search className="h-5 w-5" aria-hidden="true" />
+          </Link>
+        </Button>
+      </header>
 
-      {/* ---------------- Categories ---------------- */}
-      {categories.length > 0 && (
-        <section className="mb-16">
-          <SectionHeading
-            eyebrow="By organization type"
-            title="Browse categories"
-            description="Each category carries its own rules; administrators can add their own."
-          />
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => (
-              <Link key={category.id} href={`/categories/${category.slug}`}>
-                <Card className="h-full transition-shadow hover:shadow-panel">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-fluid-lg">
-                      <span className="text-2xl" aria-hidden="true">
-                        {category.icon || "📋"}
-                      </span>
-                      {category.name}
-                    </CardTitle>
-                    <CardDescription className="nums-tabular">
-                      {category._count?.elections ?? 0} election
-                      {(category._count?.elections ?? 0) === 1 ? "" : "s"}
-                    </CardDescription>
-                  </CardHeader>
-                  {category.description ? (
-                    <CardContent>
-                      <p className="line-clamp-2 text-sm text-muted-foreground">
-                        {category.description}
-                      </p>
-                    </CardContent>
-                  ) : null}
-                </Card>
-              </Link>
+      {!election ? (
+        <Card>
+          <CardContent className="py-14 text-center">
+            <h2 className="text-[18px] font-bold text-nv-ink">No open election</h2>
+            <p className="mx-auto mt-2 max-w-sm text-[13px] text-nv-muted">
+              There is no published election available for you at the moment.
+              Browse categories to see what is scheduled.
+            </p>
+            <Button asChild className="mt-5 sm:w-56">
+              <Link href="/explore">Explore elections</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* ---------------- Cast vote banner ---------------- */}
+          <Link
+            href={`/vote/${election.slug}`}
+            className="nv-grad-candidate relative block overflow-hidden rounded-nv-lg p-4 shadow-nv-card transition-transform duration-200 active:scale-[0.99]"
+          >
+            <span
+              aria-hidden="true"
+              className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/12"
+            />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/80">
+                  {isOpen ? "Voting open" : "Voting closed"}
+                </p>
+                <p className="mt-1 truncate text-[18px] font-bold text-white">
+                  {election.title}
+                </p>
+                <p className="mt-0.5 text-[12px] text-white/85">
+                  {election.category?.name ?? "General"}
+                </p>
+              </div>
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-nv-primary">
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </span>
+            </div>
+          </Link>
+
+          {/* ---------------- Most upvoted ---------------- */}
+          {featured.length > 0 ? (
+            <section aria-labelledby="featured-heading">
+              <div className="mb-3 flex items-center justify-between">
+                <h2
+                  id="featured-heading"
+                  className="flex items-center gap-1.5 text-[16px] font-bold text-nv-ink"
+                >
+                  <Sparkles className="h-4 w-4 text-nv-primary" aria-hidden="true" />
+                  Most upvoted
+                </h2>
+                <Link
+                  href="/explore"
+                  className="text-[12px] font-semibold text-nv-primary"
+                >
+                  See all
+                </Link>
+              </div>
+              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {featured.map((candidate) => (
+                  <CandidateCard key={candidate.id} candidate={candidate} featured />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* ---------------- Candidates ---------------- */}
+          <section aria-labelledby="candidates-heading">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="candidates-heading" className="text-[16px] font-bold text-nv-ink">
+                {firstPosition ? firstPosition.name : "Candidates"}
+              </h2>
+              {t.groupsEnabled ? (
+                <Badge variant="secondary" className="text-[10px]">
+                  {t.partyPlural}
+                </Badge>
+              ) : null}
+            </div>
+            {listed.length === 0 ? (
+              <Card>
+                <CardContent className="py-10 text-center text-[13px] text-nv-muted">
+                  No approved candidates yet.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {listed.map((candidate) => (
+                  <CandidateCard key={candidate.id} candidate={candidate} />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* ---------------- Explore tiles ---------------- */}
+      {tiles.length > 0 ? (
+        <section aria-labelledby="explore-heading">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 id="explore-heading" className="text-[16px] font-bold text-nv-ink">
+              Explore
+            </h2>
+            <Link href="/explore" className="text-[12px] font-semibold text-nv-primary">
+              See all
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {tiles.map((tile) => (
+              <Tile key={tile.id} tile={tile} />
             ))}
           </div>
         </section>
-      )}
-
-      {/* ---------------- Elections ---------------- */}
-      {elections.length > 0 && (
-        <section className="mb-16">
-          <SectionHeading
-            eyebrow="Live now"
-            title="Active and upcoming elections"
-            description="Published elections with real schedules and real ballots."
-          />
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {elections.map((election) => (
-              <ElectionCard
-                key={election.id}
-                election={{
-                  id: election.id,
-                  title: election.title,
-                  description: election.description,
-                  slug: election.slug,
-                  status: election.status,
-                  categoryName: election.category?.name ?? null,
-                  categoryIcon: election.category?.icon ?? null,
-                  positionCount: election._count?.positions ?? 0,
-                  organizationName: election.organization?.name ?? null,
-                }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ---------------- Capabilities ---------------- */}
-      <section className="mb-16">
-        <SectionHeading
-          eyebrow="How it works"
-          title="Configuration drives behaviour"
-          description="None of the following assumes an educational institution."
-        />
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <CapabilityCard
-            icon={<Sliders className="h-5 w-5" aria-hidden="true" />}
-            title="Configurable eligibility"
-            body="Choose per election: registered voters, approved organization members, an imported voter list, invitations, or an open poll."
-          />
-          <CapabilityCard
-            icon={<Tags className="h-5 w-5" aria-hidden="true" />}
-            title="Any ballot format"
-            body="Candidate elections, yes/no referendums, multiple-choice questions, and multi-select ballots — each with its own limits."
-          />
-          <CapabilityCard
-            icon={<Lock className="h-5 w-5" aria-hidden="true" />}
-            title="Controlled results"
-            body="Publish live, hold until the poll closes, or restrict to officers only. Every state change is auditable."
-          />
-        </div>
-      </section>
+      ) : null}
     </div>
   );
 }
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <header className="max-w-2xl">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-        {eyebrow}
-      </p>
-      <h2 className="mt-1 text-display text-fluid-2xl">{title}</h2>
-      <p className="mt-2 text-muted-foreground">{description}</p>
-    </header>
-  );
-}
-
-function CapabilityCard({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <span className="mb-2 grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
-          {icon}
-        </span>
-        <CardTitle className="text-fluid-lg">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
-      </CardContent>
-    </Card>
-  );
+/** Displays a name without duplicating the serializer's logic. */
+function displayName(user: { firstName: string; lastName: string; username: string }): string {
+  const full = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+  return full || user.username;
 }

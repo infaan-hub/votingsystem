@@ -2,34 +2,48 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/src/lib/utils";
 
+/**
+ * NexVote button. 48px tall, full width by default, 6–8px radius, uppercase
+ * 13px/700 with .5px tracking. Darkens 8% when pressed, drops to 40% opacity
+ * when disabled.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  [
+    "relative inline-flex select-none items-center justify-center gap-2 overflow-hidden",
+    "h-12 w-full whitespace-nowrap rounded-lg",
+    "text-[13px] font-bold uppercase tracking-[0.5px]",
+    "transition-[transform,background-color,box-shadow,opacity] duration-200 ease-out",
+    "active:scale-[0.985]",
+    "disabled:pointer-events-none disabled:opacity-40",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2",
+  ],
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-success text-success-foreground hover:bg-success/90",
+        primary:
+          "bg-nv-primary text-white shadow-[0_6px_18px_rgba(240,19,77,0.28)] hover:bg-nv-primary-600 active:bg-nv-primary-600",
+        navy: "bg-nv-navy text-white hover:brightness-110 active:brightness-95",
+        dark: "bg-nv-ink text-white hover:brightness-125 active:brightness-95",
+        ghost:
+          "border border-nv-primary bg-transparent text-nv-primary hover:bg-nv-primary-100 active:bg-nv-primary-100",
+        subtle: "bg-nv-surface text-nv-ink hover:brightness-[0.97] active:brightness-95",
+        destructive: "bg-nv-danger text-white hover:brightness-110 active:brightness-95",
+        success: "bg-nv-success text-[#06281d] hover:brightness-105 active:brightness-95",
+        /** Legacy alias for the pre-NexVote outline style. */
+        outline:
+          "border border-nv-line bg-white text-nv-ink hover:bg-nv-surface active:bg-nv-surface dark:bg-transparent dark:text-nv-ink",
       },
       size: {
-        /** 48px — the primary touch size, meets iOS HIG and Android 48dp. */
         default: "h-12 px-5",
-        /** 44px — still meets the iOS HIG minimum for secondary actions. */
-        sm: "h-11 px-4",
-        lg: "h-13 px-7",
-        icon: "h-12 w-12",
-        /** 36px — for dense table rows where the WCAG 2.2 AA 24px floor applies. */
-        dense: "h-9 px-3",
-        /** Explicit 44px touch target for nav and floating controls. */
-        touch: "h-11 min-w-11 px-3",
+        sm: "h-11 px-4 text-[12px]",
+        icon: "h-12 w-12 shrink-0",
+        dense: "h-9 px-3 text-[12px] normal-case tracking-normal",
+        /** Legacy alias; full-width call to action. */
+        lg: "h-12 px-7",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "default",
     },
   },
@@ -51,8 +65,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
     return (
       <button
-        className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        className={cn(buttonVariants({ variant, size }), className)}
         {...props}
       >
         {children}

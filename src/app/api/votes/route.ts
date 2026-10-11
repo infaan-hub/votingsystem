@@ -61,6 +61,7 @@ export const POST = makeRoute({
               user: { include: { department: true, section: { include: { department: true } } } },
               department: true,
               section: { include: { department: true } },
+              party: true,
             },
           },
           ballotOption: true,

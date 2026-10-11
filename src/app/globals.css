@@ -1,167 +1,132 @@
 @import "tailwindcss";
 
-/* Class-based dark mode: toggled by the inline script in layout.tsx. */
+/* Class-based dark mode, toggled by the inline script in layout.tsx. */
 @custom-variant dark (&:where(.dark, .dark *));
-/* Requested high-contrast mode (prefers-contrast: more), also toggled by that
-   script so the `.hc` variant is available to Tailwind utilities. */
+/* Requested high-contrast mode (prefers-contrast: more). */
 @custom-variant hc (&:where(.hc, .hc *));
 
 /* ---------------------------------------------------------------------------
-   Semantic colour tokens
+   NexVote design tokens
    --------------------------------------------------------------------------- */
 
 :root {
-  /* Surfaces */
-  --background: oklch(0.98 0.004 260);
-  --foreground: oklch(0.19 0.02 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.02 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.02 260);
-  --muted: oklch(0.955 0.006 260);
-  --muted-foreground: oklch(0.5 0.02 260);
-  --accent: oklch(0.94 0.01 260);
-  --accent-foreground: oklch(0.26 0.03 260);
-  --secondary: oklch(0.95 0.01 260);
-  --secondary-foreground: oklch(0.26 0.03 260);
+  /* brand */
+  --nv-primary: #f0134d;
+  --nv-primary-600: #d10e41;
+  --nv-primary-100: #ffe3eb;
+  --nv-navy: #1e2a8a;
+  --nv-navy-600: #2c46c9;
+  --nv-ink: #1c1c1e;
+  --nv-text: #3a3a3c;
+  --nv-muted: #9a9aa0;
+  --nv-line: #e6e6ea;
+  --nv-bg: #ffffff;
+  --nv-surface: #f6f6f9;
+  --nv-success: #18c48f;
+  --nv-warning: #f5a524;
+  --nv-danger: #e5484d;
 
-  /* Brand */
-  --primary: oklch(0.44 0.17 264);
-  --primary-foreground: oklch(0.985 0.004 260);
-  --ring: oklch(0.44 0.17 264);
+  /* gradients */
+  --nv-grad-hero: linear-gradient(160deg, #f0134d 0%, #b3166f 45%, #3b2a9e 100%);
+  --nv-grad-candidate: linear-gradient(180deg, #f0134d 0%, #c9124a 100%);
+  --nv-grad-profile: linear-gradient(135deg, #1e2a8a 0%, #2c46c9 100%);
 
-  /* Feedback */
-  --destructive: oklch(0.55 0.22 26);
-  --destructive-foreground: oklch(0.985 0.004 260);
-  --success: oklch(0.47 0.13 158);
-  --success-foreground: oklch(0.985 0.004 260);
+  /* explore tiles */
+  --nv-tile-blue: linear-gradient(135deg, #1f4fd8, #0b2e8f);
+  --nv-tile-orange: linear-gradient(135deg, #ff9a3d, #e8590c);
+  --nv-tile-purple: linear-gradient(135deg, #b04cf0, #6a1fd0);
+  --nv-tile-pink: linear-gradient(135deg, #ff4d8d, #d10e41);
+  --nv-tile-teal: linear-gradient(135deg, #27d3c3, #0b9aa8);
 
-  /* Structure — borders carry the layering in light mode too, which keeps
-     elevation consistent when the theme flips. */
-  --border: oklch(0.9 0.008 260);
-  --input: oklch(0.9 0.008 260);
+  /* shape + depth */
+  --nv-radius-sm: 8px;
+  --nv-radius-md: 14px;
+  --nv-radius-lg: 20px;
+  --nv-radius-sheet: 28px;
+  --nv-shadow-card: 0 6px 18px rgba(20, 20, 40, 0.08);
+  --nv-shadow-sheet: 0 -8px 30px rgba(20, 20, 40, 0.18);
 
-  /* Elevation. Shadows are intentionally light in light mode; dark mode relies
-     on borders and surface steps instead (see `.dark` below). */
-  --shadow-color: 250 40% 20%;
-  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
-  --shadow-md: 0 2px 8px hsl(var(--shadow-color) / 0.08);
-  --shadow-lg: 0 8px 24px hsl(var(--shadow-color) / 0.1);
+  /* type */
+  --nv-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  /* Election lifecycle status ramp — 8 distinct states, each with a matched
-     foreground so text on a status surface stays legible. */
-  --status-draft: oklch(0.55 0.015 260);
-  --status-draft-fg: oklch(0.985 0.004 260);
-  --status-published: oklch(0.58 0.13 235);
-  --status-published-fg: oklch(0.985 0.004 260);
-  --status-nominations: oklch(0.56 0.15 300);
-  --status-nominations-fg: oklch(0.985 0.004 260);
-  --status-ready: oklch(0.68 0.15 75);
-  --status-ready-fg: oklch(0.24 0.05 75);
-  --status-open: oklch(0.55 0.14 155);
-  --status-open-fg: oklch(0.985 0.004 260);
-  --status-closed: oklch(0.58 0.2 20);
-  --status-closed-fg: oklch(0.985 0.004 260);
-  --status-results: oklch(0.53 0.16 265);
-  --status-results-fg: oklch(0.985 0.004 260);
-  --status-archived: oklch(0.62 0.02 260);
-  --status-archived-fg: oklch(0.985 0.004 260);
+  /* spacing (4pt) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
 
-  /* Categorical chart palette. Perceptually spaced hues, each ≥3:1 against
-     both --background and --card so they work as graphical objects in both
-     themes. Vote bars pair these with an explicit text label, so colour is
-     never the only carrier of meaning. */
-  --chart-1: oklch(0.55 0.16 250);
-  --chart-2: oklch(0.55 0.13 155);
-  --chart-3: oklch(0.62 0.15 75);
-  --chart-4: oklch(0.58 0.2 20);
-  --chart-5: oklch(0.55 0.16 305);
-  --chart-6: oklch(0.58 0.12 205);
-  --chart-7: oklch(0.62 0.16 40);
-  --chart-8: oklch(0.55 0.13 185);
-
-  --radius: 0.625rem;
+  /* Semantic aliases consumed by the rest of the app. */
+  --background: var(--nv-bg);
+  --foreground: var(--nv-ink);
+  --card: #ffffff;
+  --card-foreground: var(--nv-ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--nv-ink);
+  --muted: var(--nv-surface);
+  --muted-foreground: var(--nv-muted);
+  --accent: var(--nv-primary-100);
+  --accent-foreground: var(--nv-primary-600);
+  --secondary: var(--nv-surface);
+  --secondary-foreground: var(--nv-text);
+  --primary: var(--nv-primary);
+  --primary-foreground: #ffffff;
+  --ring: var(--nv-primary);
+  --destructive: var(--nv-danger);
+  --destructive-foreground: #ffffff;
+  --success: var(--nv-success);
+  --success-foreground: #06281d;
+  --border: var(--nv-line);
+  --input: var(--nv-line);
 }
 
 .dark {
-  --background: oklch(0.14 0.02 260);
-  --foreground: oklch(0.95 0.005 260);
-  --card: oklch(0.18 0.02 260);
-  --card-foreground: oklch(0.95 0.005 260);
-  --popover: oklch(0.18 0.02 260);
-  --popover-foreground: oklch(0.95 0.005 260);
-  --muted: oklch(0.23 0.02 260);
-  --muted-foreground: oklch(0.68 0.02 260);
-  --accent: oklch(0.23 0.02 260);
-  --accent-foreground: oklch(0.95 0.005 260);
-  --secondary: oklch(0.22 0.02 260);
-  --secondary-foreground: oklch(0.95 0.005 260);
+  --nv-ink: #ffffff;
+  --nv-text: #d8d8e0;
+  --nv-muted: #8b8b96;
+  --nv-line: #2a2c45;
+  --nv-bg: #0f1020;
+  --nv-surface: #181a2e;
 
-  --primary: oklch(0.62 0.17 264);
-  --primary-foreground: oklch(0.16 0.02 260);
-  --ring: oklch(0.62 0.17 264);
+  --background: var(--nv-bg);
+  --foreground: var(--nv-ink);
+  --card: #171930;
+  --card-foreground: var(--nv-ink);
+  --popover: #171930;
+  --popover-foreground: var(--nv-ink);
+  --muted: #1e2038;
+  --muted-foreground: var(--nv-muted);
+  --accent: #3a1030;
+  --accent-foreground: #ffd2e0;
+  --secondary: #1e2038;
+  --secondary-foreground: var(--nv-text);
+  --primary: var(--nv-primary);
+  --primary-foreground: #ffffff;
+  --ring: var(--nv-primary);
+  --destructive: #f0555a;
+  --destructive-foreground: #2b0708;
+  --success: #2ad9a4;
+  --success-foreground: #06281d;
+  --border: var(--nv-line);
+  --input: var(--nv-line);
 
-  --destructive: oklch(0.62 0.2 25);
-  --destructive-foreground: oklch(0.16 0.02 260);
-  --success: oklch(0.62 0.14 158);
-  --success-foreground: oklch(0.16 0.02 260);
-
-  --border: oklch(0.3 0.02 260);
-  --input: oklch(0.32 0.02 260);
-
-  /* Elevation in dark mode comes from surface steps and borders, not shadows,
-     which would otherwise read as mud against dark surfaces. */
-  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.4);
-  --shadow-md: 0 2px 8px oklch(0 0 0 / 0.45);
-  --shadow-lg: 0 8px 24px oklch(0 0 0 / 0.5);
-
-  /* Brighter surfaces so status text on them keeps contrast. */
-  --status-draft: oklch(0.42 0.015 260);
-  --status-draft-fg: oklch(0.93 0.005 260);
-  --status-published: oklch(0.48 0.13 235);
-  --status-published-fg: oklch(0.93 0.005 260);
-  --status-nominations: oklch(0.46 0.15 300);
-  --status-nominations-fg: oklch(0.93 0.005 260);
-  --status-ready: oklch(0.5 0.13 75);
-  --status-ready-fg: oklch(0.93 0.01 75);
-  --status-open: oklch(0.45 0.13 155);
-  --status-open-fg: oklch(0.9 0.05 155);
-  --status-closed: oklch(0.47 0.18 20);
-  --status-closed-fg: oklch(0.93 0.01 20);
-  --status-results: oklch(0.45 0.15 265);
-  --status-results-fg: oklch(0.93 0.01 265);
-  --status-archived: oklch(0.45 0.015 260);
-  --status-archived-fg: oklch(0.9 0.005 260);
-
-  /* Chart hues lift in lightness to stay visible on dark surfaces. */
-  --chart-1: oklch(0.66 0.15 250);
-  --chart-2: oklch(0.68 0.13 155);
-  --chart-3: oklch(0.74 0.14 75);
-  --chart-4: oklch(0.66 0.18 20);
-  --chart-5: oklch(0.66 0.15 305);
-  --chart-6: oklch(0.68 0.12 205);
-  --chart-7: oklch(0.72 0.15 40);
-  --chart-8: oklch(0.66 0.12 185);
+  --nv-shadow-card: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --nv-shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.55);
 }
 
-/* Requested high contrast: stronger separations and brighter accents. */
+/* Requested high contrast: stronger separations and text weight. */
 .hc {
-  --border: oklch(0.7 0.02 260);
-  --input: oklch(0.55 0.03 260);
-  --muted-foreground: oklch(0.38 0.03 260);
-  --primary: oklch(0.35 0.2 264);
-  --destructive: oklch(0.45 0.26 26);
-  --success: oklch(0.38 0.16 158);
-  --shadow-sm: 0 0 0 1px hsl(var(--shadow-color) / 0.4);
-  --shadow-md: 0 0 0 1px hsl(var(--shadow-color) / 0.5);
-  --shadow-lg: 0 0 0 2px hsl(var(--shadow-color) / 0.6);
+  --nv-line: #b8b8c2;
+  --nv-muted: #6c6c75;
+  --nv-text: #22222a;
+  --nv-ink: #000000;
 }
 .dark.hc {
-  --border: oklch(0.55 0.03 260);
-  --input: oklch(0.6 0.03 260);
-  --muted-foreground: oklch(0.82 0.02 260);
-  --primary: oklch(0.76 0.16 264);
-  --foreground: oklch(1 0 0);
+  --nv-line: #5a5c78;
+  --nv-muted: #b4b4c4;
+  --nv-text: #ffffff;
+  --nv-ink: #ffffff;
 }
 
 /* ---------------------------------------------------------------------------
@@ -191,56 +156,35 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-status-draft: var(--status-draft);
-  --color-status-draft-foreground: var(--status-draft-fg);
-  --color-status-published: var(--status-published);
-  --color-status-published-foreground: var(--status-published-fg);
-  --color-status-nominations: var(--status-nominations);
-  --color-status-nominations-foreground: var(--status-nominations-fg);
-  --color-status-ready: var(--status-ready);
-  --color-status-ready-foreground: var(--status-ready-fg);
-  --color-status-open: var(--status-open);
-  --color-status-open-foreground: var(--status-open-fg);
-  --color-status-closed: var(--status-closed);
-  --color-status-closed-foreground: var(--status-closed-fg);
-  --color-status-results: var(--status-results);
-  --color-status-results-foreground: var(--status-results-fg);
-  --color-status-archived: var(--status-archived);
-  --color-status-archived-foreground: var(--status-archived-fg);
+  /* NexVote brand palette, usable as `bg-nv-primary`, `text-nv-navy`, etc. */
+  --color-nv-primary: var(--nv-primary);
+  --color-nv-primary-600: var(--nv-primary-600);
+  --color-nv-primary-100: var(--nv-primary-100);
+  --color-nv-navy: var(--nv-navy);
+  --color-nv-ink: var(--nv-ink);
+  --color-nv-text: var(--nv-text);
+  --color-nv-muted: var(--nv-muted);
+  --color-nv-line: var(--nv-line);
+  --color-nv-surface: var(--nv-surface);
+  --color-nv-success: var(--nv-success);
+  --color-nv-warning: var(--nv-warning);
+  --color-nv-danger: var(--nv-danger);
 
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-chart-6: var(--chart-6);
-  --color-chart-7: var(--chart-7);
-  --color-chart-8: var(--chart-8);
+  --radius-nv-sm: var(--nv-radius-sm);
+  --radius-nv-md: var(--nv-radius-md);
+  --radius-nv-lg: var(--nv-radius-lg);
+  --radius-nv-sheet: var(--nv-radius-sheet);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
+  --shadow-nv-card: var(--nv-shadow-card);
+  --shadow-nv-sheet: var(--nv-shadow-sheet);
 
-  --shadow-soft: var(--shadow-sm);
-  --shadow-panel: var(--shadow-md);
-  --shadow-float: var(--shadow-lg);
+  --font-sans: var(--nv-font);
 
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-}
-
-/* Fluid type scale: each step scales continuously between 360px and ~1600px
-   instead of snapping at breakpoints. */
-@theme {
-  --text-fluid-xs: clamp(0.75rem, 0.72rem + 0.12vw, 0.85rem);
-  --text-fluid-sm: clamp(0.875rem, 0.84rem + 0.18vw, 1rem);
-  --text-fluid-base: clamp(1rem, 0.96rem + 0.22vw, 1.125rem);
-  --text-fluid-lg: clamp(1.125rem, 1.05rem + 0.35vw, 1.375rem);
-  --text-fluid-xl: clamp(1.25rem, 1.13rem + 0.55vw, 1.625rem);
-  --text-fluid-2xl: clamp(1.5rem, 1.3rem + 0.9vw, 2.125rem);
-  --text-fluid-3xl: clamp(1.875rem, 1.5rem + 1.6vw, 2.875rem);
-  --text-fluid-4xl: clamp(2.25rem, 1.6rem + 2.8vw, 4rem);
+  /* Breakpoints from the spec. */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1100px;
+  --breakpoint-xl: 1440px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -249,29 +193,25 @@
 
 @layer base {
   * {
-    border-color: var(--border);
+    border-color: var(--nv-line);
   }
 
   html {
-    /* Stops iOS rubber-band scroll from dragging the app shell behind the
-       sticky header. */
     overscroll-behavior-y: contain;
     -webkit-text-size-adjust: 100%;
-    /* Removes the 300ms tap delay and grey flash on mobile WebKit/Android. */
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-sans);
+    font-family: var(--nv-font);
     overscroll-behavior-y: none;
-    /* Prevents accidental text selection while tapping controls quickly. */
     -webkit-touch-callout: none;
+    /* Momentum scroll on iOS. */
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Every interactive element clears the 24px WCAG 2.2 AA target minimum and
-     avoids the double-tap zoom delay. */
   button,
   a,
   [role="button"],
@@ -283,14 +223,12 @@
     touch-action: manipulation;
   }
 
-  /* Visible, consistent focus indicator on keyboard navigation only. */
   :focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 2px solid var(--nv-primary);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 4px;
   }
 
-  /* Motion-sensitive users get static transitions. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -304,7 +242,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Safe-area utilities
+   Utilities
    --------------------------------------------------------------------------- */
 
 @utility pt-safe {
@@ -313,69 +251,98 @@
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-@utility pl-safe {
-  padding-left: env(safe-area-inset-left, 0px);
-}
-@utility pr-safe {
-  padding-right: env(safe-area-inset-right, 0px);
-}
 @utility px-safe {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 }
-@utility h-safe-screen {
-  height: 100dvh;
+
+/* App shell: honours both notch insets. */
+@utility app-shell {
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ---------------------------------------------------------------------------
-   Component helpers
-   --------------------------------------------------------------------------- */
-
-@utility panel {
-  background-color: var(--card);
-  color: var(--card-foreground);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+/* Bottom sheet on phones; centred modal from the lg breakpoint up. */
+@utility sheet {
+  border-radius: var(--nv-radius-sheet) var(--nv-radius-sheet) 0 0;
+  box-shadow: var(--nv-shadow-sheet);
 }
-
-/* Dark mode layers with borders rather than shadows. */
-@utility panel-raised {
-  background-color: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
-@utility text-display {
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-
-@utility text-display-tight {
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.02;
-}
-
-/* Vote counts and metrics use monospaced digits so streaming results do not
-   reflow the layout. */
-@utility nums-tabular {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+@utility sheet-modal {
+  border-radius: var(--nv-radius-lg);
+  max-width: 480px;
+  margin-inline: auto;
 }
 
 @utility pb-nav {
   padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 
-@utility tap {
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+@utility nums-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
-/* Election lifecycle status pill: colour plus a label, never colour alone. */
-@utility status-surface {
-  border: 1px solid color-mix(in oklab, currentColor 35%, transparent);
+@utility shimmer {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--nv-surface) 92%, transparent) 25%,
+    color-mix(in oklab, var(--nv-surface) 60%, transparent) 37%,
+    color-mix(in oklab, var(--nv-surface) 92%, transparent) 63%
+  );
+  background-size: 400% 100%;
+  animation: nv-shimmer 1.4s ease infinite;
+}
+
+@keyframes nv-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* Screen-reader-only text. */
+@utility sr-only-focusable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   NexVote gradient utilities
+   Gradients cannot be expressed as a single Tailwind colour token, so they are
+   exposed as `bg-image` utilities that set `background-image` directly.
+   --------------------------------------------------------------------------- */
+
+@utility nv-grad-hero {
+  background-image: var(--nv-grad-hero);
+}
+@utility nv-grad-candidate {
+  background-image: var(--nv-grad-candidate);
+}
+@utility nv-grad-profile {
+  background-image: var(--nv-grad-profile);
+}
+@utility nv-tile-blue {
+  background-image: var(--nv-tile-blue);
+}
+@utility nv-tile-orange {
+  background-image: var(--nv-tile-orange);
+}
+@utility nv-tile-purple {
+  background-image: var(--nv-tile-purple);
+}
+@utility nv-tile-pink {
+  background-image: var(--nv-tile-pink);
+}
+@utility nv-tile-teal {
+  background-image: var(--nv-tile-teal);
 }

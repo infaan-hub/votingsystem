@@ -175,6 +175,9 @@ model User {
 
   votes              Vote[]
   candidateProfiles  Candidate[]
+  ratings            CandidateRating[]
+  opinions           Opinion[]
+  opinionVotes       OpinionVote[]
   token              Token?
   memberships        Membership[]
   eligibleVoterRows  EligibleVoter[]
@@ -279,6 +282,7 @@ model Position {
   candidates     Candidate[]
   votes          Vote[]
   ballotOptions  BallotOption[]
+  ratingCategories RatingCategory[]
 
   @@unique([electionId, name, departmentId, sectionId])
   @@index([electionId])
@@ -307,6 +311,8 @@ model Candidate {
   electionId              Int
   positionId              Int
   userId                  Int
+  /// Optional ballot group (party/slate/ticket). Null for non-partisan ballots.
+  partyId                 Int?
   departmentId            Int?
   sectionId               Int?
   slogan                  String   @default("")
@@ -328,13 +334,108 @@ model Candidate {
   election   Election    @relation(fields: [electionId], references: [id], onDelete: Cascade)
   position   Position    @relation(fields: [positionId], references: [id], onDelete: Cascade)
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  party      Party?      @relation(fields: [partyId], references: [id], onDelete: SetNull)
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
-  votes Vote[]
+  votes   Vote[]
+  ratings CandidateRating[]
+  opinions Opinion[]
 
   @@unique([electionId, positionId, userId])
   @@index([positionId])
+  @@index([partyId])
+}
+
+/// Ballot group. Generic by default ("Party"); the tenant renames it via
+/// `config/tenant.ts` so the same model serves parties, slates, tickets, or
+/// non-partisan ballots (partyId stays null).
+model Party {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  /** Short code rendered on candidate badges, e.g. "LAB", "GRN". */
+  code      String   @default("")
+  emblemUrl String   @default("")
+  /// Brand colour used for badges and results bars.
+  color     String   @default("")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidates Candidate[]
+
+  @@index([isActive])
+}
+
+/// A dimension candidates are scored on, scoped to a question so a presidential
+/// race can rate "Debate" and "Policy" while a referendum rates nothing.
+model RatingCategory {
+  id         Int      @id @default(autoincrement())
+  positionId Int
+  name       String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  position Position          @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  ratings  CandidateRating[]
+
+  @@unique([positionId, name])
+  @@index([positionId])
+}
+
+/// One voter's score for one candidate on one category (1–5).
+model CandidateRating {
+  id          Int      @id @default(autoincrement())
+  candidateId Int
+  voterId     Int
+  categoryId  Int
+  score       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidate Candidate      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  voter     User           @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  category  RatingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, voterId, categoryId])
+  @@index([candidateId])
+  @@index([categoryId])
+}
+
+/// A public comment a voter leaves about a candidate, with community votes.
+model Opinion {
+  id          Int      @id @default(autoincrement())
+  candidateId Int
+  voterId     Int
+  body        String
+  up          Int      @default(0)
+  down        Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidate Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  voter     User          @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  reactions OpinionVote[]
+
+  @@index([candidateId])
+}
+
+/// One voter's reaction to an opinion; the pair is unique so reaction counts
+/// cannot be inflated by repeated taps.
+model OpinionVote {
+  id        Int      @id @default(autoincrement())
+  opinionId Int
+  voterId   Int
+  /// "up" or "down".
+  value     String
+  createdAt DateTime @default(now())
+
+  opinion Opinion @relation(fields: [opinionId], references: [id], onDelete: Cascade)
+  voter   User    @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([opinionId, voterId])
+  @@index([opinionId])
 }
 
 // ---------------------------------------------------------------------------
@@ -360,6 +461,13 @@ model Vote {
   candidateId    Int?
   ballotOptionId Int?
   writeInText    String   @default("")
+  /// Verification code returned to the voter. Not derived from any ballot
+  /// content, so it cannot be used to infer a choice.
+  receiptCode    String   @default("")
+  /// Client-supplied retry key. Nullable so the unique constraint only applies
+  /// to keys that were actually sent; Postgres treats NULLs as distinct, so
+  /// ordinary votes never collide with each other.
+  idempotencyKey String?
   createdAt  DateTime @default(now())
 
   voter        User         @relation(fields: [voterId], references: [id], onDelete: Cascade)
@@ -369,10 +477,12 @@ model Vote {
   ballotOption BallotOption? @relation(fields: [ballotOptionId], references: [id], onDelete: Cascade)
 
   @@unique([voterId, electionId, positionId])
+  @@unique([idempotencyKey])
   @@index([electionId])
   @@index([positionId])
   @@index([candidateId])
   @@index([ballotOptionId])
+  @@index([voterId, electionId])
 }
 
 model Announcement {

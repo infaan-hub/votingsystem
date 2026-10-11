@@ -134,7 +134,7 @@ export function ResponsiveDialog({
           </div>
           <Button
             variant="ghost"
-            size="touch"
+            size="icon"
             onClick={() => onOpenChange(false)}
             aria-label="Close dialog"
             className="-mr-1 -mt-1"

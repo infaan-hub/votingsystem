@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" role="img" aria-label="Ballot box">
+  <!-- hand with ballot -->
+  <path d="M120 22c14 0 24 10 24 24v46h-48V46c0-14 10-24 24-24z"
+        fill="#FFE3EB"/>
+  <rect x="104" y="52" width="32" height="40" rx="4" fill="#F0134D"/>
+  <path d="M112 64l6 6 12-14" fill="none" stroke="#ffffff" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- box -->
+  <path d="M44 104h152l-14 74H58z" fill="#1E2A8A"/>
+  <rect x="98" y="92" width="44" height="16" rx="4" fill="#2C46C9"/>
+  <rect x="104" y="122" width="32" height="5" rx="2.5" fill="#ffffff" opacity="0.55"/>
+  <rect x="112" y="136" width="16" height="5" rx="2.5" fill="#ffffff" opacity="0.4"/>
+</svg>
