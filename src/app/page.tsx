@@ -3,9 +3,6 @@ import { ChevronRight, Vote } from "lucide-react";
 
 import { prisma } from "@/src/lib/db";
 import { serializeElectionList } from "@/src/lib/serializers";
-import { candidatePhotoPath } from "@/src/lib/serializers";
-import { CandidateCard, type CandidateCardData } from "@/src/components/candidate-card";
-import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Tile, type TileData } from "@/src/components/ui/tile";
@@ -25,17 +22,6 @@ export default async function HomePage() {
         organization: true,
         positions: {
           orderBy: { order: "asc" },
-          include: {
-            candidates: {
-              where: { approved: true },
-              include: {
-                user: { include: { department: true, section: true } },
-                department: true,
-                section: true,
-                _count: { select: { votes: true } },
-              },
-            },
-          },
         },
       },
     }),
@@ -47,19 +33,6 @@ export default async function HomePage() {
       include: { _count: { select: { elections: true } } },
     }),
   ]);
-
-  const firstPosition = election?.positions[0];
-  const listed: CandidateCardData[] = firstPosition
-    ? firstPosition.candidates.map((candidate) => ({
-        id: candidate.id,
-        name: displayName(candidate.user),
-        party: candidate.user.department?.name ?? null,
-        partyCode: candidate.user.department?.code?.slice(0, 3) ?? null,
-        role: firstPosition.name,
-        photoUrl: candidatePhotoPath(candidate),
-        href: `/candidates/${candidate.id}`,
-      }))
-    : [];
 
   // Explore tiles come from real categories, so nothing here is fabricated.
   const tiles: TileData[] = categories.map((category) => ({
@@ -153,33 +126,6 @@ export default async function HomePage() {
               </div>
             </div>
           </Link>
-
-          {/* ---------------- Candidates ---------------- */}
-          <section aria-labelledby="candidates-heading">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 id="candidates-heading" className="text-[16px] font-bold text-nv-ink">
-                {firstPosition ? firstPosition.name : "Candidates"}
-              </h2>
-              {t.groupsEnabled ? (
-                <Badge variant="secondary" className="text-[10px]">
-                  {t.partyPlural}
-                </Badge>
-              ) : null}
-            </div>
-            {listed.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center text-[13px] text-nv-muted">
-                  No approved candidates yet.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {listed.map((candidate) => (
-                  <CandidateCard key={candidate.id} candidate={candidate} />
-                ))}
-              </div>
-            )}
-          </section>
         </>
       )}
 
@@ -203,10 +149,4 @@ export default async function HomePage() {
       ) : null}
     </div>
   );
-}
-
-/** Displays a name without duplicating the serializer's logic. */
-function displayName(user: { firstName: string; lastName: string; username: string }): string {
-  const full = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
-  return full || user.username;
 }

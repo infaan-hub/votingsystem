@@ -43,7 +43,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={invalid || undefined}
             aria-describedby={describedBy}
             className={cn(
-              "h-12 w-full border-0 border-b bg-transparent px-0 text-[15px] text-nv-ink",
+              "h-12 w-full border-0 border-b bg-transparent px-0 text-[16px] text-nv-ink",
               "placeholder:text-nv-muted",
               "transition-colors duration-200 ease-out",
               "focus:outline-none focus-visible:outline-none",
