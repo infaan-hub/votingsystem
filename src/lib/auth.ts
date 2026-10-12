@@ -77,6 +77,24 @@ export function requireStateAdmin(state: RequestState): UserWithRelations {
   return user;
 }
 
+/** Election officers and administrators share the officer toolset. */
+export function isOfficerRole(role: string): boolean {
+  return role === "officer" || role === "admin";
+}
+
+/** Every account that is not an administrator is a normal user / voter. */
+export function isVoterRole(role: string): boolean {
+  return !isOfficerRole(role);
+}
+
+export function requireStateOfficer(state: RequestState): UserWithRelations {
+  const user = requireStateUser(state);
+  if (!isOfficerRole(user.role)) {
+    throw forbidden("Election officer access is required.");
+  }
+  return user;
+}
+
 export async function requireAuth(req: Request): Promise<AuthContext> {
   const state = await authenticateRequest(req);
   if (!state.user) throw unauthenticated();

@@ -38,8 +38,8 @@ export function serializeElectionAdmin(election: Election) {
     timezone: election.timezone,
     allow_admins_to_vote: election.allowAdminsToVote,
     is_published: election.isPublished,
-    registration_start_at: formatDateTime(election.registrationStartAt),
-    registration_end_at: formatDateTime(election.registrationEndAt),
+    registration_start_at: formatDateTime(election.registrationStartAt, election.timezone),
+    registration_end_at: formatDateTime(election.registrationEndAt, election.timezone),
     category_id: election.categoryId,
     organization_id: election.organizationId,
   };

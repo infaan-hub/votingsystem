@@ -1,6 +1,6 @@
 import { json, makeRoute, noContent } from "@/src/lib/api";
 import { ApiError, fieldErrors, notFoundModel } from "@/src/lib/http";
-import { Collector, choiceField, emailField, strField } from "@/src/lib/fields";
+import { Collector, choiceField, emailField, strField, boolField } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
 import { readPayload, type Payload } from "@/src/lib/request";
 import {
@@ -50,6 +50,9 @@ const route = makeRoute({
       const role = has("role")
         ? choiceField(c, payload, "role", MANAGE_ROLES, { required: false })
         : undefined;
+      const isActive = has("is_active")
+        ? boolField(c, payload, "is_active", { required: false })
+        : undefined;
       c.throwIfAny();
 
       // validate() — sequential custom checks.
@@ -74,6 +77,7 @@ const route = makeRoute({
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
       if (role !== undefined) updates.role = role;
+      if (isActive !== undefined) updates.isActive = isActive;
 
       const merged = { ...target, ...updates };
       try {

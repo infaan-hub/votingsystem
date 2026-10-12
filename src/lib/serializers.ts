@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/db";
-import { formatDateTime, secondsUntil } from "@/src/lib/time";
+import { DEFAULT_TIME_ZONE, formatDateTime, secondsUntil } from "@/src/lib/time";
 import type {
   Announcement,
   Candidate,
@@ -53,6 +53,8 @@ export function serializeUserSummary(user: UserWithRelations) {
     full_name: displayName(user),
     email: user.email,
     role: user.role,
+    is_active: user.isActive,
+    date_joined: formatDateTime(user.dateJoined),
     department: serializeDepartment(user.department),
     section: serializeSection(user.section),
     registration_number: user.registrationNumber,
@@ -195,24 +197,19 @@ type PositionRow = Position & {
   section: (Section & { department: Department | null }) | null;
 };
 
-export async function serializePosition(position: PositionRow) {
-  const candidates = await prisma.candidate.findMany({
-    where: { positionId: position.id, approved: true },
-    include: {
-      user: { include: { department: true, section: { include: { department: true } } } },
-      department: true,
-      section: { include: { department: true } },
-      party: true,
-      _count: { select: { votes: true } },
-    },
-  });
+type CandidateWithCounts = CandidateRow & { _count: { votes: number } };
 
-  // Ordering: position name, featured_order, username.
-  candidates.sort((a, b) => {
+function sortCandidates<
+  T extends { featuredOrder: number; user: { username: string } },
+>(candidates: T[]): T[] {
+  // Ordering: featured_order, then username.
+  return candidates.sort((a, b) => {
     if (a.featuredOrder !== b.featuredOrder) return a.featuredOrder - b.featuredOrder;
     return pythonTextCompare(a.user.username, b.user.username);
   });
+}
 
+function serializePositionRow(position: PositionRow, candidates: CandidateWithCounts[]) {
   return {
     id: position.id,
     name: position.name,
@@ -225,36 +222,64 @@ export async function serializePosition(position: PositionRow) {
     ballot_type: position.ballotType,
     max_selections: position.maxSelections,
     allow_write_in: position.allowWriteIn,
-    candidates: candidates.map((candidate) =>
+    candidates: sortCandidates(candidates).map((candidate) =>
       serializeCandidate(candidate, candidate._count.votes),
     ),
   };
 }
 
-export function serializeAnnouncement(announcement: Announcement, now = new Date()) {
+const CANDIDATE_INCLUDE = {
+  user: { include: { department: true, section: { include: { department: true } } } },
+  department: true,
+  section: { include: { department: true } },
+  party: true,
+  _count: { select: { votes: true } },
+} as const;
+
+export async function serializePosition(position: PositionRow) {
+  const candidates = await prisma.candidate.findMany({
+    where: { positionId: position.id, approved: true },
+    include: CANDIDATE_INCLUDE,
+  });
+
+  return serializePositionRow(position, candidates);
+}
+
+export function serializeAnnouncement(
+  announcement: Announcement,
+  now = new Date(),
+  timeZone = DEFAULT_TIME_ZONE,
+) {
   return {
     id: announcement.id,
     title: announcement.title,
     message: announcement.message,
     announcement_type: announcement.announcementType,
-    publish_at: formatDateTime(announcement.publishAt),
+    publish_at: formatDateTime(announcement.publishAt, timeZone),
     is_pinned: announcement.isPinned,
     is_visible: announcement.publishAt === null || announcement.publishAt <= now,
-    created_at: formatDateTime(announcement.createdAt),
+    created_at: formatDateTime(announcement.createdAt, timeZone),
   };
 }
 
 export function serializeElectionList(election: Election, now = new Date()) {
+  const tz = election.timezone || DEFAULT_TIME_ZONE;
   return {
     id: election.id,
+    slug: election.slug,
     title: election.title,
     description: election.description,
     image: electionImagePath(election),
     image_url: electionImagePath(election) || null,
-    campaign_start_at: formatDateTime(election.campaignStartAt),
-    campaign_end_at: formatDateTime(election.campaignEndAt),
-    voting_start_at: formatDateTime(election.votingStartAt),
-    voting_end_at: formatDateTime(election.votingEndAt),
+    lifecycle_status: election.status,
+    visibility: election.visibility,
+    result_visibility: election.resultVisibility,
+    category_id: election.categoryId,
+    organization_id: election.organizationId,
+    campaign_start_at: formatDateTime(election.campaignStartAt, tz),
+    campaign_end_at: formatDateTime(election.campaignEndAt, tz),
+    voting_start_at: formatDateTime(election.votingStartAt, tz),
+    voting_end_at: formatDateTime(election.votingEndAt, tz),
     allow_live_results: election.allowLiveResults,
     announce_winners_automatically: election.announceWinnersAutomatically,
     status: electionStatus(election, now),
@@ -264,20 +289,39 @@ export function serializeElectionList(election: Election, now = new Date()) {
 }
 
 export async function serializeElectionDetail(election: Election, now = new Date()) {
-  const [positions, announcements] = await Promise.all([
+  // One round-trip for every candidate in the election instead of one query
+  // per position (the old N+1 shape).
+  const [positions, announcements, candidates] = await Promise.all([
     prisma.position.findMany({
       where: { electionId: election.id },
       include: { department: true, section: { include: { department: true } } },
       orderBy: { name: "asc" },
     }),
     visibleAnnouncements(election.id, now),
+    prisma.candidate.findMany({
+      where: { electionId: election.id, approved: true },
+      include: CANDIDATE_INCLUDE,
+    }),
   ]);
 
+  const byPosition = new Map<number, typeof candidates>();
+  for (const candidate of candidates) {
+    const bucket = byPosition.get(candidate.positionId);
+    if (bucket) {
+      bucket.push(candidate);
+    } else {
+      byPosition.set(candidate.positionId, [candidate]);
+    }
+  }
+
+  const timeZone = election.timezone || DEFAULT_TIME_ZONE;
   return {
     ...serializeElectionList(election, now),
-    positions: await Promise.all(positions.map((position) => serializePosition(position))),
+    positions: positions.map((position) =>
+      serializePositionRow(position, byPosition.get(position.id) ?? []),
+    ),
     announcements: announcements.map((announcement) =>
-      serializeAnnouncement(announcement, now),
+      serializeAnnouncement(announcement, now, timeZone),
     ),
   };
 }
@@ -302,6 +346,6 @@ export function serializeVote(vote: {
     candidate: choice,
     position: vote.position.name,
     election: vote.election.title,
-    created_at: formatDateTime(vote.createdAt),
+    created_at: formatDateTime(vote.createdAt, vote.election.timezone || DEFAULT_TIME_ZONE),
   };
 }

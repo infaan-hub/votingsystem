@@ -303,12 +303,30 @@ describe("VotingApiTests", () => {
     expect(logoutResponse.status).toBe(204);
   });
 
-  it("registers a new admin", async () => {
-    await seedApi();
+  it("refuses anonymous admin self-registration but allows an admin to create one", async () => {
+    const { adminUser } = await seedApi();
+    const anonymous = await call(
+      registerAdminPOST,
+      jsonRequest("/api/auth/register/admin/", {
+        method: "POST",
+        body: {
+          full_name: "Election Master",
+          username: "chief_admin",
+          email: "chief@example.com",
+          staff_id: "ADM-100",
+          password: "AdminPass123!",
+          confirm_password: "AdminPass123!",
+        },
+      }),
+    );
+    expect([401, 403]).toContain(anonymous.status);
+
+    const token = await adminTokenFor(adminUser.id);
     const response = await call(
       registerAdminPOST,
       jsonRequest("/api/auth/register/admin/", {
         method: "POST",
+        token,
         body: {
           full_name: "Election Master",
           username: "chief_admin",
@@ -491,7 +509,7 @@ describe("VotingApiTests", () => {
     );
   });
 
-  it("resets a password through the forgot-password endpoint", async () => {
+  it("does not allow unauthenticated password resets via forgot-password", async () => {
     await seedApi();
     const response = await call(
       forgotPasswordPOST,
@@ -504,14 +522,14 @@ describe("VotingApiTests", () => {
         },
       }),
     );
-    expect(response.status).toBe(200);
-    expect((await readJson(response)).detail).toBe("Password updated successfully.");
+    expect(response.status).toBe(503);
+    expect(String((await readJson(response)).detail).toLowerCase()).toContain("not available");
 
     const loginResponse = await call(
       loginPOST,
       jsonRequest("/api/auth/login/", {
         method: "POST",
-        body: { username: "student_a", password: "NewPass123!" },
+        body: { username: "student_a", password: "Pass1234!" },
       }),
     );
     expect(loginResponse.status).toBe(200);

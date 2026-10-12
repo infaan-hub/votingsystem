@@ -44,7 +44,7 @@ export const POST = makeRoute({
           isPinned,
         },
       });
-      return json(serializeAnnouncement(announcement), 201);
+      return json(serializeAnnouncement(announcement, new Date(), election.timezone), 201);
     },
   },
 });

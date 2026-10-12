@@ -383,36 +383,23 @@ async function seedCorporateElection(now: number) {
     }
   }
 
-  // Organization members are the eligible voters here — no department or
-  // section anywhere in this election.
+  // These four employees belong to the organization. Election-level
+  // eligibility policies (including org membership) are not yet enforced at
+  // vote time; only per-position department/section rules are.
   const membersByUsername = ["kezia", "marcus", "priya", "tomas"];
   const members = [];
   for (const username of membersByUsername) {
-    const member = await upsertUser(username, {
-      password: "Works2026!",
-      firstName: username[0].toUpperCase() + username.slice(1),
-      lastName: "Ford",
-      email: `${username}@northwind.example`,
-      role: "staff",
-      registrationNumber: "",
-      staffId: `NW-${username.toUpperCase()}`,
-    });
-    members.push(member);
-  }
-  for (const member of members) {
-    const membership = await prisma.membership.findFirst({
-      where: { userId: member.id, organizationId: org.id },
-    });
-    if (!membership) {
-      await prisma.membership.create({
-        data: {
-          userId: member.id,
-          organizationId: org.id,
-          memberRole: "member",
-          status: "approved",
-        },
-      });
-    }
+    members.push(
+      await upsertUser(username, {
+        password: "Works2026!",
+        firstName: username[0].toUpperCase() + username.slice(1),
+        lastName: "Ford",
+        email: `${username}@northwind.example`,
+        role: "staff",
+        registrationNumber: "",
+        staffId: `NW-${username.toUpperCase()}`,
+      }),
+    );
   }
 
   // Two approved candidates draw from the same member pool, mirroring how a

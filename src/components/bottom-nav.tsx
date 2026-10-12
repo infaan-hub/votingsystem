@@ -2,27 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Compass, Home, User, Vote } from "lucide-react";
+import { Home, Vote } from "lucide-react";
 
 import { cn } from "@/src/lib/utils";
+import type { NavItem } from "@/src/lib/nav";
 
-export type BottomNavItem = {
-  href: string;
-  label: string;
-  icon: typeof Home;
-};
+export type BottomNavItem = NavItem;
 
 export const DEFAULT_BOTTOM_NAV: BottomNavItem[] = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/feed", label: "Feed", icon: BarChart3 },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/", label: "Home", icon: Home, exact: true },
+  { href: "/elections", label: "Elections", icon: Vote },
 ];
 
 /**
- * Four-tab bottom navigation for phones. The active tab is crimson with a
- * filled icon and bold label; inactive tabs are muted. Height 64 plus the safe
- * -area inset, so it clears the iOS home indicator and the Android gesture bar.
+ * Five-tab bottom navigation for phones. The active tab is indigo with a
+ * bolder icon and bold label; inactive tabs are muted. Height 64 plus the
+ * safe-area inset, so it clears the iOS home indicator and Android gesture bar.
  */
 export function BottomNav({ items }: { items?: BottomNavItem[] }) {
   const pathname = usePathname();
@@ -31,12 +26,13 @@ export function BottomNav({ items }: { items?: BottomNavItem[] }) {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-nv-line bg-white/95 backdrop-blur dark:bg-[#0F1020]/95 lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-nv-line bg-nv-surface/95 backdrop-blur lg:hidden"
     >
       <ul className="mx-auto flex max-w-lg items-stretch px-safe">
         {nav.map((item) => {
-          const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = item.exact
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <li key={item.href} className="flex-1">

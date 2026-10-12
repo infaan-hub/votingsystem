@@ -1,8 +1,9 @@
-const NAIROBI_OFFSET_MS = 3 * 60 * 60 * 1000;
-
-function pad(value: number, size = 2): string {
-  return String(value).padStart(size, "0");
-}
+/**
+ * Fallback IANA timezone for display and for interpreting naive datetimes.
+ * Elections carry their own `timezone`; this only applies when no zone is
+ * supplied (categories, votes without an election, legacy admin input).
+ */
+export const DEFAULT_TIME_ZONE = "Africa/Nairobi";
 
 // ISO datetime regex: date required, time optional (T or space separator),
 // fraction up to 12 digits (6 stored), tzinfo Z|±HH|±HHMM|±HH:MM.
@@ -10,9 +11,10 @@ const DATETIME_RE =
   /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d{1,12}))?)?(Z|z|[+-]\d{2}(?::?\d{2})?)?)?$/;
 
 /**
- * Parses an ISO datetime. Naive strings are assumed to be Nairobi
- * (Africa/Nairobi, UTC+3) wall-clock time; aware strings keep their instant.
- * Anything the regex rejects yields null.
+ * Parses an ISO datetime. Naive strings (no zone suffix) are interpreted as
+ * UTC; aware strings keep their instant. Anything the regex rejects yields
+ * null. The admin UI always submits `toISOString()`, so naive input only
+ * arrives from legacy/external callers.
  */
 export function parseDateTime(value: unknown): Date | null {
   if (value instanceof Date) {
@@ -72,21 +74,46 @@ export function parseDateTime(value: unknown): Date | null {
   return check;
 }
 
+/** Renders the zone's UTC offset at `date` as `+HH:MM` / `-HH:MM`. */
+function offsetLabel(timeZone: string, date: Date): string {
+  const name =
+    new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "longOffset" })
+      .formatToParts(date)
+      .find((part) => part.type === "timeZoneName")?.value ?? "GMT";
+  const offset = name.replace("GMT", "");
+  return offset || "+00:00";
+}
+
 /**
- * Renders an instant as Africa/Nairobi local wall clock with `+03:00`,
- * six-digit microseconds only when they are non-zero.
+ * Renders an instant as wall-clock time in `timeZone` (IANA), with a numeric
+ * offset and six-digit microseconds only when they are non-zero. Falls back to
+ * `DEFAULT_TIME_ZONE` when no zone is supplied.
  */
-export function formatDateTime(value: Date | null | undefined): string | null {
+export function formatDateTime(
+  value: Date | null | undefined,
+  timeZone: string = DEFAULT_TIME_ZONE,
+): string | null {
   if (!value || Number.isNaN(value.getTime())) {
     return null;
   }
-  const shifted = new Date(value.getTime() + NAIROBI_OFFSET_MS);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(value);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "00";
   const base =
-    `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}` +
-    `T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}`;
-  const microseconds = shifted.getUTCMilliseconds() * 1000;
+    `${get("year")}-${get("month")}-${get("day")}` +
+    `T${get("hour")}:${get("minute")}:${get("second")}`;
+  const microseconds = value.getUTCMilliseconds() * 1000;
   const fraction = microseconds ? `.${String(microseconds).padStart(6, "0")}` : "";
-  return `${base}${fraction}+03:00`;
+  return `${base}${fraction}${offsetLabel(timeZone, value)}`;
 }
 
 export function secondsUntil(target: Date | null | undefined, now = new Date()): number {

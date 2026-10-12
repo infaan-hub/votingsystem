@@ -3,6 +3,7 @@ import { ApiError, unauthenticated } from "@/src/lib/http";
 import {
   authenticateRequest,
   requireStateAdmin,
+  requireStateOfficer,
   type RequestState,
 } from "@/src/lib/auth";
 
@@ -16,7 +17,7 @@ export type ApiHandler = (
   state: RequestState,
 ) => Promise<Response>;
 
-export type Permission = "public" | "authenticated" | "admin";
+export type Permission = "public" | "authenticated" | "officer" | "admin";
 
 export type ViewConfig = {
   permission?: Permission;
@@ -79,6 +80,10 @@ export function makeRoute(config: ViewConfig) {
       const state = await authenticateRequest(req);
 
       if (permission === "authenticated" && !state.user) throw unauthenticated();
+      if (permission === "officer") {
+        if (!state.user) throw unauthenticated();
+        requireStateOfficer(state);
+      }
       if (permission === "admin") {
         if (!state.user) throw unauthenticated();
         requireStateAdmin(state);

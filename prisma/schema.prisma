@@ -66,6 +66,7 @@ model ElectionCategory {
 
   creator  User?      @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   elections Election[]
+  electionRequests ElectionRequest[]
 
   @@index([isActive])
 }
@@ -85,63 +86,9 @@ model Organization {
   creator     User?         @relation("OrgCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   departments Department[]
   elections   Election[]
-  memberships Membership[]
+  officerAssignments OfficerAssignment[]
 
   @@index([isActive])
-}
-
-model Membership {
-  id             Int      @id @default(autoincrement())
-  userId         Int
-  organizationId Int
-  /// Owner / manager / member — org-scoped, distinct from platform role.
-  memberRole     String   @default("member")
-  /// pending / approved / rejected / suspended
-  status         String   @default("approved")
-  joinedAt       DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, organizationId])
-  @@index([organizationId, status])
-}
-
-/// Allow-list for elections using the `voter_list` eligibility policy.
-model EligibleVoter {
-  id         Int      @id @default(autoincrement())
-  electionId Int
-  userId     Int?
-  /// Email or external identifier for invited participants not yet registered.
-  identifier String   @default("")
-  status     String   @default("approved")
-  addedBy    Int?
-  createdAt  DateTime @default(now())
-
-  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([electionId, userId])
-  @@unique([electionId, identifier])
-  @@index([electionId, status])
-}
-
-model AuditLog {
-  id         Int      @id @default(autoincrement())
-  actorId    Int?
-  action     String
-  entityType String
-  entityId   String   @default("")
-  /// Never stores ballot selections or secrets — metadata only.
-  metadata   Json?
-  ipAddress  String   @default("")
-  createdAt  DateTime @default(now())
-
-  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
-
-  @@index([entityType, entityId])
-  @@index([createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -179,12 +126,14 @@ model User {
   opinions           Opinion[]
   opinionVotes       OpinionVote[]
   token              Token?
-  memberships        Membership[]
-  eligibleVoterRows  EligibleVoter[]
   categoriesCreated  ElectionCategory[] @relation("CategoryCreator")
   organizationsCreated Organization[]    @relation("OrgCreator")
   electionsCreated   Election[]
-  auditLogs          AuditLog[]
+  electionRequests   ElectionRequest[]   @relation("Requester")
+  contactMessages    ContactMessage[]
+  auditLogs          AuditLog[]         @relation("AuditActor")
+  officerAssignments OfficerAssignment[] @relation("OfficerAssignee")
+  campaignsOwned     Campaign[]         @relation("CampaignOwner")
 
   @@index([role])
 }
@@ -232,6 +181,33 @@ model Election {
   votingEndAt     DateTime
   registrationStartAt DateTime?
   registrationEndAt   DateTime?
+  nominationStartAt DateTime?
+  nominationEndAt   DateTime?
+
+  // ---- Officer-configured election rules (Part 5, steps E–F) -------------
+  /// Free-text "who may vote" description shown to voters. Never used as a
+  /// security control on its own — `eligibilityPolicy`/`capacityMode` are.
+  rulesText     String @default("")
+  /// account / email / phone / membership / employee / student_id / custom
+  voterIdMethod String @default("account")
+  /// Human label for a custom identifier, e.g. "Library card number".
+  voterIdLabel  String @default("")
+  /// `restricted` = finite eligible list or maxVoters; `open` = public election
+  /// with no pre-declared participant cap (eligibility still enforced).
+  capacityMode  String @default("restricted")
+  /// Null means "no declared cap" and only applies when capacityMode = open.
+  maxVoters     Int?
+  /// public / unlisted / private. Private elections require a valid share
+  /// token on the public detail route.
+  visibility    String @default("public")
+  /// Stable, non-sequential share token for protected invitation links.
+  shareToken       String?   @unique
+  shareTokenExpiry DateTime?
+
+  resultFinalizedAt  DateTime?
+  resultPublishedAt  DateTime?
+  /// Set when an administrator approves the originating ElectionRequest.
+  approvedRequestId  Int?
 
   allowLiveResults            Boolean   @default(true)
   announceWinnersAutomatically Boolean  @default(true)
@@ -248,12 +224,16 @@ model Election {
   positions      Position[]
   candidates     Candidate[]
   votes          Vote[]
-  eligibleVoters EligibleVoter[]
   announcements  Announcement[]
+  campaigns      Campaign[]
+  electionVoters ElectionVoter[]
+  officerAssignments OfficerAssignment[]
 
   @@index([categoryId])
   @@index([organizationId])
   @@index([status])
+  /// Hot path: the landing page lists published elections by opening time.
+  @@index([isPublished, votingStartAt])
 }
 
 model Position {
@@ -341,10 +321,30 @@ model Candidate {
   votes   Vote[]
   ratings CandidateRating[]
   opinions Opinion[]
+  campaigns Campaign[]
+  images  CandidateImage[]
 
   @@unique([electionId, positionId, userId])
   @@index([positionId])
   @@index([partyId])
+}
+
+/// Optional extra candidate photos beyond the primary `Candidate.photo`
+/// (the officer builder allows up to two additional images).
+model CandidateImage {
+  id          Int     @id @default(autoincrement())
+  candidateId Int
+  /// 1 = first extra image, 2 = second extra image.
+  slot        Int     @default(1)
+  imageBytes  Bytes
+  imageContentType String @default("image/jpeg")
+  imageFilename    String @default("")
+  createdAt   DateTime @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, slot])
+  @@index([candidateId])
 }
 
 /// Ballot group. Generic by default ("Party"); the tenant renames it via
@@ -499,4 +499,201 @@ model Announcement {
   election Election? @relation(fields: [electionId], references: [id], onDelete: Cascade)
 
   @@index([electionId])
+}
+
+// ---------------------------------------------------------------------------
+// Election requests (normal user → administrator review)
+// ---------------------------------------------------------------------------
+
+model ElectionRequest {
+  id          Int      @id @default(autoincrement())
+  requesterId Int
+  title       String
+  /// Free-form category name when the requester picks "Other".
+  categoryName String  @default("")
+  categoryId  Int?
+  organization String  @default("")
+  description String   @default("")
+  purpose     String   @default("")
+  startAt     DateTime
+  endAt       DateTime
+  /// Expected number of voters; 0 means "not specified".
+  expectedVoters Int   @default(0)
+  /// public / restricted / internal — the requester's proposed election type.
+  electionType  String  @default("public")
+  /// Proposed voter identification method (account, student_id, membership...).
+  voterIdMethod String  @default("account")
+  /// Newline/comma separated proposed positions.
+  positionsText String  @default("")
+  reason      String   @default("")
+  contactInfo String   @default("")
+
+  /// PENDING / UNDER_REVIEW / APPROVED / REJECTED / CHANGES_REQUESTED / CANCELLED
+  status      String   @default("PENDING")
+  decisionNote String  @default("")
+  decidedBy   Int?
+  decidedAt   DateTime?
+  assignedOfficerId Int?
+  /// Set when approval produced an election.
+  electionId  Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requester User  @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  category  ElectionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Officer assignment scope
+// ---------------------------------------------------------------------------
+
+/// `scope`: "all" | "election" | "organization".
+/// `electionId` / `organizationId` hold the target for the narrower scopes.
+model OfficerAssignment {
+  id             Int      @id @default(autoincrement())
+  officerId      Int
+  scope          String   @default("all")
+  electionId     Int?
+  organizationId Int?
+  assignedBy     Int?
+  isActive       Boolean  @default(true)
+  note           String   @default("")
+  createdAt      DateTime @default(now())
+
+  officer      User          @relation("OfficerAssignee", fields: [officerId], references: [id], onDelete: Cascade)
+  election     Election?     @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([officerId])
+  @@index([electionId])
+}
+
+// ---------------------------------------------------------------------------
+// Voter eligibility (structured, server-enforced)
+// ---------------------------------------------------------------------------
+
+/// Pre-declared eligible voter for a restricted election.
+/// `uniqueKey` is either `u:<userId>` or `h:<sha256(identifier)>` so the
+/// unique constraint works whether the row is account-bound or ID-bound.
+/// Identifiers are only ever stored as salted hashes, never in clear text.
+model ElectionVoter {
+  id          Int      @id @default(autoincrement())
+  electionId  Int
+  uniqueKey   String
+  userId      Int?
+  /// Display label (e.g. department or masked identifier) — never the raw ID.
+  label       String   @default("")
+  createdAt   DateTime @default(now())
+
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+
+  @@unique([electionId, uniqueKey])
+  @@index([electionId])
+}
+
+// ---------------------------------------------------------------------------
+// Candidate campaigns (created by election officers)
+// ---------------------------------------------------------------------------
+
+model Campaign {
+  id          Int      @id @default(autoincrement())
+  electionId  Int
+  candidateId Int
+  /// Officer who authored the campaign; used for scope enforcement.
+  ownerId     Int?
+  topic       String
+  description String   @default("")
+  /// Main campaign image, stored as bytes like the rest of the media.
+  imageBytes        Bytes?
+  imageContentType  String  @default("")
+  imageFilename     String  @default("")
+  /// Campaign video (max 30 seconds). Duration is inspected server-side.
+  videoBytes        Bytes?
+  videoContentType  String  @default("")
+  videoFilename     String  @default("")
+  videoDurationSeconds Int  @default(0)
+  /// Legacy/external URL fallback when no bytes are stored.
+  videoUrl          String   @default("")
+  startAt     DateTime?
+  endAt       DateTime?
+  /// DRAFT / PENDING / PUBLISHED / HIDDEN / REJECTED
+  status      String   @default("DRAFT")
+  moderationNote String @default("")
+  moderatedBy Int?
+  moderatedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  election  Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  owner     User?     @relation("CampaignOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  images    CampaignImage[]
+
+  @@index([electionId])
+  @@index([candidateId])
+  @@index([status])
+}
+
+/// Additional campaign images beyond the main one.
+model CampaignImage {
+  id         Int    @id @default(autoincrement())
+  campaignId Int
+  slot       Int    @default(1)
+  imageBytes Bytes
+  imageContentType String @default("image/jpeg")
+  imageFilename    String @default("")
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, slot])
+  @@index([campaignId])
+}
+
+// ---------------------------------------------------------------------------
+// Contact + audit
+// ---------------------------------------------------------------------------
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  name      String
+  email     String
+  subject   String
+  message   String
+  /// NEW / OPEN / RESOLVED
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Append-only activity record. There is no update or delete API for this
+/// table; rows are written by server code only.
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int?
+  /// e.g. "officer.election.create", "admin.request.approve".
+  action     String
+  entityType String   @default("")
+  entityId   String   @default("")
+  summary    String   @default("")
+  /// JSON-encoded detail. Never contains passwords, tokens or ballot choices.
+  detail     String   @default("{}")
+  ipAddress  String   @default("")
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

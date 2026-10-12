@@ -37,17 +37,25 @@ export default async function CandidateDetailPage({
 
   // Rating categories come from the position itself; with no rating records yet
   // the panel renders an honest empty state rather than invented numbers.
-  const ratingCategories = candidate.position
-    ? await prisma.ratingCategory.findMany({
-        where: { positionId: candidate.position.id },
-        orderBy: { order: "asc" },
-      })
-    : [];
-
-  const ratings = await prisma.candidateRating.findMany({
-    where: { candidateId: candidate.id },
-    select: { score: true, categoryId: true },
-  });
+  // All three follow-up queries are independent of each other.
+  const [ratingCategories, ratings, opinions] = await Promise.all([
+    candidate.position
+      ? prisma.ratingCategory.findMany({
+          where: { positionId: candidate.position.id },
+          orderBy: { order: "asc" },
+        })
+      : Promise.resolve([]),
+    prisma.candidateRating.findMany({
+      where: { candidateId: candidate.id },
+      select: { score: true, categoryId: true },
+    }),
+    prisma.opinion.findMany({
+      where: { candidateId: candidate.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: { voter: true },
+    }),
+  ]);
 
   const ratingData: ResultDatum[] = ratingCategories.map((category) => {
     const scores = ratings
@@ -68,13 +76,6 @@ export default async function CandidateDetailPage({
   const overall = ratings.length
     ? ratings.reduce((sum, rating) => sum + rating.score, 0) / ratings.length
     : 0;
-
-  const opinions = await prisma.opinion.findMany({
-    where: { candidateId: candidate.id },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-    include: { voter: true },
-  });
 
   const photo = candidatePhotoPath(candidate);
   const initials = initialsFor(

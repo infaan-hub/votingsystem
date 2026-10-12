@@ -80,16 +80,8 @@ export type TenantConfig = {
   features: {
     /** Require a one-time code sent to a phone number at registration. */
     phoneVerification: boolean;
-    /** Identity/KYC review queue for administrators. */
-    identityReview: boolean;
-    /** Candidate ratings and public opinion threads. */
-    ratingsAndOpinions: boolean;
     /** Live head-to-head counts while voting is open. */
     liveResults: boolean;
-    /** Re-authentication (biometric or password) at the moment of casting. */
-    voteReauthentication: boolean;
-    /** Printable/verifiable receipt code after voting. */
-    receipts: boolean;
   };
   /** Contact + legal surfaces rendered in the footer. */
   authority: {
@@ -143,11 +135,7 @@ const tenant: TenantConfig = {
   },
   features: {
     phoneVerification: false,
-    identityReview: false,
-    ratingsAndOpinions: true,
     liveResults: true,
-    voteReauthentication: true,
-    receipts: true,
   },
   authority: {
     name: "Electoral Office",

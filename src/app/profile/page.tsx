@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Bookmark,
   ChevronRight,
-  Fingerprint,
   LogOut,
   MessageSquare,
   Pencil,
@@ -261,12 +260,6 @@ export default function ProfilePage() {
           <Badge variant="secondary" className="text-[10px]">
             {tenant.authority.name}
           </Badge>
-          {tenant.features.voteReauthentication ? (
-            <Badge variant="secondary" className="gap-1 text-[10px]">
-              <Fingerprint className="h-3 w-3" aria-hidden="true" />
-              Re-auth on vote
-            </Badge>
-          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="ghost" className="w-auto px-4">

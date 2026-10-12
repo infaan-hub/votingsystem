@@ -4,10 +4,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BarChart3,
-  FolderTree,
+  FileClock,
+  FileText,
+  Inbox,
   LayoutDashboard,
+  Megaphone,
+  MessagesSquare,
+  PieChart,
   Search,
-  Tags,
+  Settings2,
+  ShieldCheck,
+  UserRound,
   Users,
   Vote,
   X,
@@ -29,12 +36,27 @@ type Action = {
 const STATIC_ACTIONS: Action[] = [
   { id: "nav-home", label: "Home", group: "Navigate", href: "/", icon: LayoutDashboard },
   { id: "nav-elections", label: "Browse elections", group: "Navigate", href: "/elections", icon: Vote },
-  { id: "nav-categories", label: "Browse categories", group: "Navigate", href: "/categories", icon: Tags },
+  { id: "nav-campaigns", label: "Browse campaigns", group: "Navigate", href: "/compaigns", icon: Megaphone },
+  { id: "nav-results", label: "Published results", group: "Navigate", href: "/results", icon: PieChart },
+  { id: "nav-contact", label: "Contact support", group: "Navigate", href: "/contact", icon: MessagesSquare },
   { id: "nav-dashboard", label: "My dashboard", group: "Navigate", href: "/dashboard", icon: LayoutDashboard },
+  { id: "nav-request", label: "Request an election", group: "Navigate", href: "/request-election", icon: FileText },
+  { id: "nav-profile", label: "My profile", group: "Account", href: "/profile", icon: UserRound },
   { id: "nav-login", label: "Sign in", group: "Account", href: "/login", icon: Users },
-  { id: "admin-categories", label: "Manage categories", group: "Admin", href: "/admin/categories", icon: FolderTree },
-  { id: "admin-users", label: "Manage users", group: "Admin", href: "/admin?view=users", icon: Users },
-  { id: "admin-stats", label: "Platform statistics", group: "Admin", href: "/admin", icon: BarChart3 },
+  { id: "admin-home", label: "Admin dashboard", group: "Admin", href: "/admin/dashboard", icon: LayoutDashboard },
+  { id: "admin-requests", label: "Review election requests", group: "Admin", href: "/admin/election-requests", icon: Inbox },
+  { id: "admin-elections", label: "Manage elections", group: "Admin", href: "/admin/elections", icon: Vote },
+  { id: "admin-campaigns", label: "Review campaigns", group: "Admin", href: "/admin/compaigns", icon: Megaphone },
+  { id: "admin-votes", label: "Vote aggregates", group: "Admin", href: "/admin/votes", icon: BarChart3 },
+  { id: "admin-results", label: "Publish results", group: "Admin", href: "/admin/results", icon: PieChart },
+  { id: "admin-officers", label: "Add election officers", group: "Admin", href: "/admin/add-election-officer", icon: ShieldCheck },
+  { id: "admin-users", label: "Manage users", group: "Admin", href: "/admin/users", icon: Users },
+  { id: "admin-audit", label: "Audit logs", group: "Admin", href: "/admin/audit-logs", icon: FileClock },
+  { id: "officer-home", label: "Officer dashboard", group: "Officer", href: "/officer/dashboard", icon: LayoutDashboard },
+  { id: "officer-election", label: "Run my election", group: "Officer", href: "/officer/election", icon: Vote },
+  { id: "officer-campaigns", label: "Officer campaigns", group: "Officer", href: "/officer/compaign", icon: Megaphone },
+  { id: "officer-management", label: "Election management", group: "Officer", href: "/officer/management", icon: Settings2 },
+  { id: "officer-results", label: "Officer results", group: "Officer", href: "/officer/results", icon: PieChart },
 ];
 
 type CommandPaletteProps = {
@@ -55,18 +77,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user?.role === "admin";
+  const isOfficer = user?.role === "officer";
 
   const actions = useMemo(() => {
     const allowed = STATIC_ACTIONS.filter((action) => {
-      if (action.group !== "Admin") return true;
-      return isAdmin;
+      if (action.group === "Admin") return isAdmin;
+      if (action.group === "Officer") return isOfficer || isAdmin;
+      if (action.id === "nav-login") return !user;
+      return true;
     });
     if (!query.trim()) return allowed;
     const needle = query.trim().toLowerCase();
     return allowed.filter((action) =>
       `${action.label} ${action.keywords ?? ""} ${action.group}`.toLowerCase().includes(needle),
     );
-  }, [query, isAdmin]);
+  }, [query, isAdmin, isOfficer, user]);
 
   useEffect(() => {
     if (open) {

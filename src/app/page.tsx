@@ -14,28 +14,38 @@ import { t } from "@/config/tenant";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const election = await prisma.election.findFirst({
-    where: { isPublished: true },
-    orderBy: { votingStartAt: "desc" },
-    include: {
-      category: true,
-      organization: true,
-      positions: {
-        orderBy: { order: "asc" },
-        include: {
-          candidates: {
-            where: { approved: true },
-            include: {
-              user: { include: { department: true, section: true } },
-              department: true,
-              section: true,
-              _count: { select: { votes: true } },
+  // The election and the category tiles are independent — fetch them together.
+  const [election, categories] = await Promise.all([
+    prisma.election.findFirst({
+      where: { isPublished: true },
+      orderBy: { votingStartAt: "desc" },
+      include: {
+        category: true,
+        organization: true,
+        positions: {
+          orderBy: { order: "asc" },
+          include: {
+            candidates: {
+              where: { approved: true },
+              include: {
+                user: { include: { department: true, section: true } },
+                department: true,
+                section: true,
+                _count: { select: { votes: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    // Explore tiles come from real categories, so nothing here is fabricated.
+    prisma.electionCategory.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      take: 6,
+      include: { _count: { select: { elections: true } } },
+    }),
+  ]);
 
   // Featured: highest-voted approved candidates across the election.
   const featured: CandidateCardData[] = election
@@ -73,12 +83,6 @@ export default async function HomePage() {
     : [];
 
   // Explore tiles come from real categories, so nothing here is fabricated.
-  const categories = await prisma.electionCategory.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" },
-    take: 6,
-    include: { _count: { select: { elections: true } } },
-  });
   const tiles: TileData[] = categories.map((category) => ({
     id: category.id,
     label: category.name,

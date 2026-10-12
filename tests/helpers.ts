@@ -66,13 +66,22 @@ export function multipartRequest(
 export async function resetDb(): Promise<void> {
   await prisma.$transaction(
     [
+      prisma.opinionVote.deleteMany(),
+      prisma.opinion.deleteMany(),
+      prisma.candidateRating.deleteMany(),
+      prisma.ratingCategory.deleteMany(),
+      prisma.campaignImage.deleteMany(),
+      prisma.campaign.deleteMany(),
+      prisma.electionVoter.deleteMany(),
+      prisma.officerAssignment.deleteMany(),
+      prisma.electionRequest.deleteMany(),
+      prisma.contactMessage.deleteMany(),
+      prisma.auditLog.deleteMany(),
+      prisma.candidateImage.deleteMany(),
       prisma.vote.deleteMany(),
       prisma.ballotOption.deleteMany(),
       prisma.announcement.deleteMany(),
       prisma.candidate.deleteMany(),
-      prisma.eligibleVoter.deleteMany(),
-      prisma.membership.deleteMany(),
-      prisma.auditLog.deleteMany(),
       prisma.position.deleteMany(),
       prisma.token.deleteMany(),
       prisma.user.deleteMany(),
@@ -81,6 +90,7 @@ export async function resetDb(): Promise<void> {
       prisma.organization.deleteMany(),
       prisma.section.deleteMany(),
       prisma.department.deleteMany(),
+      prisma.party.deleteMany(),
     ],
     { timeout: 60000, maxWait: 60000 },
   );
