@@ -236,6 +236,16 @@ function ElectionDetailContent() {
   const detail = data?.detail ?? null;
   const positions = useMemo(() => data?.positions ?? [], [data]);
 
+  const [campaignLive, setCampaignLive] = useState(false);
+  useEffect(() => {
+    if (!election?.campaign_end_at) {
+      setCampaignLive(false);
+      return;
+    }
+    const end = new Date(election.campaign_end_at).getTime();
+    setCampaignLive(Number.isFinite(end) && end > Date.now());
+  }, [election?.campaign_end_at]);
+
   const showResults = detail ? resultsAreShown(detail) : false;
 
   const loadResults = useCallback(async () => {
@@ -381,8 +391,15 @@ function ElectionDetailContent() {
 
         {votingOpen && election.voting_end_at ? (
           <Countdown target={election.voting_end_at} prefix="Voting closes in" />
-        ) : election.status === "upcoming" && election.voting_start_at ? (
-          <Countdown target={election.voting_start_at} prefix="Voting opens in" />
+        ) : election.status === "upcoming" ? (
+          <div className="flex flex-wrap gap-x-6 gap-y-1">
+            {campaignLive && election.campaign_end_at ? (
+              <Countdown target={election.campaign_end_at} prefix="Campaign closes in" />
+            ) : null}
+            {election.voting_start_at ? (
+              <Countdown target={election.voting_start_at} prefix="Voting opens in" />
+            ) : null}
+          </div>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2">

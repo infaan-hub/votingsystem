@@ -190,7 +190,7 @@ function Ballot({
             You need an authenticated account to receive a ballot.
           </p>
           <Button asChild className="sm:w-52">
-            <Link href="/login">Sign in</Link>
+            <Link href={`/login?next=${encodeURIComponent(`/vote/${slug}`)}`}>Sign in</Link>
           </Button>
         </CardContent>
       </Card>
