@@ -75,7 +75,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Button
               variant="subtle"
               size="dense"
-              className="absolute left-4 sm:left-6"
+              className="absolute left-4 top-1/2 h-9 w-9 -translate-y-1/2 px-0 sm:left-6"
               onClick={() => setMenuOpen((open) => !open)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
