@@ -44,6 +44,7 @@ type CampaignRow = {
   start_at: string | null;
   end_at: string | null;
   image_url: string | null;
+  image_urls?: string[];
   video_url: string | null;
   video_duration_seconds: number | null;
   election: { id: number; slug: string; title: string; status: string };
@@ -56,7 +57,7 @@ type CampaignRow = {
   };
 };
 
-type BallotPayload = {
+type OfficerBallotPayload = {
   positions: {
     id: number;
     name: string;
@@ -72,6 +73,8 @@ type FormState = {
   end_at: string;
   status: string;
   image: File | null;
+  image2: File | null;
+  image3: File | null;
   video: File | null;
 };
 
@@ -83,6 +86,8 @@ const EMPTY_FORM: FormState = {
   end_at: "",
   status: "DRAFT",
   image: null,
+  image2: null,
+  image3: null,
   video: null,
 };
 
@@ -151,10 +156,10 @@ function CampaignBody() {
         : Promise.resolve([]),
     [selectedId],
   );
-  const ballot = useResource<BallotPayload | null>(
+  const ballot = useResource<OfficerBallotPayload | null>(
     (authToken) =>
       dialogOpen && selectedId
-        ? apiFetch<BallotPayload>(authToken, `/api/elections/${selectedId}`)
+        ? apiFetch<OfficerBallotPayload>(authToken, `/api/officer/elections/${selectedId}`)
         : Promise.resolve(null),
     [dialogOpen, selectedId],
   );
@@ -190,6 +195,8 @@ function CampaignBody() {
       end_at: toLocalInput(campaign.end_at),
       status: campaign.status,
       image: null,
+      image2: null,
+      image3: null,
       video: null,
     });
     setFieldErrors({});
@@ -228,6 +235,8 @@ function CampaignBody() {
       if (startAt) body.set("start_at", startAt);
       if (endAt) body.set("end_at", endAt);
       if (form.image) body.set("image", form.image);
+      if (form.image2) body.set("image2", form.image2);
+      if (form.image3) body.set("image3", form.image3);
       if (form.video) body.set("video", form.video);
 
       if (editing) {
@@ -394,7 +403,7 @@ function CampaignBody() {
         description={
           editing
             ? "Update the wording, schedule, status or media for this campaign."
-            : "Promote a candidate with a topic, an optional story and up to 30 seconds of video."
+            : "Pick a candidate on this election's ballot, then add a topic, a description, a cover image, up to two extra images and a video of up to 30 seconds."
         }
         footer={
           <>
@@ -459,7 +468,7 @@ function CampaignBody() {
                 hint={
                   editing
                     ? "The candidate cannot be changed after a campaign is created."
-                    : "Only approved candidates on this ballot are listed."
+                    : "Candidates come from this election's ballot — pick the one this campaign supports."
                 }
                 onChange={(event) => setForm({ ...form, candidate_id: event.target.value })}
                 error={firstError(fieldErrors, "candidate_id")}
@@ -528,6 +537,29 @@ function CampaignBody() {
             error={firstError(fieldErrors, "image")}
             onChange={(file) => setForm((current) => ({ ...current, image: file }))}
           />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FileField
+              id="campaign-image2"
+              label="Extra image 1 (optional)"
+              accept="image/*"
+              hint={`Gallery image. Up to ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.${
+                editing ? " Replaces the current first extra image if one exists." : ""
+              }`}
+              error={firstError(fieldErrors, "image2")}
+              onChange={(file) => setForm((current) => ({ ...current, image2: file }))}
+            />
+            <FileField
+              id="campaign-image3"
+              label="Extra image 2 (optional)"
+              accept="image/*"
+              hint={`Gallery image. Up to ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.${
+                editing ? " Replaces the current second extra image if one exists." : ""
+              }`}
+              error={firstError(fieldErrors, "image3")}
+              onChange={(file) => setForm((current) => ({ ...current, image3: file }))}
+            />
+          </div>
 
           <FileField
             id="campaign-video"
@@ -609,6 +641,11 @@ function CampaignCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const gallery = campaign.image_urls ?? [];
+  // The cover renders as the card's main visual — only show the rest as thumbs.
+  const extras = campaign.image_url
+    ? gallery.filter((url) => url !== campaign.image_url)
+    : gallery;
   return (
     <article className="rounded-nv-md border border-nv-line bg-nv-surface p-5 shadow-nv-card">
       <div className="flex items-start gap-4">
@@ -656,6 +693,19 @@ function CampaignCard({
           Delete
         </Button>
       </div>
+
+      {extras.length ? (
+        <div className="mt-3 flex gap-2">
+          {extras.map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt=""
+              className="h-12 w-12 rounded-nv-md border border-nv-line object-cover"
+            />
+          ))}
+        </div>
+      ) : null}
     </article>
   );
 }

@@ -86,6 +86,26 @@ const route = makeRoute({
         include: CAMPAIGN_INCLUDE,
       });
 
+      // Replace any extra gallery slots that were resubmitted.
+      for (const extra of files.extras) {
+        await prisma.campaignImage.deleteMany({
+          where: { campaignId: pk, slot: extra.slot },
+        });
+        await prisma.campaignImage.create({
+          data: {
+            campaignId: pk,
+            slot: extra.slot,
+            imageBytes: Buffer.from(extra.bytes),
+            imageContentType: extra.contentType,
+            imageFilename: extra.filename,
+          },
+        });
+      }
+      const full = await prisma.campaign.findUniqueOrThrow({
+        where: { id: pk },
+        include: CAMPAIGN_INCLUDE,
+      });
+
       await recordAudit({
         actorId: officer.id,
         action: "officer.campaign.update",
@@ -96,7 +116,7 @@ const route = makeRoute({
         ipAddress: clientIp(req),
       });
 
-      return json(serializeCampaign(updated, { moderation: true }));
+      return json(serializeCampaign(full, { moderation: true }));
     },
     DELETE: async (req, params, state) => {
       const officer = requireStateOfficer(state);

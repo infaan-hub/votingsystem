@@ -27,6 +27,8 @@ export type CampaignFileFields = {
   videoContentType: string;
   videoFilename: string;
   videoDurationSeconds: number | null;
+  /** Extra gallery images beyond the cover, keyed by CampaignImage slot (1..2). */
+  extras: { slot: number; bytes: Uint8Array; contentType: string; filename: string }[];
 };
 
 export async function collectCampaignFiles(
@@ -41,6 +43,7 @@ export async function collectCampaignFiles(
     videoContentType: "",
     videoFilename: "",
     videoDurationSeconds: null,
+    extras: [],
   };
 
   const image = fileField(c, payload, "image", { required: false, allowNull: true });
@@ -56,6 +59,31 @@ export async function collectCampaignFiles(
         files.imageBytes = bytes;
         files.imageContentType = image.type || "";
         files.imageFilename = image.name || "";
+      }
+    }
+  }
+
+  for (const [key, slot] of [
+    ["image2", 1],
+    ["image3", 2],
+  ] as const) {
+    const part = fileField(c, payload, key, { required: false, allowNull: true });
+    if (part instanceof File) {
+      const bytes = await validateImageFile(c, key, part);
+      if (bytes) {
+        if (bytes.length > MAX_IMAGE_BYTES) {
+          c.field(
+            key,
+            `Image is too large. The limit is ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.`,
+          );
+        } else {
+          files.extras.push({
+            slot,
+            bytes,
+            contentType: part.type || "",
+            filename: part.name || "",
+          });
+        }
       }
     }
   }
@@ -143,6 +171,18 @@ const route = makeRoute({
         include: CAMPAIGN_INCLUDE,
       });
 
+      for (const extra of files.extras) {
+        await prisma.campaignImage.create({
+          data: {
+            campaignId: created.id,
+            slot: extra.slot,
+            imageBytes: Buffer.from(extra.bytes),
+            imageContentType: extra.contentType,
+            imageFilename: extra.filename,
+          },
+        });
+      }
+
       await recordAudit({
         actorId: officer.id,
         action: "officer.campaign.create",
@@ -153,7 +193,12 @@ const route = makeRoute({
         ipAddress: clientIp(req),
       });
 
-      return json(serializeCampaign(created, { moderation: true }), 201);
+      // Re-read so the response includes the extra gallery images.
+      const full = await prisma.campaign.findUniqueOrThrow({
+        where: { id: created.id },
+        include: CAMPAIGN_INCLUDE,
+      });
+      return json(serializeCampaign(full, { moderation: true }), 201);
     },
   },
 });

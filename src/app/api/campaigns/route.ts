@@ -8,6 +8,7 @@ export const CAMPAIGN_INCLUDE = {
   candidate: { include: { user: true, party: true } },
   election: true,
   owner: true,
+  images: { orderBy: { slot: "asc" } },
 } as const;
 
 export type CampaignRow = Prisma.CampaignGetPayload<{ include: typeof CAMPAIGN_INCLUDE }>;
@@ -27,6 +28,12 @@ export function serializeCampaign(
       campaign.imageBytes && campaign.imageBytes.length
         ? `/api/campaigns/${campaign.id}/image`
         : null,
+    image_urls: [
+      ...(campaign.imageBytes && campaign.imageBytes.length
+        ? [`/api/campaigns/${campaign.id}/image`]
+        : []),
+      ...campaign.images.map((extra) => `/api/campaigns/${campaign.id}/images/${extra.slot}`),
+    ],
     video_url:
       campaign.videoBytes && campaign.videoBytes.length
         ? `/api/campaigns/${campaign.id}/video`
