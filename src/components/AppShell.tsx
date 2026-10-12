@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, LogOut, Menu, Search, Vote, X } from "lucide-react";
+import { LayoutDashboard, LogIn, LogOut, Menu, Search, UserPlus, Vote, X } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
 import { Sidebar } from "@/src/components/sidebar";
@@ -64,12 +64,70 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   /* ------------------------------------------------------------------ *
-   * Public chrome: drawer sidebar (nav + auth) + centred brand header.  *
+   * Public chrome: desktop icon rail + drawer sidebar + centred brand.  *
    * ------------------------------------------------------------------ */
   if (shell === "public") {
     const publicLinks = navGroups.flatMap((group) => group.items);
+    const isActive = (item: NavItem) =>
+      item.exact
+        ? pathname === item.href
+        : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
     return (
-      <div className="app-shell flex min-h-dvh flex-col">
+      <div className="app-shell flex min-h-dvh flex-col md:pl-[72px]">
+        {/* Desktop rail — icons only while the drawer is closed. */}
+        <aside
+          aria-label="Sidebar"
+          className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center border-r border-sidebar-border bg-sidebar py-4 md:flex"
+        >
+          <Link
+            href="/"
+            aria-label={`${t.name} home`}
+            className="mb-4 grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-nv-primary text-nv-navy"
+          >
+            <Vote className="h-5 w-5" aria-hidden="true" />
+          </Link>
+
+          <nav className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto">
+            {publicLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                aria-label={item.label}
+                aria-current={isActive(item) ? "page" : undefined}
+                className={cn(
+                  "grid h-11 w-11 shrink-0 place-items-center rounded-lg transition-colors duration-200",
+                  isActive(item)
+                    ? "bg-nv-primary text-nv-navy"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                )}
+              >
+                <item.icon className="h-5 w-5" aria-hidden="true" />
+              </Link>
+            ))}
+          </nav>
+
+          <div className="flex shrink-0 flex-col items-center gap-1 border-t border-sidebar-border pt-3">
+            <Link
+              href="/login"
+              title="Sign in"
+              aria-label="Sign in"
+              className="grid h-11 w-11 place-items-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <LogIn className="h-5 w-5" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/register"
+              title="Create account"
+              aria-label="Create account"
+              className="grid h-11 w-11 place-items-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              <UserPlus className="h-5 w-5" aria-hidden="true" />
+            </Link>
+          </div>
+        </aside>
+
         <header className="sticky top-0 z-30 border-b border-nv-line bg-nv-surface/90 backdrop-blur">
           <div className="relative mx-auto flex h-16 w-full max-w-6xl items-center px-4 sm:px-6">
             <Button
