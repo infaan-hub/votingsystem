@@ -3,9 +3,9 @@
 /* ---------------------------------------------------------------------------
    Design tokens — NexVote identity.
 
-   Single fixed theme: deep teal surfaces (#042F32) with pale-green ink and
-   accents (#D6FFCB). Every value is overridable per tenant through the same
-   variable names.
+   Single fixed theme: deep teal surfaces (#042F32), white text, and
+   pale-green (#D6FFCB) reserved for buttons/accents. Every value is
+   overridable per tenant through the same variable names.
    --------------------------------------------------------------------------- */
 
 :root {
@@ -16,11 +16,11 @@
   --nv-navy: #042f32;
   --nv-navy-600: #06373b;
 
-  /* neutrals — teal-tinted scale */
-  --nv-ink: #d6ffcb;
-  --nv-text: color-mix(in srgb, #d6ffcb 88%, #042f32);
-  --nv-muted: color-mix(in srgb, #d6ffcb 64%, #042f32);
-  --nv-line: color-mix(in srgb, #d6ffcb 22%, #042f32);
+  /* neutrals — white text on teal surfaces */
+  --nv-ink: #ffffff;
+  --nv-text: color-mix(in srgb, #ffffff 92%, #042f32);
+  --nv-muted: color-mix(in srgb, #ffffff 66%, #042f32);
+  --nv-line: color-mix(in srgb, #ffffff 18%, #042f32);
   --nv-bg: #042f32;
   --nv-surface: #042f32;
 
@@ -51,23 +51,23 @@
   --chart-7: #34d399;
   --chart-8: #94a3b8;
 
-  /* lifecycle pills */
+  /* lifecycle pills — tinted chips with white labels */
   --status-draft: #0a3a3d;
-  --status-draft-foreground: #a8cfc7;
+  --status-draft-foreground: #ffffff;
   --status-published: #0f3d2f;
-  --status-published-foreground: #9fe6b8;
+  --status-published-foreground: #ffffff;
   --status-nominations: #3b2f06;
-  --status-nominations-foreground: #fde68a;
+  --status-nominations-foreground: #ffffff;
   --status-ready: #083344;
-  --status-ready-foreground: #a5f3fc;
+  --status-ready-foreground: #ffffff;
   --status-open: #064e3b;
-  --status-open-foreground: #a7f3d0;
+  --status-open-foreground: #ffffff;
   --status-closed: #450a0a;
-  --status-closed-foreground: #fecaca;
+  --status-closed-foreground: #ffffff;
   --status-results: #243a2c;
-  --status-results-foreground: #c9f5d8;
+  --status-results-foreground: #ffffff;
   --status-archived: #0a3a3d;
-  --status-archived-foreground: #8fb8b0;
+  --status-archived-foreground: #ffffff;
 
   /* shape + depth */
   --nv-radius-sm: 8px;
@@ -114,10 +114,10 @@
   --input: var(--nv-line);
   /* Sidebar / navigation surface (darker teal anchor). */
   --sidebar: #021f21;
-  --sidebar-foreground: color-mix(in srgb, #d6ffcb 78%, #021f21);
+  --sidebar-foreground: color-mix(in srgb, #ffffff 78%, #021f21);
   --sidebar-accent: #06373b;
-  --sidebar-accent-foreground: #d6ffcb;
-  --sidebar-border: color-mix(in srgb, #d6ffcb 16%, #021f21);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: color-mix(in srgb, #ffffff 16%, #021f21);
 }
 
 /* ---------------------------------------------------------------------------
