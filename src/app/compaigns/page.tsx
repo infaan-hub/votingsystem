@@ -197,7 +197,7 @@ function CampaignsContent() {
                     className="h-full w-full object-cover"
                   />
                   {campaign.video_url ? (
-                    <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-bold text-nv-ink">
+                    <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-bold text-white">
                       <Clapperboard className="h-3 w-3" aria-hidden="true" />
                       {campaign.video_duration_seconds
                         ? formatDuration(campaign.video_duration_seconds)

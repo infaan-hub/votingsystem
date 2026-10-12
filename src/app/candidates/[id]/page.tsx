@@ -223,7 +223,7 @@ function InfoTab({
         <CardContent className="flex items-center gap-3.5 p-4">
           <span
             aria-hidden="true"
-            className="nv-grad-profile grid h-14 w-14 shrink-0 place-items-center rounded-full text-lg font-bold text-nv-ink"
+            className="nv-grad-profile grid h-14 w-14 shrink-0 place-items-center rounded-full text-lg font-bold text-white"
           >
             {initials}
           </span>
@@ -276,7 +276,7 @@ function OpinionsTab({ opinions }: { opinions: OpinionRow[] }) {
           <div className="flex items-center gap-2.5">
             <span
               aria-hidden="true"
-              className="nv-grad-profile grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-bold text-nv-ink"
+              className="nv-grad-profile grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
             >
               {initialsFor(opinion.voter.username)}
             </span>

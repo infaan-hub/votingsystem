@@ -50,7 +50,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const brand = (compact?: boolean) => (
     <Link href="/" className="flex items-center gap-2" aria-label={`${t.name} home`}>
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-nv-navy">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-white">
         <Vote className="h-4 w-4" aria-hidden="true" />
       </span>
       {!compact ? (
@@ -92,7 +92,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       className={cn(
                         "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
                         active
-                          ? "bg-nv-primary text-nv-navy"
+                          ? "bg-nv-primary text-white"
                           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       )}
                     >
@@ -201,7 +201,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                             className={cn(
                               "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
                               active
-                                ? "bg-nv-primary text-nv-navy"
+                                ? "bg-nv-primary text-white"
                                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                             )}
                           >
@@ -261,7 +261,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-nv-line bg-nv-surface/90 backdrop-blur md:hidden">
         <div className="flex h-14 items-center gap-2 px-safe px-4">
           <Link href="/" className="flex items-center gap-2" aria-label={`${t.name} home`}>
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-nv-primary text-nv-navy">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-nv-primary text-white">
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="text-[16px] font-extrabold tracking-tight text-nv-ink">

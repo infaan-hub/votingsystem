@@ -93,7 +93,7 @@ export default function ProfilePage() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <span className="nv-grad-profile grid h-14 w-14 place-items-center rounded-full text-nv-ink">
+          <span className="nv-grad-profile grid h-14 w-14 place-items-center rounded-full text-white">
             <Shield className="h-6 w-6" aria-hidden="true" />
           </span>
           <h1 className="text-[18px] font-bold text-nv-ink">Sign in to continue</h1>
@@ -114,14 +114,14 @@ export default function ProfilePage() {
       {/* ---------------- Navy banner ---------------- */}
       <section className="nv-grad-profile relative -mx-4 -mt-4 overflow-hidden rounded-b-[28px] px-4 pb-6 pt-6">
         <div className="relative flex items-center gap-3.5">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-nv-ink/20 text-xl font-bold text-nv-ink">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-white/20 text-xl font-bold text-white">
             {initialsFor(user.full_name || user.username)}
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[20px] font-extrabold text-nv-ink">
+            <h1 className="truncate text-[20px] font-extrabold text-white">
               {user.full_name || user.username}
             </h1>
-            <p className="nums-tabular truncate text-[13px] text-nv-ink/80">
+            <p className="nums-tabular truncate text-[13px] text-white/80">
               {t.idLabel}: {user.username}
             </p>
           </div>
@@ -129,7 +129,7 @@ export default function ProfilePage() {
             type="button"
             onClick={onEditRequest}
             aria-label="Edit profile"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-ink/20 text-nv-ink transition-colors hover:bg-nv-ink/30"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
           >
             <Pencil className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -220,7 +220,7 @@ export default function ProfilePage() {
                 >
                   <span
                     aria-hidden="true"
-                    className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-nv-ink"
+                    className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
                   >
                     #{id}
                   </span>
@@ -276,11 +276,11 @@ export default function ProfilePage() {
 
 function BannerStat({ term, value }: { term: string; value: string }) {
   return (
-    <div className="rounded-lg bg-nv-ink/15 px-3 py-2">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.4px] text-nv-ink/75">
+    <div className="rounded-lg bg-white/15 px-3 py-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.4px] text-white/75">
         {term}
       </dt>
-      <dd className="text-[13px] font-bold capitalize text-nv-ink">{value}</dd>
+      <dd className="text-[13px] font-bold capitalize text-white">{value}</dd>
     </div>
   );
 }

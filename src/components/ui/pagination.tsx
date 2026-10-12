@@ -75,7 +75,7 @@ export function Pagination({
                 "h-9 min-w-9 rounded-md px-2 text-[13px] font-semibold transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary/40",
                 entry === page
-                  ? "bg-nv-primary text-nv-navy"
+                  ? "bg-nv-primary text-white"
                   : "bg-transparent text-nv-muted hover:bg-muted hover:text-nv-ink",
               )}
             >

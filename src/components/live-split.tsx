@@ -73,7 +73,7 @@ function SplitSide({
         aria-hidden="true"
         className={cn(
           "grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold",
-          leading ? "nv-grad-candidate text-nv-navy" : "nv-grad-profile text-nv-ink",
+          leading ? "nv-grad-candidate text-nv-navy" : "nv-grad-profile text-white",
         )}
       >
         {initials || "?"}

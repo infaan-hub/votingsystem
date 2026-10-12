@@ -59,7 +59,7 @@ export function Tile({
       )}
     >
       {emblem ? (
-        <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-nv-ink/20 text-lg font-bold text-nv-ink">
+        <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20 text-lg font-bold text-white">
           {emblem}
         </span>
       ) : null}
@@ -67,25 +67,25 @@ export function Tile({
       <span className="relative min-w-0">
         <span
           className={cn(
-            "block font-bold text-nv-ink",
+            "block font-bold text-white",
             wide ? "text-[15px]" : "text-[14px] leading-5",
           )}
         >
           {tile.label}
         </span>
         {subtitle ? (
-          <span className="mt-0.5 block truncate text-[12px] text-nv-ink/80">{subtitle}</span>
+          <span className="mt-0.5 block truncate text-[12px] text-white/80">{subtitle}</span>
         ) : null}
       </span>
 
       {tile.meta ? (
-        <span className="nums-tabular absolute right-3 top-3 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-bold text-nv-ink">
+        <span className="nums-tabular absolute right-3 top-3 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white">
           {tile.meta}
         </span>
       ) : null}
 
       {tile.icon ? (
-        <span className="absolute bottom-3 right-3 text-nv-ink/70" aria-hidden="true">
+        <span className="absolute bottom-3 right-3 text-white/70" aria-hidden="true">
           {tile.icon}
         </span>
       ) : null}

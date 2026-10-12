@@ -47,7 +47,7 @@ export default function WelcomePage() {
             <li key={step.title} className="flex gap-3">
               <span
                 aria-hidden="true"
-                className="nums-tabular grid h-7 w-7 shrink-0 place-items-center rounded-full bg-nv-primary-100 text-[12px] font-bold text-nv-primary"
+                className="nums-tabular grid h-7 w-7 shrink-0 place-items-center rounded-full bg-nv-primary-100 text-[12px] font-bold text-nv-ink"
               >
                 {index + 1}
               </span>

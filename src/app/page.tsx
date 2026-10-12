@@ -78,23 +78,23 @@ export default async function HomePage() {
       {/* ---------------- Hero ---------------- */}
       <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg px-5 py-8 sm:px-8 sm:py-10">
         <div className="relative flex flex-col items-start gap-5">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-nv-primary text-nv-navy">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-nv-primary text-white">
             <Vote className="h-7 w-7" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h1 className="text-fluid-3xl text-nv-ink">{t.name}</h1>
-            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-nv-ink/85">
+            <h1 className="text-fluid-3xl text-white">{t.name}</h1>
+            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-white/85">
               {tenant.tagline}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button asChild>
+            <Button asChild className="bg-white text-nv-navy shadow-[0_6px_18px_rgba(255,255,255,0.2)] hover:bg-white/90 active:bg-white/90">
               <Link href="/elections">Browse elections</Link>
             </Button>
             <Button
               asChild
               variant="outline"
-              className="border-nv-ink/40 bg-transparent text-nv-ink hover:bg-nv-ink/10"
+              className="border-white/40 bg-transparent text-white hover:bg-white/10"
             >
               <Link href="/results">View results</Link>
             </Button>
@@ -147,7 +147,7 @@ export default async function HomePage() {
                 >
                   {isOpen ? "Voting open" : "Voting closed"}
                 </span>
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-primary text-nv-navy transition-transform group-hover:translate-x-0.5">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-primary text-white transition-transform group-hover:translate-x-0.5">
                   <ChevronRight className="h-5 w-5" aria-hidden="true" />
                 </span>
               </div>

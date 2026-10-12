@@ -45,7 +45,7 @@ export function Tooltip({
           id={id}
           role="tooltip"
           className={cn(
-            "pointer-events-none absolute z-50 w-max max-w-[16rem] rounded-md border border-nv-navy/10 bg-nv-navy px-2.5 py-1.5 text-[12px] font-medium text-nv-ink shadow-float",
+            "pointer-events-none absolute z-50 w-max max-w-[16rem] rounded-md border border-nv-navy/10 bg-nv-navy px-2.5 py-1.5 text-[12px] font-medium text-white shadow-float",
             placement,
           )}
         >

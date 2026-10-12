@@ -308,7 +308,7 @@ function Ballot({
                             />
                             <span
                               aria-hidden="true"
-                              className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-nv-ink"
+                              className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
                             >
                               {initialsFor(candidate.user.full_name || candidate.user.username)}
                             </span>
@@ -323,7 +323,7 @@ function Ballot({
                               ) : null}
                             </span>
                             {candidate.party_code ? (
-                              <span className="shrink-0 rounded-full bg-nv-primary px-2 py-0.5 text-[10px] font-bold uppercase text-nv-navy">
+                              <span className="shrink-0 rounded-full bg-nv-primary px-2 py-0.5 text-[10px] font-bold uppercase text-white">
                                 {candidate.party_code}
                               </span>
                             ) : null}

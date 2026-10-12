@@ -20,7 +20,7 @@ export default function TermsPage() {
       </Link>
 
       <header className="flex items-center gap-3">
-        <span className="nv-grad-profile grid h-11 w-11 place-items-center rounded-xl text-nv-ink">
+        <span className="nv-grad-profile grid h-11 w-11 place-items-center rounded-xl text-white">
           <FileText className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>

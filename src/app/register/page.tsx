@@ -218,7 +218,7 @@ function OtpScreen({
       </button>
 
       <header className="mt-5">
-        <span className="grid h-12 w-12 place-items-center rounded-xl bg-nv-primary-100 text-nv-primary">
+        <span className="grid h-12 w-12 place-items-center rounded-xl bg-nv-primary-100 text-nv-ink">
           <ShieldCheck className="h-6 w-6" aria-hidden="true" />
         </span>
         <h1 className="mt-4 text-[28px] font-bold leading-8 tracking-tight text-nv-ink">

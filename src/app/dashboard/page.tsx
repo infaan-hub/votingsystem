@@ -367,7 +367,7 @@ function DashboardContent() {
                   href="/compaigns"
                   className="flex items-center gap-3 rounded-nv-md border border-nv-line bg-nv-surface p-3.5 shadow-nv-card transition-colors hover:bg-nv-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
                 >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-primary">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-ink">
                     <Clapperboard className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">

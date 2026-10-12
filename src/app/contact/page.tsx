@@ -181,7 +181,7 @@ export default function ContactPage() {
           <Section title="Support information">
             <dl className="space-y-4">
               <div className="flex items-start gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-primary">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-ink">
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
@@ -194,7 +194,7 @@ export default function ContactPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-primary">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-ink">
                   <Mail className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
@@ -212,7 +212,7 @@ export default function ContactPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-primary">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-nv-primary-100 text-nv-ink">
                   <Clock className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
