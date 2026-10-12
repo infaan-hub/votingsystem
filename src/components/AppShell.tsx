@@ -321,7 +321,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 function PublicFooter() {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-nv-line bg-nv-surface pb-20 pt-8 lg:pb-8">
+    <footer className="hidden border-t border-nv-line bg-nv-surface pt-8 lg:block">
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <p className="text-[15px] font-extrabold tracking-tight text-nv-ink">{t.name}</p>
