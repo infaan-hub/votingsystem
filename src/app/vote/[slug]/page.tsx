@@ -323,7 +323,7 @@ function Ballot({
                               ) : null}
                             </span>
                             {candidate.party_code ? (
-                              <span className="shrink-0 rounded-full bg-nv-primary px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                              <span className="shrink-0 rounded-full bg-nv-primary px-2 py-0.5 text-[10px] font-bold uppercase text-nv-navy">
                                 {candidate.party_code}
                               </span>
                             ) : null}

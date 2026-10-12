@@ -3,31 +3,31 @@
 /* ---------------------------------------------------------------------------
    Design tokens — NexVote identity.
 
-   Single fixed theme: pale-green surfaces (#D6FFCB), dark-teal text and
-   buttons (#042F32, white labels). Every value is overridable per tenant
+   Single fixed theme: deep teal surfaces (#042F32) with white text; buttons
+   are white with dark-teal labels. Every value is overridable per tenant
    through the same variable names.
    --------------------------------------------------------------------------- */
 
 :root {
-  /* brand — dark teal powers buttons and text on the green canvas */
-  --nv-primary: #042f32;
-  --nv-primary-600: #06373b;
-  --nv-primary-100: color-mix(in srgb, #042f32 12%, #d6ffcb);
+  /* brand — white powers buttons and accents on the teal canvas */
+  --nv-primary: #ffffff;
+  --nv-primary-600: color-mix(in srgb, #ffffff 88%, #042f32);
+  --nv-primary-100: color-mix(in srgb, #ffffff 12%, #042f32);
   --nv-navy: #042f32;
   --nv-navy-600: #021f21;
 
-  /* neutrals — dark teal ink on green surfaces */
-  --nv-ink: #042f32;
-  --nv-text: color-mix(in srgb, #042f32 92%, #d6ffcb);
-  --nv-muted: color-mix(in srgb, #042f32 58%, #d6ffcb);
-  --nv-line: color-mix(in srgb, #042f32 15%, #d6ffcb);
-  --nv-bg: #d6ffcb;
-  --nv-surface: color-mix(in srgb, #ffffff 35%, #d6ffcb);
+  /* neutrals — white text on teal surfaces */
+  --nv-ink: #ffffff;
+  --nv-text: color-mix(in srgb, #ffffff 92%, #042f32);
+  --nv-muted: color-mix(in srgb, #ffffff 66%, #042f32);
+  --nv-line: color-mix(in srgb, #ffffff 18%, #042f32);
+  --nv-bg: #042f32;
+  --nv-surface: #042f32;
 
   /* status */
-  --nv-success: #047857;
-  --nv-warning: #b45309;
-  --nv-danger: #dc2626;
+  --nv-success: #34d399;
+  --nv-warning: #fbbf24;
+  --nv-danger: #ff8a80;
 
   /* gradients — dark bands stay dark (white text), green panels deepen for contrast */
   --nv-grad-hero: linear-gradient(160deg, #06383c 0%, #042f32 55%, #0b4d3f 100%);
@@ -42,14 +42,14 @@
   --nv-tile-teal: linear-gradient(135deg, #0a4a3f, #043630);
 
   /* chart series used by result bars and turnout splits */
-  --chart-1: #042f32;
-  --chart-2: #0d9488;
-  --chart-3: #7c3aed;
-  --chart-4: #d97706;
-  --chart-5: #db2777;
-  --chart-6: #0284c7;
-  --chart-7: #059669;
-  --chart-8: #64748b;
+  --chart-1: #ffffff;
+  --chart-2: #2dd4bf;
+  --chart-3: #c4b5fd;
+  --chart-4: #fbbf24;
+  --chart-5: #f472b6;
+  --chart-6: #38bdf8;
+  --chart-7: #34d399;
+  --chart-8: #94a3b8;
 
   /* lifecycle pills — tinted chips with white labels */
   --status-draft: #0a3a3d;
@@ -74,10 +74,10 @@
   --nv-radius-md: 14px;
   --nv-radius-lg: 20px;
   --nv-radius-sheet: 28px;
-  --nv-shadow-card: 0 1px 2px rgba(4, 47, 50, 0.08), 0 8px 24px rgba(4, 47, 50, 0.08);
-  --nv-shadow-sheet: 0 -8px 30px rgba(4, 47, 50, 0.18);
-  --nv-shadow-panel: 0 1px 2px rgba(4, 47, 50, 0.08), 0 12px 28px rgba(4, 47, 50, 0.1);
-  --nv-shadow-float: 0 24px 56px rgba(4, 47, 50, 0.2);
+  --nv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --nv-shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.55);
+  --nv-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(0, 0, 0, 0.4);
+  --nv-shadow-float: 0 24px 56px rgba(0, 0, 0, 0.6);
 
   /* type */
   --nv-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -104,20 +104,20 @@
   --secondary: var(--nv-surface);
   --secondary-foreground: var(--nv-text);
   --primary: var(--nv-primary);
-  --primary-foreground: #ffffff;
+  --primary-foreground: #042f32;
   --ring: var(--nv-primary);
   --destructive: var(--nv-danger);
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: #042f32;
   --success: var(--nv-success);
-  --success-foreground: #ffffff;
+  --success-foreground: #042f32;
   --border: var(--nv-line);
   --input: var(--nv-line);
-  /* Sidebar / navigation surface (slightly deeper green than the canvas). */
-  --sidebar: color-mix(in srgb, #042f32 8%, #d6ffcb);
-  --sidebar-foreground: color-mix(in srgb, #042f32 82%, #d6ffcb);
-  --sidebar-accent: color-mix(in srgb, #042f32 16%, #d6ffcb);
-  --sidebar-accent-foreground: #042f32;
-  --sidebar-border: color-mix(in srgb, #042f32 14%, #d6ffcb);
+  /* Sidebar / navigation surface (darker teal anchor). */
+  --sidebar: #021f21;
+  --sidebar-foreground: color-mix(in srgb, #ffffff 78%, #021f21);
+  --sidebar-accent: #06373b;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: color-mix(in srgb, #ffffff 16%, #021f21);
 }
 
 /* ---------------------------------------------------------------------------

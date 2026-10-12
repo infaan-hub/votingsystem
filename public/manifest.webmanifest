@@ -6,8 +6,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#D6FFCB",
-  "theme_color": "#D6FFCB",
+  "background_color": "#042F32",
+  "theme_color": "#042F32",
   "categories": ["productivity", "government", "utilities"],
   "icons": [
     {

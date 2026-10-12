@@ -78,7 +78,7 @@ export default async function HomePage() {
       {/* ---------------- Hero ---------------- */}
       <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg px-5 py-8 sm:px-8 sm:py-10">
         <div className="relative flex flex-col items-start gap-5">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-nv-primary text-white">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-nv-primary text-nv-navy">
             <Vote className="h-7 w-7" aria-hidden="true" />
           </span>
           <div className="min-w-0">
@@ -88,7 +88,7 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button asChild className="bg-white text-nv-navy shadow-[0_6px_18px_rgba(255,255,255,0.2)] hover:bg-white/90 active:bg-white/90">
+            <Button asChild>
               <Link href="/elections">Browse elections</Link>
             </Button>
             <Button
@@ -147,7 +147,7 @@ export default async function HomePage() {
                 >
                   {isOpen ? "Voting open" : "Voting closed"}
                 </span>
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-primary text-white transition-transform group-hover:translate-x-0.5">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-primary text-nv-navy transition-transform group-hover:translate-x-0.5">
                   <ChevronRight className="h-5 w-5" aria-hidden="true" />
                 </span>
               </div>

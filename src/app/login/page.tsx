@@ -111,7 +111,7 @@ export default function LoginPage() {
     <div className="app-shell flex min-h-dvh flex-col bg-nv-bg">
       {/* ---------------- Hero ---------------- */}
       <section className="nv-grad-hero relative flex min-h-[40dvh] flex-1 flex-col items-center justify-center px-6 pt-10 text-center">
-        <span className="grid h-20 w-20 place-items-center rounded-2xl bg-nv-primary text-white">
+        <span className="grid h-20 w-20 place-items-center rounded-2xl bg-nv-primary text-nv-navy">
           <Vote className="h-10 w-10" aria-hidden="true" />
         </span>
         <h1 className="relative mt-5 text-[34px] font-extrabold leading-[38px] tracking-tight text-white">
