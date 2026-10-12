@@ -5,7 +5,7 @@ import { Inter } from "next/font/google";
 import AppShell from "@/src/components/AppShell";
 import { AppProvider } from "@/src/components/AppProvider";
 import { ToastProvider } from "@/src/components/ui/toast";
-import tenant, { t } from "@/config/tenant";
+import tenant from "@/config/tenant";
 import "./globals.css";
 
 const inter = Inter({
@@ -38,38 +38,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: tenant.themeColor },
-    { media: "(prefers-color-scheme: dark)", color: "#0F1020" },
-  ],
+  themeColor: [{ color: "#042F32" }],
 };
-
-/**
- * Applies the stored or OS theme before first paint so there is no flash, and
- * seeds the requested-contrast class.
- */
-const themeScript = `
-(function () {
-  try {
-    var stored = localStorage.getItem("election-hub-theme");
-    var explicit = localStorage.getItem("election-hub-theme-explicit");
-    var dark = explicit && stored ? stored === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var root = document.documentElement;
-    root.classList.toggle("dark", dark);
-    root.classList.toggle("hc", window.matchMedia("(prefers-contrast: more)").matches);
-    root.style.colorScheme = dark ? "dark" : "light";
-    root.lang = "${t.locales[0]}";
-  } catch (e) {}
-})();
-`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang={tenant.defaultLocale} dir={tenant.direction} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang={tenant.defaultLocale} dir={tenant.direction}>
       <body className={`${inter.variable} font-sans antialiased`}>
         <AppProvider>
           <ToastProvider>

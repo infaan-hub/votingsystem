@@ -448,7 +448,7 @@ function ElectionsBody() {
             </Button>
             <LinkButton
               href={`/admin/results?election=${detail?.id ?? ""}`}
-              variant="navy"
+              variant="outline"
               className="w-auto"
             >
               View results

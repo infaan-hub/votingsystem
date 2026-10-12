@@ -53,22 +53,13 @@ export function Tile({
         gradientFor(tile.id),
         "group relative flex flex-col justify-end overflow-hidden rounded-[18px] bg-cover p-3.5 shadow-nv-card",
         "transition-transform duration-200 ease-out active:scale-[0.98]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2 focus-visible:ring-offset-nv-bg",
         wide ? "min-h-[92px] flex-row items-center gap-3.5" : "min-h-[104px]",
         className,
       )}
     >
-      <span
-        aria-hidden="true"
-        className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10"
-      />
-      <span
-        aria-hidden="true"
-        className="absolute -bottom-10 -left-4 h-20 w-20 rounded-full bg-black/10"
-      />
-
       {emblem ? (
-        <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20 text-lg font-bold text-white">
+        <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-nv-ink/20 text-lg font-bold text-nv-ink">
           {emblem}
         </span>
       ) : null}
@@ -76,25 +67,25 @@ export function Tile({
       <span className="relative min-w-0">
         <span
           className={cn(
-            "block font-bold text-white",
+            "block font-bold text-nv-ink",
             wide ? "text-[15px]" : "text-[14px] leading-5",
           )}
         >
           {tile.label}
         </span>
         {subtitle ? (
-          <span className="mt-0.5 block truncate text-[12px] text-white/80">{subtitle}</span>
+          <span className="mt-0.5 block truncate text-[12px] text-nv-ink/80">{subtitle}</span>
         ) : null}
       </span>
 
       {tile.meta ? (
-        <span className="nums-tabular absolute right-3 top-3 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-bold text-white">
+        <span className="nums-tabular absolute right-3 top-3 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-bold text-nv-ink">
           {tile.meta}
         </span>
       ) : null}
 
       {tile.icon ? (
-        <span className="absolute bottom-3 right-3 text-white/70" aria-hidden="true">
+        <span className="absolute bottom-3 right-3 text-nv-ink/70" aria-hidden="true">
           {tile.icon}
         </span>
       ) : null}

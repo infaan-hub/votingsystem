@@ -23,7 +23,7 @@ export function LiveSplit({ entries }: { entries: LiveSplitEntry[] }) {
   const challengerPct = total > 0 ? 100 - leaderPct : 50;
 
   return (
-    <div className="rounded-nv-lg bg-white p-4 shadow-nv-card dark:bg-[#171930]">
+    <div className="rounded-nv-lg bg-nv-surface p-4 shadow-nv-card">
       <div className="flex items-center justify-between gap-3">
         <SplitSide entry={leader} pct={leaderPct} align="left" leading />
         <span className="nums-tabular shrink-0 text-[11px] font-bold uppercase tracking-wide text-nv-muted">
@@ -73,7 +73,7 @@ function SplitSide({
         aria-hidden="true"
         className={cn(
           "grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold",
-          leading ? "nv-grad-candidate text-white" : "nv-grad-profile text-white",
+          leading ? "nv-grad-candidate text-nv-navy" : "nv-grad-profile text-nv-ink",
         )}
       >
         {initials || "?"}

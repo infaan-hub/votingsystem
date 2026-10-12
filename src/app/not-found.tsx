@@ -15,7 +15,7 @@ export default function NotFound() {
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Link
           href="/"
-          className="rounded-full bg-nv-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-nv-primary-600"
+          className="rounded-full bg-nv-primary px-5 py-2.5 text-sm font-semibold text-nv-navy transition hover:bg-nv-primary-600"
         >
           Back to {tenant.shortName}
         </Link>

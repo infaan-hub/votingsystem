@@ -1,88 +1,83 @@
 @import "tailwindcss";
 
-/* Class-based dark mode, toggled by the inline script in layout.tsx. */
-@custom-variant dark (&:where(.dark, .dark *));
-/* Requested high-contrast mode (prefers-contrast: more). */
-@custom-variant hc (&:where(.hc, .hc *));
-
 /* ---------------------------------------------------------------------------
-   Design tokens — premium election-technology identity.
+   Design tokens — NexVote identity.
 
-   Navigation surfaces are deep navy/charcoal, primary actions are indigo,
-   success is emerald/teal, and page backgrounds are neutral cool off-whites.
-   Every value is overridable per tenant through the same variable names.
+   Single fixed theme: deep teal surfaces (#042F32) with pale-green ink and
+   accents (#D6FFCB). Every value is overridable per tenant through the same
+   variable names.
    --------------------------------------------------------------------------- */
 
 :root {
   /* brand */
-  --nv-primary: #4f46e5;
-  --nv-primary-600: #4338ca;
-  --nv-primary-100: #e0e7ff;
-  --nv-navy: #0f172a;
-  --nv-navy-600: #1e293b;
+  --nv-primary: #d6ffcb;
+  --nv-primary-600: #b7e9c0;
+  --nv-primary-100: color-mix(in srgb, #d6ffcb 14%, #042f32);
+  --nv-navy: #042f32;
+  --nv-navy-600: #06373b;
 
-  /* neutrals — cool gray scale */
-  --nv-ink: #0f172a;
-  --nv-text: #334155;
-  --nv-muted: #64748b;
-  --nv-line: #e2e8f0;
-  --nv-bg: #f8fafc;
-  --nv-surface: #ffffff;
+  /* neutrals — teal-tinted scale */
+  --nv-ink: #d6ffcb;
+  --nv-text: color-mix(in srgb, #d6ffcb 88%, #042f32);
+  --nv-muted: color-mix(in srgb, #d6ffcb 64%, #042f32);
+  --nv-line: color-mix(in srgb, #d6ffcb 22%, #042f32);
+  --nv-bg: #042f32;
+  --nv-surface: #042f32;
 
   /* status */
-  --nv-success: #059669;
-  --nv-warning: #d97706;
-  --nv-danger: #dc2626;
+  --nv-success: #34d399;
+  --nv-warning: #fbbf24;
+  --nv-danger: #ff8a80;
 
-  /* restrained gradients */
-  --nv-grad-hero: linear-gradient(160deg, #4f46e5 0%, #6d28d9 52%, #312e81 100%);
-  --nv-grad-candidate: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
-  --nv-grad-profile: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  /* gradients */
+  --nv-grad-hero: linear-gradient(160deg, #06383c 0%, #042f32 55%, #0b4d3f 100%);
+  --nv-grad-candidate: linear-gradient(160deg, #d6ffcb 0%, #a9e9b8 100%);
+  --nv-grad-profile: linear-gradient(135deg, #021f21 0%, #06373b 100%);
 
   /* explore tiles */
-  --nv-tile-blue: linear-gradient(135deg, #2563eb, #1e3a8a);
-  --nv-tile-orange: linear-gradient(135deg, #fb923c, #c2410c);
-  --nv-tile-purple: linear-gradient(135deg, #8b5cf6, #5b21b6);
-  --nv-tile-pink: linear-gradient(135deg, #e879f9, #a21caf);
-  --nv-tile-teal: linear-gradient(135deg, #2dd4bf, #0f766e);
+  --nv-tile-blue: linear-gradient(135deg, #0a4a44, #043431);
+  --nv-tile-orange: linear-gradient(135deg, #0d4236, #04332a);
+  --nv-tile-purple: linear-gradient(135deg, #0e4048, #04313a);
+  --nv-tile-pink: linear-gradient(135deg, #123f3a, #04332f);
+  --nv-tile-teal: linear-gradient(135deg, #0a4a3f, #043630);
 
   /* chart series used by result bars and turnout splits */
-  --chart-1: #4f46e5;
-  --chart-2: #0d9488;
-  --chart-3: #7c3aed;
-  --chart-4: #d97706;
-  --chart-5: #db2777;
-  --chart-6: #0284c7;
-  --chart-7: #059669;
-  --chart-8: #64748b;
+  --chart-1: #d6ffcb;
+  --chart-2: #2dd4bf;
+  --chart-3: #c4b5fd;
+  --chart-4: #fbbf24;
+  --chart-5: #f472b6;
+  --chart-6: #38bdf8;
+  --chart-7: #34d399;
+  --chart-8: #94a3b8;
 
   /* lifecycle pills */
-  --status-draft: #f1f5f9;
-  --status-draft-foreground: #475569;
-  --status-published: #e0e7ff;
-  --status-published-foreground: #3730a3;
-  --status-nominations: #fef3c7;
-  --status-nominations-foreground: #92400e;
-  --status-ready: #cffafe;
-  --status-ready-foreground: #155e75;
-  --status-open: #d1fae5;
-  --status-open-foreground: #065f46;
-  --status-closed: #fee2e2;
-  --status-closed-foreground: #991b1b;
-  --status-results: #ede9fe;
-  --status-results-foreground: #5b21b6;
-  --status-archived: #f1f5f9;
-  --status-archived-foreground: #64748b;
+  --status-draft: #0a3a3d;
+  --status-draft-foreground: #a8cfc7;
+  --status-published: #0f3d2f;
+  --status-published-foreground: #9fe6b8;
+  --status-nominations: #3b2f06;
+  --status-nominations-foreground: #fde68a;
+  --status-ready: #083344;
+  --status-ready-foreground: #a5f3fc;
+  --status-open: #064e3b;
+  --status-open-foreground: #a7f3d0;
+  --status-closed: #450a0a;
+  --status-closed-foreground: #fecaca;
+  --status-results: #243a2c;
+  --status-results-foreground: #c9f5d8;
+  --status-archived: #0a3a3d;
+  --status-archived-foreground: #8fb8b0;
 
   /* shape + depth */
   --nv-radius-sm: 8px;
   --nv-radius-md: 14px;
   --nv-radius-lg: 20px;
   --nv-radius-sheet: 28px;
-  --nv-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
-  --nv-shadow-sheet: 0 -8px 30px rgba(15, 23, 42, 0.16);
-  --nv-shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.05), 0 12px 28px rgba(15, 23, 42, 0.07);
-  --nv-shadow-float: 0 24px 56px rgba(15, 23, 42, 0.2);
+  --nv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --nv-shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.55);
+  --nv-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(0, 0, 0, 0.4);
+  --nv-shadow-float: 0 24px 56px rgba(0, 0, 0, 0.6);
 
   /* type */
   --nv-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -98,104 +93,31 @@
   /* Semantic aliases consumed by the rest of the app. */
   --background: var(--nv-bg);
   --foreground: var(--nv-ink);
-  --card: #ffffff;
+  --card: var(--nv-surface);
   --card-foreground: var(--nv-ink);
-  --popover: #ffffff;
+  --popover: var(--nv-surface);
   --popover-foreground: var(--nv-ink);
   --muted: var(--nv-surface);
   --muted-foreground: var(--nv-muted);
   --accent: var(--nv-primary-100);
-  --accent-foreground: var(--nv-primary-600);
+  --accent-foreground: var(--nv-ink);
   --secondary: var(--nv-surface);
   --secondary-foreground: var(--nv-text);
   --primary: var(--nv-primary);
-  --primary-foreground: #ffffff;
+  --primary-foreground: #042f32;
   --ring: var(--nv-primary);
   --destructive: var(--nv-danger);
-  --destructive-foreground: #ffffff;
+  --destructive-foreground: #042f32;
   --success: var(--nv-success);
-  --success-foreground: #ffffff;
+  --success-foreground: #042f32;
   --border: var(--nv-line);
   --input: var(--nv-line);
-  /* Sidebar / navigation surface (deep navy in both themes). */
-  --sidebar: #0f172a;
-  --sidebar-foreground: #cbd5e1;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #1f2937;
-}
-
-.dark {
-  --nv-ink: #f1f5f9;
-  --nv-text: #cbd5e1;
-  --nv-muted: #94a3b8;
-  --nv-line: #1f2937;
-  --nv-bg: #0b1220;
-  --nv-surface: #111827;
-
-  --background: var(--nv-bg);
-  --foreground: var(--nv-ink);
-  --card: #111827;
-  --card-foreground: var(--nv-ink);
-  --popover: #111827;
-  --popover-foreground: var(--nv-ink);
-  --muted: #1f2937;
-  --muted-foreground: var(--nv-muted);
-  --accent: #1e1b4b;
-  --accent-foreground: #c7d2fe;
-  --secondary: #1f2937;
-  --secondary-foreground: var(--nv-text);
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
-  --ring: #6366f1;
-  --destructive: #f87171;
-  --destructive-foreground: #450a0a;
-  --success: #34d399;
-  --success-foreground: #052e22;
-  --border: var(--nv-line);
-  --input: var(--nv-line);
-
-  --sidebar: #080d18;
-  --sidebar-foreground: #cbd5e1;
-  --sidebar-accent: #111827;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #1f2937;
-
-  --status-draft: #1f2937;
-  --status-draft-foreground: #cbd5e1;
-  --status-published: #1e1b4b;
-  --status-published-foreground: #c7d2fe;
-  --status-nominations: #3b2a06;
-  --status-nominations-foreground: #fde68a;
-  --status-ready: #083344;
-  --status-ready-foreground: #a5f3fc;
-  --status-open: #064e3b;
-  --status-open-foreground: #a7f3d0;
-  --status-closed: #450a0a;
-  --status-closed-foreground: #fecaca;
-  --status-results: #2e1065;
-  --status-results-foreground: #ddd6fe;
-  --status-archived: #1f2937;
-  --status-archived-foreground: #94a3b8;
-
-  --nv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 26px rgba(0, 0, 0, 0.4);
-  --nv-shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.55);
-  --nv-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 30px rgba(0, 0, 0, 0.45);
-  --nv-shadow-float: 0 24px 56px rgba(0, 0, 0, 0.65);
-}
-
-/* Requested high contrast: stronger separations and text weight. */
-.hc {
-  --nv-line: #94a3b8;
-  --nv-muted: #475569;
-  --nv-text: #1e293b;
-  --nv-ink: #000000;
-}
-.dark.hc {
-  --nv-line: #475569;
-  --nv-muted: #cbd5e1;
-  --nv-text: #ffffff;
-  --nv-ink: #ffffff;
+  /* Sidebar / navigation surface (darker teal anchor). */
+  --sidebar: #021f21;
+  --sidebar-foreground: color-mix(in srgb, #d6ffcb 78%, #021f21);
+  --sidebar-accent: #06373b;
+  --sidebar-accent-foreground: #d6ffcb;
+  --sidebar-border: color-mix(in srgb, #d6ffcb 16%, #021f21);
 }
 
 /* ---------------------------------------------------------------------------
@@ -291,6 +213,14 @@
 @layer base {
   * {
     border-color: var(--nv-line);
+    /* Scrollbars are hidden everywhere; scrolling still works. */
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
   }
 
   html {

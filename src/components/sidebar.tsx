@@ -105,7 +105,7 @@ function NavLink({
           "group flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary",
           active
-            ? "bg-nv-primary text-white shadow-[0_4px_14px_rgba(79,70,229,0.35)]"
+            ? "bg-nv-primary text-nv-navy shadow-[0_4px_14px_rgba(214,255,203,0.2)]"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         )}
       >

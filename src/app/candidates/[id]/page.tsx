@@ -87,16 +87,11 @@ export default async function CandidateDetailPage({
     <div className="space-y-5">
       {/* ---------------- Hero ---------------- */}
       <section className="nv-grad-candidate relative -mx-4 -mt-4 overflow-hidden px-4 pb-8 pt-3 lg:mx-0 lg:rounded-nv-lg">
-        <span
-          aria-hidden="true"
-          className="absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/12"
-        />
-
         <div className="relative flex items-center justify-between">
           <Link
             href="/"
             aria-label="Go back"
-            className="grid h-11 w-11 place-items-center rounded-full bg-white/20 text-white"
+            className="grid h-11 w-11 place-items-center rounded-full bg-nv-navy/20 text-nv-navy"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Link>
@@ -104,7 +99,7 @@ export default async function CandidateDetailPage({
         </div>
 
         <div className="relative mt-4 flex items-end gap-4">
-          <span className="grid h-28 w-24 shrink-0 place-items-center overflow-hidden rounded-nv-md bg-white/20">
+          <span className="grid h-28 w-24 shrink-0 place-items-center overflow-hidden rounded-nv-md bg-nv-navy/20">
             {photo ? (
               <img
                 src={photo}
@@ -114,16 +109,16 @@ export default async function CandidateDetailPage({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-3xl font-bold text-white/85">{initials}</span>
+              <span className="text-3xl font-bold text-nv-navy/85">{initials}</span>
             )}
           </span>
           <div className="min-w-0 pb-1">
-            <h1 className="text-[24px] font-extrabold leading-7 tracking-tight text-white">
+            <h1 className="text-[24px] font-extrabold leading-7 tracking-tight text-nv-navy">
               {displayFullName(candidate.user)}
             </h1>
-            <p className="mt-1 text-[13px] text-white/85">{candidate.position.name}</p>
+            <p className="mt-1 text-[13px] text-nv-navy/85">{candidate.position.name}</p>
             {candidate.department ? (
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold text-white">
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-nv-navy/20 px-2.5 py-1 text-[11px] font-semibold text-nv-navy">
                 <MapPin className="h-3 w-3" aria-hidden="true" />
                 {t.constituency}: {candidate.department.name}
               </span>
@@ -228,7 +223,7 @@ function InfoTab({
         <CardContent className="flex items-center gap-3.5 p-4">
           <span
             aria-hidden="true"
-            className="nv-grad-profile grid h-14 w-14 shrink-0 place-items-center rounded-full text-lg font-bold text-white"
+            className="nv-grad-profile grid h-14 w-14 shrink-0 place-items-center rounded-full text-lg font-bold text-nv-ink"
           >
             {initials}
           </span>
@@ -276,12 +271,12 @@ function OpinionsTab({ opinions }: { opinions: OpinionRow[] }) {
       {opinions.map((opinion) => (
         <li
           key={opinion.id}
-          className="rounded-nv-md bg-white p-3.5 shadow-nv-card dark:bg-[#171930]"
+          className="rounded-nv-md bg-nv-surface p-3.5 shadow-nv-card"
         >
           <div className="flex items-center gap-2.5">
             <span
               aria-hidden="true"
-              className="nv-grad-profile grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
+              className="nv-grad-profile grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-bold text-nv-ink"
             >
               {initialsFor(opinion.voter.username)}
             </span>

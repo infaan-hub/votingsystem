@@ -40,7 +40,7 @@ function Switch({
       <span
         aria-hidden="true"
         className={cn(
-          "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+          "pointer-events-none block h-5 w-5 rounded-full bg-nv-navy shadow-sm transition-transform",
           checked ? "translate-x-5" : "translate-x-0",
         )}
       />

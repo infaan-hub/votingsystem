@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles } from "lucide-react";
+import { ChevronRight, Vote } from "lucide-react";
 
 import { prisma } from "@/src/lib/db";
 import { serializeElectionList } from "@/src/lib/serializers";
@@ -9,7 +9,8 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Tile, type TileData } from "@/src/components/ui/tile";
-import { t } from "@/config/tenant";
+import tenant, { t } from "@/config/tenant";
+import { cn } from "@/src/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -47,28 +48,6 @@ export default async function HomePage() {
     }),
   ]);
 
-  // Featured: highest-voted approved candidates across the election.
-  const featured: CandidateCardData[] = election
-    ? election.positions
-        .flatMap((position) =>
-          position.candidates.map((candidate) => ({
-            candidate,
-            positionName: position.name,
-            votes: candidate._count.votes,
-          })),
-        )
-        .sort((a, b) => b.votes - a.votes)
-        .slice(0, 6)
-        .map(({ candidate, positionName }) => ({
-          id: candidate.id,
-          name: displayName(candidate.user),
-          role: positionName,
-          photoUrl: candidatePhotoPath(candidate),
-          href: `/candidates/${candidate.id}`,
-          rating: null,
-        }))
-    : [];
-
   const firstPosition = election?.positions[0];
   const listed: CandidateCardData[] = firstPosition
     ? firstPosition.candidates.map((candidate) => ({
@@ -92,32 +71,36 @@ export default async function HomePage() {
 
   const openElection = election ? serializeElectionList(election) : null;
   const isOpen = election?.status === "OPEN";
+  const questionCount = election?.positions.length ?? 0;
 
   return (
     <div className="space-y-7">
-      {/* ---------------- Header ---------------- */}
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-nv-muted">
-            {t.constituency}
-          </p>
-          <h1 className="mt-0.5 truncate text-[26px] font-extrabold leading-8 tracking-tight text-nv-ink">
-            {election?.organization?.name ?? election?.title ?? "All regions"}
-          </h1>
-          <p className="mt-1 text-[13px] text-nv-muted">
-            {openElection
-              ? `${election?.positions.length ?? 0} question${
-                  (election?.positions.length ?? 0) === 1 ? "" : "s"
-                } on this ballot`
-              : "No open election right now"}
-          </p>
+      {/* ---------------- Hero ---------------- */}
+      <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg px-5 py-8 sm:px-8 sm:py-10">
+        <div className="relative flex flex-col items-start gap-5">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-nv-primary text-nv-navy">
+            <Vote className="h-7 w-7" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-fluid-3xl text-nv-ink">{t.name}</h1>
+            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-nv-ink/85">
+              {tenant.tagline}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild>
+              <Link href="/elections">Browse elections</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-nv-ink/40 bg-transparent text-nv-ink hover:bg-nv-ink/10"
+            >
+              <Link href="/results">View results</Link>
+            </Button>
+          </div>
         </div>
-        <Button asChild variant="subtle" size="icon" aria-label="Search">
-          <Link href="/explore">
-            <Search className="h-5 w-5" aria-hidden="true" />
-          </Link>
-        </Button>
-      </header>
+      </section>
 
       {!election ? (
         <Card>
@@ -134,58 +117,42 @@ export default async function HomePage() {
         </Card>
       ) : (
         <>
-          {/* ---------------- Cast vote banner ---------------- */}
+          {/* ---------------- Current election ---------------- */}
           <Link
             href={`/vote/${election.slug}`}
-            className="nv-grad-candidate relative block overflow-hidden rounded-nv-lg p-4 shadow-nv-card transition-transform duration-200 active:scale-[0.99]"
+            className="group relative block overflow-hidden rounded-nv-lg border border-nv-line bg-nv-surface p-4 shadow-nv-card transition-transform duration-200 active:scale-[0.99]"
           >
-            <span
-              aria-hidden="true"
-              className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/12"
-            />
-            <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-white/80">
-                  {isOpen ? "Voting open" : "Voting closed"}
+                <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-nv-muted">
+                  Current election
                 </p>
-                <p className="mt-1 truncate text-[18px] font-bold text-white">
+                <p className="mt-1 truncate text-[18px] font-bold text-nv-ink">
                   {election.title}
                 </p>
-                <p className="mt-0.5 text-[12px] text-white/85">
-                  {election.category?.name ?? "General"}
+                <p className="mt-0.5 text-[12px] text-nv-muted">
+                  {openElection
+                    ? `${questionCount} question${questionCount === 1 ? "" : "s"} on this ballot`
+                    : "No open election right now"}
                 </p>
               </div>
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-nv-primary">
-                <ChevronRight className="h-5 w-5" aria-hidden="true" />
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span
+                  className={cn(
+                    "status-surface rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                    isOpen
+                      ? "bg-status-open text-status-open-foreground"
+                      : "bg-status-closed text-status-closed-foreground",
+                  )}
+                >
+                  {isOpen ? "Voting open" : "Voting closed"}
+                </span>
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-primary text-nv-navy transition-transform group-hover:translate-x-0.5">
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                </span>
+              </div>
             </div>
           </Link>
-
-          {/* ---------------- Most upvoted ---------------- */}
-          {featured.length > 0 ? (
-            <section aria-labelledby="featured-heading">
-              <div className="mb-3 flex items-center justify-between">
-                <h2
-                  id="featured-heading"
-                  className="flex items-center gap-1.5 text-[16px] font-bold text-nv-ink"
-                >
-                  <Sparkles className="h-4 w-4 text-nv-primary" aria-hidden="true" />
-                  Most upvoted
-                </h2>
-                <Link
-                  href="/explore"
-                  className="text-[12px] font-semibold text-nv-primary"
-                >
-                  See all
-                </Link>
-              </div>
-              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {featured.map((candidate) => (
-                  <CandidateCard key={candidate.id} candidate={candidate} featured />
-                ))}
-              </div>
-            </section>
-          ) : null}
 
           {/* ---------------- Candidates ---------------- */}
           <section aria-labelledby="candidates-heading">

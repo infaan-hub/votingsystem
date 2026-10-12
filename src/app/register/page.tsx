@@ -87,7 +87,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="app-shell min-h-dvh bg-white px-6 pb-nav pt-6 dark:bg-[#0F1020] lg:pb-10">
+    <div className="app-shell min-h-dvh bg-nv-bg px-6 pb-nav pt-6 lg:pb-10">
       <Link
         href="/login"
         className="inline-flex min-h-11 items-center gap-2 text-[13px] font-semibold text-nv-muted"
@@ -207,7 +207,7 @@ function OtpScreen({
   }
 
   return (
-    <div className="app-shell min-h-dvh bg-white px-6 pb-nav pt-6 dark:bg-[#0F1020] lg:pb-10">
+    <div className="app-shell min-h-dvh bg-nv-bg px-6 pb-nav pt-6 lg:pb-10">
       <button
         type="button"
         onClick={onBack}

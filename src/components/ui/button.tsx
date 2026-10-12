@@ -15,23 +15,24 @@ const buttonVariants = cva(
     "transition-[transform,background-color,box-shadow,opacity] duration-200 ease-out",
     "active:scale-[0.985]",
     "disabled:pointer-events-none disabled:opacity-40",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2 focus-visible:ring-offset-nv-bg",
   ],
   {
     variants: {
       variant: {
         primary:
-          "bg-nv-primary text-white shadow-[0_6px_18px_rgba(79,70,229,0.3)] hover:bg-nv-primary-600 active:bg-nv-primary-600",
-        navy: "bg-nv-navy text-white hover:brightness-110 active:brightness-95",
-        dark: "bg-nv-ink text-white hover:brightness-125 active:brightness-95",
+          "bg-nv-primary text-nv-navy shadow-[0_6px_18px_rgba(214,255,203,0.18)] hover:bg-nv-primary-600 active:bg-nv-primary-600",
+        navy: "bg-nv-navy text-nv-ink hover:brightness-110 active:brightness-95",
+        dark: "bg-nv-ink text-nv-navy hover:brightness-125 active:brightness-95",
         ghost:
           "border border-nv-primary bg-transparent text-nv-primary hover:bg-nv-primary-100 active:bg-nv-primary-100",
-        subtle: "bg-nv-surface text-nv-ink hover:brightness-[0.97] active:brightness-95",
-        destructive: "bg-nv-danger text-white hover:brightness-110 active:brightness-95",
+        subtle:
+          "bg-transparent text-nv-muted hover:bg-nv-ink/10 hover:text-nv-ink active:bg-nv-ink/14",
+        destructive: "bg-nv-danger text-nv-navy hover:brightness-110 active:brightness-95",
         success: "bg-nv-success text-[#06281d] hover:brightness-105 active:brightness-95",
         /** Legacy alias for the pre-NexVote outline style. */
         outline:
-          "border border-nv-line bg-white text-nv-ink hover:bg-nv-surface active:bg-nv-surface dark:bg-transparent dark:text-nv-ink",
+          "border border-nv-line bg-transparent text-nv-ink hover:bg-nv-ink/10 active:bg-nv-ink/14",
       },
       size: {
         default: "h-12 px-5",

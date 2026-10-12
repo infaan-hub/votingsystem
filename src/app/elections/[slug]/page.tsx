@@ -364,7 +364,7 @@ function ElectionDetailContent() {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="nv-grad-candidate nv-dots h-full w-full text-white" aria-hidden="true" />
+            <div className="nv-grad-candidate nv-dots h-full w-full text-nv-navy" aria-hidden="true" />
           )}
         </div>
 

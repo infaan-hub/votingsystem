@@ -27,13 +27,13 @@ export default async function ThankYouPage({
     <div className="mx-auto flex min-h-[80dvh] max-w-md flex-col justify-center px-4 pb-nav lg:pb-10">
       <Card className="overflow-hidden">
         <div className="nv-grad-candidate flex flex-col items-center px-6 py-9 text-center">
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-white/20">
-            <CheckCircle2 className="h-9 w-9 text-white" aria-hidden="true" />
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-nv-navy/20">
+            <CheckCircle2 className="h-9 w-9 text-nv-navy" aria-hidden="true" />
           </span>
-          <h1 className="mt-4 text-[26px] font-extrabold leading-8 tracking-tight text-white">
+          <h1 className="mt-4 text-[26px] font-extrabold leading-8 tracking-tight text-nv-navy">
             Thank you for voting!
           </h1>
-          <p className="mt-2 text-[13px] leading-5 text-white/85">
+          <p className="mt-2 text-[13px] leading-5 text-nv-navy/85">
             Your ballot has been recorded by {tenant.authority.name} and cannot be
             changed.
           </p>
@@ -56,7 +56,7 @@ export default async function ThankYouPage({
             </p>
           </div>
 
-          <div className="flex items-start gap-2 rounded-nv-md bg-nv-primary-100/50 p-3 dark:bg-[#3a1030]">
+          <div className="flex items-start gap-2 rounded-nv-md bg-[#3a1030] p-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-nv-primary" aria-hidden="true" />
             <p className="text-[12px] leading-4 text-nv-text">
               Your vote is stored separately from your identity. Only aggregate

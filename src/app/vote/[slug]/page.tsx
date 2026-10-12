@@ -182,7 +182,7 @@ function Ballot({
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <span className="nv-grad-candidate grid h-14 w-14 place-items-center rounded-full text-white">
+          <span className="nv-grad-candidate grid h-14 w-14 place-items-center rounded-full text-nv-navy">
             <LogIn className="h-6 w-6" aria-hidden="true" />
           </span>
           <h1 className="text-[18px] font-bold text-nv-ink">Sign in to vote</h1>
@@ -291,7 +291,7 @@ function Ballot({
                         <li key={candidate.id}>
                           <label
                             className={cn(
-                              "flex items-center gap-3 rounded-nv-md border bg-white p-3 transition-colors duration-200",
+                              "flex items-center gap-3 rounded-nv-md border bg-nv-surface p-3 transition-colors duration-200",
                               locked
                                 ? "cursor-not-allowed opacity-60"
                                 : "cursor-pointer hover:border-nv-primary/50",
@@ -308,7 +308,7 @@ function Ballot({
                             />
                             <span
                               aria-hidden="true"
-                              className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
+                              className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-nv-ink"
                             >
                               {initialsFor(candidate.user.full_name || candidate.user.username)}
                             </span>
@@ -323,7 +323,7 @@ function Ballot({
                               ) : null}
                             </span>
                             {candidate.party_code ? (
-                              <span className="shrink-0 rounded-full bg-nv-primary px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                              <span className="shrink-0 rounded-full bg-nv-primary px-2 py-0.5 text-[10px] font-bold uppercase text-nv-navy">
                                 {candidate.party_code}
                               </span>
                             ) : null}
@@ -339,7 +339,7 @@ function Ballot({
 
           {/* ---------------- Sticky CTA ---------------- */}
           <div className="sticky bottom-20 z-30 lg:bottom-4">
-            <div className="rounded-nv-lg border border-nv-line bg-white/95 p-3 shadow-nv-sheet backdrop-blur dark:bg-[#171930]/95">
+            <div className="rounded-nv-lg border border-nv-line bg-nv-surface/95 p-3 shadow-nv-sheet backdrop-blur">
               {!complete ? (
                 <p className="px-1 pb-2 text-[12px] text-nv-muted">
                   Answer every question to submit your ballot.

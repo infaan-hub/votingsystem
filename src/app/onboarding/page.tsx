@@ -26,27 +26,19 @@ const FEATURES = [
 export default function OnboardingPage() {
   return (
     <div className="nv-grad-hero relative min-h-dvh overflow-hidden">
-      <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-white" />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/5"
-      />
+      <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-nv-ink" />
 
       <div className="relative mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-6 py-10 sm:px-8">
         <header className="flex items-center gap-2.5">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-nv-primary shadow-nv-card">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-nv-surface text-nv-primary shadow-nv-card">
             <Vote className="h-5 w-5" aria-hidden="true" />
           </span>
-          <span className="text-[18px] font-extrabold tracking-tight text-white">{tenant.name}</span>
+          <span className="text-[18px] font-extrabold tracking-tight text-nv-ink">{tenant.name}</span>
         </header>
 
         <main className="flex flex-1 flex-col justify-center py-10">
-          <h1 className="max-w-2xl text-display text-white">{tenant.tagline}</h1>
-          <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-white/85">
+          <h1 className="max-w-2xl text-display text-nv-ink">{tenant.tagline}</h1>
+          <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-nv-ink/85">
             Run and join elections for {tenant.authority.name} with secret ballots, auditable
             results, and a voting experience that works on any device.
           </p>
@@ -67,11 +59,11 @@ export default function OnboardingPage() {
           </ul>
         </main>
 
-        <footer className="flex flex-col gap-3 border-t border-white/15 pt-6 sm:flex-row sm:items-center">
+        <footer className="flex flex-col gap-3 border-t border-nv-ink/15 pt-6 sm:flex-row sm:items-center">
           <LinkButton href="/register" className="sm:w-auto">
             Create account
           </LinkButton>
-          <Button asChild variant="ghost" className="border-white/60 bg-transparent text-white hover:bg-white/10 sm:w-auto">
+          <Button asChild variant="ghost" className="border-nv-ink/60 bg-transparent text-nv-ink hover:bg-nv-ink/10 sm:w-auto">
             <Link href="/login">Sign in</Link>
           </Button>
           <LinkButton href="/elections" variant="subtle" className="sm:w-auto">

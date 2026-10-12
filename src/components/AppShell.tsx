@@ -3,19 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Moon,
-  Search,
-  Sun,
-  Vote,
-  X,
-} from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, Search, Vote, X } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
-import { CommandPalette } from "@/src/components/command-palette";
 import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
 import { Avatar } from "@/src/components/ui/avatar";
@@ -42,11 +32,10 @@ import { cn } from "@/src/lib/utils";
 const IMMERSIVE = /^\/(login|register|onboarding|vote\/[^/]+\/thank-you)(\/|$)/;
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, handleLogout, theme, toggleTheme } = useApp();
+  const { user, handleLogout } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const shell = shellRoleFor(user?.role);
   const immersive = IMMERSIVE.test(pathname);
@@ -55,176 +44,193 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setMenuOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const typing =
-        !!target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable);
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setPaletteOpen((open) => !open);
-        return;
-      }
-      if (event.key === "/" && !typing) {
-        event.preventDefault();
-        setPaletteOpen(true);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   const navGroups = useMemo(() => navGroupsFor(shell), [shell]);
   const bottomItems = useMemo<NavItem[]>(() => bottomNavFor(shell), [shell]);
   const chip = roleLabel(user?.role);
 
   const brand = (compact?: boolean) => (
     <Link href="/" className="flex items-center gap-2" aria-label={`${t.name} home`}>
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-white">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-nv-navy">
         <Vote className="h-4 w-4" aria-hidden="true" />
       </span>
       {!compact ? (
-        <span className="text-[15px] font-extrabold tracking-tight text-white">{t.name}</span>
+        <span className="text-[15px] font-extrabold tracking-tight text-nv-ink">{t.name}</span>
       ) : null}
     </Link>
   );
 
   if (immersive) {
-    return (
-      <div className="app-shell">
-        {children}
-        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-      </div>
-    );
+    return <div className="app-shell">{children}</div>;
   }
 
   /* ------------------------------------------------------------------ *
-   * Public chrome: header + footer, no rail.                             *
+   * Public chrome: sidebar (auth buttons live here) + header + footer.  *
    * ------------------------------------------------------------------ */
   if (shell === "public") {
     const publicLinks = navGroups.flatMap((group) => group.items);
     return (
-      <div className="app-shell flex min-h-dvh flex-col">
-        <header className="sticky top-0 z-30 border-b border-nv-line bg-nv-surface/90 backdrop-blur">
-          <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
-            <Link href="/" className="flex items-center gap-2" aria-label={`${t.name} home`}>
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-white">
-                <Vote className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <span className="text-[16px] font-extrabold tracking-tight text-nv-ink">
-                {t.name}
-              </span>
-            </Link>
-
-            <nav aria-label="Primary" className="ml-6 hidden items-center gap-1 md:flex">
+      <div className="app-shell flex min-h-dvh">
+        {/* Desktop sidebar — navigation + auth actions, never in the header. */}
+        <aside
+          aria-label="Sidebar"
+          className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-sidebar-border bg-sidebar md:flex"
+        >
+          <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-5">
+            {brand()}
+          </div>
+          <nav className="min-h-0 flex-1 overflow-y-auto p-3">
+            <ul className="flex flex-col gap-0.5">
               {publicLinks.map((item) => {
                 const active = item.exact
                   ? pathname === item.href
                   : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "rounded-lg px-3 py-2 text-[13.5px] font-semibold transition-colors",
-                      active
-                        ? "bg-nv-primary-100 text-nv-primary-600"
-                        : "text-nv-muted hover:bg-nv-bg hover:text-nv-ink",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
+                        active
+                          ? "bg-nv-primary text-nv-navy"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      )}
+                    >
+                      <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                      <span className="truncate text-[13px] font-semibold">{item.label}</span>
+                    </Link>
+                  </li>
                 );
               })}
-            </nav>
-
-            <div className="ml-auto flex items-center gap-1.5">
-              <Button
-                variant="subtle"
-                size="dense"
-                className="hidden sm:inline-flex"
-                onClick={() => setPaletteOpen(true)}
-                aria-label="Search"
-              >
-                <Search className="h-4 w-4" aria-hidden="true" />
-              </Button>
-              <Button
-                variant="subtle"
-                size="dense"
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <Moon className="h-4 w-4" aria-hidden="true" />
-                )}
-              </Button>
-              <Button asChild size="dense" variant="ghost" className="hidden sm:inline-flex">
-                <Link href="/login">Sign in</Link>
-              </Button>
-              <Button asChild size="dense">
-                <Link href="/register">Create account</Link>
-              </Button>
-              <Button
-                variant="subtle"
-                size="dense"
-                className="md:hidden"
-                onClick={() => setMenuOpen((open) => !open)}
-                aria-label="Menu"
-                aria-expanded={menuOpen}
-              >
-                {menuOpen ? (
-                  <X className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <Menu className="h-4 w-4" aria-hidden="true" />
-                )}
-              </Button>
-            </div>
+            </ul>
+          </nav>
+          <div className="shrink-0 space-y-2 border-t border-sidebar-border p-3">
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/login">Sign in</Link>
+            </Button>
+            <Button asChild className="w-full">
+              <Link href="/register">Create account</Link>
+            </Button>
           </div>
+        </aside>
 
-          {menuOpen ? (
-            <nav aria-label="Menu" className="border-t border-nv-line px-4 pb-3 pt-2 md:hidden">
-              <ul className="flex flex-col">
+        <div className="flex min-h-dvh flex-1 flex-col md:pl-60">
+          <header className="sticky top-0 z-30 border-b border-nv-line bg-nv-surface/90 backdrop-blur">
+            <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+              <span className="md:hidden">{brand()}</span>
+
+              <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
                 {publicLinks.map((item) => {
                   const active = item.exact
                     ? pathname === item.href
                     : pathname === item.href || pathname.startsWith(`${item.href}/`);
                   return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={() => setMenuOpen(false)}
-                        className={cn(
-                          "flex min-h-11 items-center gap-3 rounded-lg px-3 text-[14px] font-semibold",
-                          active
-                            ? "bg-nv-primary-100 text-nv-primary-600"
-                            : "text-nv-muted",
-                        )}
-                      >
-                        <item.icon className="h-5 w-5" aria-hidden="true" />
-                        {item.label}
-                      </Link>
-                    </li>
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "rounded-lg px-3 py-2 text-[13.5px] font-semibold transition-colors",
+                        active
+                          ? "bg-nv-primary-100 text-nv-primary-600"
+                          : "text-nv-muted hover:bg-nv-bg hover:text-nv-ink",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
                   );
                 })}
-              </ul>
-            </nav>
+              </nav>
+
+              <div className="ml-auto flex items-center gap-1.5">
+                <Button asChild variant="subtle" size="dense" aria-label="Search">
+                  <Link href="/elections">
+                    <Search className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </Button>
+                <Button
+                  variant="subtle"
+                  size="dense"
+                  className="md:hidden"
+                  onClick={() => setMenuOpen((open) => !open)}
+                  aria-label="Menu"
+                  aria-expanded={menuOpen}
+                >
+                  {menuOpen ? (
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Menu className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </header>
+
+          {/* Mobile drawer — the sidebar with auth actions, opened by the menu. */}
+          {menuOpen ? (
+            <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Menu">
+              <button
+                type="button"
+                aria-label="Close menu"
+                className="absolute inset-0 bg-black/60"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar">
+                <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
+                  {brand()}
+                  <Button
+                    variant="subtle"
+                    size="dense"
+                    onClick={() => setMenuOpen(false)}
+                    aria-label="Close menu"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </div>
+                <nav className="min-h-0 flex-1 overflow-y-auto p-3">
+                  <ul className="flex flex-col gap-0.5">
+                    {publicLinks.map((item) => {
+                      const active = item.exact
+                        ? pathname === item.href
+                        : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            aria-current={active ? "page" : undefined}
+                            className={cn(
+                              "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
+                              active
+                                ? "bg-nv-primary text-nv-navy"
+                                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                            )}
+                          >
+                            <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                            <span className="truncate text-[13px] font-semibold">{item.label}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </nav>
+                <div className="shrink-0 space-y-2 border-t border-sidebar-border p-3">
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href="/login">Sign in</Link>
+                  </Button>
+                  <Button asChild className="w-full">
+                    <Link href="/register">Create account</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
           ) : null}
-        </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-6 sm:px-6">{children}</main>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-16 pt-6 sm:px-6">{children}</main>
 
-        <PublicFooter />
+          <PublicFooter />
 
-        <BottomNav items={bottomItems} />
-        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+          <BottomNav items={bottomItems} />
+        </div>
       </div>
     );
   }
@@ -245,23 +251,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ) : null
         }
         footer={
-          <div className="space-y-2">
-            <p className="truncate text-[11px] leading-tight text-sidebar-foreground/70">
-              {tenant.authority.name}
-            </p>
-            <Button
-              variant="subtle"
-              size="dense"
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <Moon className="h-4 w-4" aria-hidden="true" />
-              )}
-            </Button>
-          </div>
+          <p className="truncate text-[11px] leading-tight text-sidebar-foreground/70">
+            {tenant.authority.name}
+          </p>
         }
       />
 
@@ -269,7 +261,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-nv-line bg-nv-surface/90 backdrop-blur md:hidden">
         <div className="flex h-14 items-center gap-2 px-safe px-4">
           <Link href="/" className="flex items-center gap-2" aria-label={`${t.name} home`}>
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-nv-primary text-white">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-nv-primary text-nv-navy">
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="text-[16px] font-extrabold tracking-tight text-nv-ink">
@@ -278,25 +270,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           <div className="ml-auto flex items-center gap-1">
-            <Button
-              variant="subtle"
-              size="dense"
-              onClick={() => setPaletteOpen(true)}
-              aria-label="Search"
-            >
-              <Search className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <Button
-              variant="subtle"
-              size="dense"
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <Moon className="h-4 w-4" aria-hidden="true" />
-              )}
+            <Button asChild variant="subtle" size="dense" aria-label="Search">
+              <Link href="/elections">
+                <Search className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -328,7 +305,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <BottomNav items={bottomItems} />
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }

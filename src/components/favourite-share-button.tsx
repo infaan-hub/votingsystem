@@ -20,7 +20,7 @@ export function FavouriteShareButton({ name }: { name: string }) {
         aria-label={saved ? `Remove ${name} from favourites` : `Save ${name} to favourites`}
         aria-pressed={saved}
         onClick={() => setSaved((current) => !current)}
-        className="grid h-11 w-11 place-items-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+        className="grid h-11 w-11 place-items-center rounded-full bg-nv-navy/20 text-nv-navy transition-colors hover:bg-nv-navy/30"
       >
         {saved ? (
           <BookmarkCheck className="h-5 w-5" aria-hidden="true" />
@@ -28,7 +28,7 @@ export function FavouriteShareButton({ name }: { name: string }) {
           <Bookmark className="h-5 w-5" aria-hidden="true" />
         )}
       </button>
-      <span className="grid h-11 w-11 place-items-center rounded-full bg-white/20 text-white">
+      <span className="grid h-11 w-11 place-items-center rounded-full bg-nv-navy/20 text-nv-navy">
         <ShareIconButton name={name} />
       </span>
     </>
@@ -64,7 +64,7 @@ function ShareIconButton({ name }: { name: string }) {
       size="icon"
       onClick={onShare}
       aria-label={`Share ${name}`}
-      className="bg-transparent text-white hover:bg-white/25 hover:text-white"
+      className="bg-transparent text-nv-navy hover:bg-nv-navy/25 hover:text-nv-navy"
     >
       <Share2 className="h-5 w-5" aria-hidden="true" />
       {copied ? <span className="sr-only">Link copied</span> : null}

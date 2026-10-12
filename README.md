@@ -95,11 +95,10 @@ general-purpose path end to end.
 
 | Route | Screen |
 | --- | --- |
-| `/` | Home — region header, most-upvoted candidates, explore tiles |
-| `/login` | Hero splash + white login sheet |
+| `/` | Home — hero, current election card, candidates, explore tiles |
+| `/login` | Hero splash + login sheet; lands on the role dashboard |
 | `/register` | Registration, and OTP when `features.phoneVerification` is on |
-| `/explore` | Search, chip filters, gradient category tiles, regions, leaders |
-| `/feed` | Live head-to-head counts, news, social tabs |
+| `/explore`, `/feed` | Redirect to the elections list |
 | `/candidates/[id]` | Candidate detail — Posts / Info / People's Opinion, rating |
 | `/vote/[slug]` | E-voting ballot with watermark and sticky cast-vote CTA |
 | `/vote/[slug]/thank-you` | Thank-you screen with verification code |
@@ -175,15 +174,14 @@ codebase is required.
 Verified by running the app in each target:
 
 - [ ] **iOS Safari** — safe-area spacing on a notched device, momentum scroll on
-      long lists, WebAuthn prompt on cast, theme follows the OS setting, no
-      horizontal overflow.
+      long lists, WebAuthn prompt on cast, no horizontal overflow.
 - [ ] **Android Chrome** — PWA installs from the browser menu, the launch icon
       renders (maskable), biometric prompt on cast, system back closes the
       confirmation sheet, no grey tap flash.
-- [ ] **Desktop Chrome / Firefox / Edge** — `⌘K` opens the palette, arrow keys
-      navigate it, `Enter` selects, Tab order is sane, focus rings are visible,
-      window resize from 1100px down to 360px produces no horizontal scrollbar.
-- [ ] **All** — dark mode, high-contrast mode, reduced-motion, and a 200% zoom
+- [ ] **Desktop Chrome / Firefox / Edge** — header search jumps to the
+      elections list, Tab order is sane, focus rings are visible, window
+      resize from 1100px down to 360px produces no horizontal scrollbar.
+- [ ] **All** — the fixed teal/green theme, reduced-motion, and a 200% zoom
       level all keep every control reachable and legible.
 
 ## Deploy to Vercel

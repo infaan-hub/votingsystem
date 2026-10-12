@@ -93,7 +93,7 @@ export default function ProfilePage() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <span className="nv-grad-profile grid h-14 w-14 place-items-center rounded-full text-white">
+          <span className="nv-grad-profile grid h-14 w-14 place-items-center rounded-full text-nv-ink">
             <Shield className="h-6 w-6" aria-hidden="true" />
           </span>
           <h1 className="text-[18px] font-bold text-nv-ink">Sign in to continue</h1>
@@ -113,19 +113,15 @@ export default function ProfilePage() {
     <div className="space-y-5">
       {/* ---------------- Navy banner ---------------- */}
       <section className="nv-grad-profile relative -mx-4 -mt-4 overflow-hidden rounded-b-[28px] px-4 pb-6 pt-6">
-        <span
-          aria-hidden="true"
-          className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10"
-        />
         <div className="relative flex items-center gap-3.5">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-white/20 text-xl font-bold text-white">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-nv-ink/20 text-xl font-bold text-nv-ink">
             {initialsFor(user.full_name || user.username)}
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[20px] font-extrabold text-white">
+            <h1 className="truncate text-[20px] font-extrabold text-nv-ink">
               {user.full_name || user.username}
             </h1>
-            <p className="nums-tabular truncate text-[13px] text-white/80">
+            <p className="nums-tabular truncate text-[13px] text-nv-ink/80">
               {t.idLabel}: {user.username}
             </p>
           </div>
@@ -133,7 +129,7 @@ export default function ProfilePage() {
             type="button"
             onClick={onEditRequest}
             aria-label="Edit profile"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-ink/20 text-nv-ink transition-colors hover:bg-nv-ink/30"
           >
             <Pencil className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -150,7 +146,7 @@ export default function ProfilePage() {
         <CardContent className="flex items-center gap-3.5 p-4">
           <span
             aria-hidden="true"
-            className="nv-grad-candidate grid h-11 w-11 shrink-0 place-items-center rounded-full text-white"
+            className="nv-grad-candidate grid h-11 w-11 shrink-0 place-items-center rounded-full text-nv-navy"
           >
             <Vote className="h-5 w-5" />
           </span>
@@ -220,11 +216,11 @@ export default function ProfilePage() {
               <li key={id}>
                 <Link
                   href={`/candidates/${id}`}
-                  className="flex items-center gap-3 rounded-nv-md bg-white p-3 shadow-nv-card dark:bg-[#171930]"
+                  className="flex items-center gap-3 rounded-nv-md bg-nv-surface p-3 shadow-nv-card"
                 >
                   <span
                     aria-hidden="true"
-                    className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
+                    className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-nv-ink"
                   >
                     #{id}
                   </span>
@@ -280,11 +276,11 @@ export default function ProfilePage() {
 
 function BannerStat({ term, value }: { term: string; value: string }) {
   return (
-    <div className="rounded-lg bg-white/15 px-3 py-2">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.4px] text-white/75">
+    <div className="rounded-lg bg-nv-ink/15 px-3 py-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.4px] text-nv-ink/75">
         {term}
       </dt>
-      <dd className="text-[13px] font-bold capitalize text-white">{value}</dd>
+      <dd className="text-[13px] font-bold capitalize text-nv-ink">{value}</dd>
     </div>
   );
 }
