@@ -40,7 +40,7 @@ export function CandidateCard({
       href={href}
       className={cn(
         "group block w-[104px] shrink-0 rounded-nv-md transition-transform duration-200 ease-out",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2 focus-visible:ring-offset-nv-bg",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2 focus-visible:ring-offset-nv-surface",
         "active:scale-[0.97]",
         className,
       )}

@@ -29,10 +29,11 @@ export function LiveSplit({ entries }: { entries: LiveSplitEntry[] }) {
         <span className="nums-tabular shrink-0 text-[11px] font-bold uppercase tracking-wide text-nv-muted">
           Live
         </span>
-        <SplitSide entry={challenger} pct={challengerPct} align="right" />      </div>
+        <SplitSide entry={challenger} pct={challengerPct} align="right" />
+      </div>
 
       <div
-        className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-nv-surface"
+        className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-white/10"
         role="img"
         aria-label={`${leader.name} ${leaderPct.toFixed(1)} percent, ${challenger.name} ${challengerPct.toFixed(1)} percent`}
       >
@@ -41,7 +42,7 @@ export function LiveSplit({ entries }: { entries: LiveSplitEntry[] }) {
           style={{ width: `${leaderPct}%` }}
         />
         <span
-          className="h-full bg-nv-navy transition-[width] duration-500 ease-out"
+          className="h-full bg-nv-primary/40 transition-[width] duration-500 ease-out"
           style={{ width: `${challengerPct}%` }}
         />
       </div>
@@ -73,7 +74,7 @@ function SplitSide({
         aria-hidden="true"
         className={cn(
           "grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold",
-          leading ? "nv-grad-candidate text-nv-navy" : "nv-grad-profile text-white",
+          leading ? "bg-nv-primary text-nv-navy" : "bg-nv-primary-100 text-nv-ink",
         )}
       >
         {initials || "?"}

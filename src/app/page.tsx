@@ -47,20 +47,19 @@ export default async function HomePage() {
   const questionCount = election?.positions.length ?? 0;
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       {/* ---------------- Hero ---------------- */}
-      <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg px-5 py-8 sm:px-8 sm:py-10">
-        <div className="relative flex flex-col items-start gap-5">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-nv-primary text-nv-navy">
-            <Vote className="h-7 w-7" aria-hidden="true" />
+      <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg border border-white/10 px-6 py-12 text-center sm:py-16">
+        <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-white" />
+        <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-5">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white text-nv-navy shadow-float">
+            <Vote className="h-8 w-8" aria-hidden="true" />
           </span>
-          <div className="min-w-0">
-            <h1 className="text-fluid-3xl text-white">{t.name}</h1>
-            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-white/85">
-              {tenant.tagline}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
+          <h1 className="text-display text-white">{t.name}</h1>
+          <p className="max-w-lg text-[15.5px] leading-relaxed text-white/85">
+            {tenant.tagline}
+          </p>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Button asChild>
               <Link href="/elections">Browse elections</Link>
             </Button>

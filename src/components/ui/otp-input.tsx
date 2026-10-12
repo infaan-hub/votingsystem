@@ -133,7 +133,7 @@ export function OtpInput({
                 invalid
                   ? "border-nv-danger"
                   : active || digits[index]?.trim()
-                    ? "border-nv-primary"
+                    ? "border-nv-primary ring-2 ring-nv-primary/25"
                     : "border-nv-line",
                 disabled && "opacity-40",
               )}

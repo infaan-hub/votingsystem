@@ -38,7 +38,7 @@ export function SearchInput({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-lg border border-nv-line bg-nv-surface pl-9 pr-3 text-[14px] text-nv-ink placeholder:text-nv-muted focus:border-nv-primary focus:outline-none focus:ring-2 focus:ring-nv-primary/25"
+        className="h-12 w-full rounded-lg border border-nv-line bg-nv-surface pl-9 pr-3 text-[16px] text-nv-ink placeholder:text-nv-muted focus:border-nv-primary focus:outline-none focus:ring-2 focus:ring-nv-primary/25"
       />
     </div>
   );
@@ -68,7 +68,7 @@ export function FilterSelect({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         options={[{ value: "", label: placeholder }, ...options]}
-        className="h-11 text-[13.5px]"
+        className="h-12"
       />
     </div>
   );

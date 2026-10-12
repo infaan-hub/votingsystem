@@ -266,7 +266,7 @@ function OfficerForm() {
         title="Officer account"
         description="Existing accounts keep their password and are promoted to the officer role; new accounts are created with an unusable password that only an invitation or reset can set."
       >
-        <div className="space-y-4">
+        <div className="max-w-2xl space-y-4">
           <RadioGroup
             label="Account source"
             name="officer-source"

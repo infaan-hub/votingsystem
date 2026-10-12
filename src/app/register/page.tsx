@@ -88,6 +88,7 @@ export default function RegisterPage() {
 
   return (
     <div className="app-shell min-h-dvh bg-nv-bg px-6 pb-nav pt-6 lg:pb-10">
+      <div className="mx-auto w-full max-w-md">
       <Link
         href="/login"
         className="inline-flex min-h-11 items-center gap-2 text-[13px] font-semibold text-nv-muted"
@@ -100,7 +101,7 @@ export default function RegisterPage() {
         <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-nv-primary">
           Step 1 of 3
         </p>
-        <h1 className="mt-1 text-[28px] font-bold leading-8 tracking-tight text-nv-ink">
+        <h1 className="mt-1 text-fluid-xl tracking-tight text-nv-ink">
           Create your account
         </h1>
         <p className="mt-2 text-[14px] leading-5 text-nv-muted">
@@ -180,6 +181,7 @@ export default function RegisterPage() {
           Sign in
         </Link>
       </p>
+      </div>
     </div>
   );
 }

@@ -408,7 +408,7 @@ function CampaignBody() {
         }
       >
         <form
-          className="space-y-4 py-1"
+          className="max-w-2xl space-y-4 py-1"
           onSubmit={(event) => {
             event.preventDefault();
             void submit();

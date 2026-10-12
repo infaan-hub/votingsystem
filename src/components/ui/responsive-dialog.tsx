@@ -146,7 +146,7 @@ export function ResponsiveDialog({
         {children ? <div className="px-5 pb-2">{children}</div> : null}
 
         {footer ? (
-          <div className="flex flex-col-reverse gap-2 border-t p-5 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse gap-2 border-t p-5 sm:flex-row sm:justify-end max-sm:[&_button]:w-full max-sm:[&_a]:w-full">
             {footer}
           </div>
         ) : null}

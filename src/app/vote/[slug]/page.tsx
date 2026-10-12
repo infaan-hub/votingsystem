@@ -231,7 +231,7 @@ function Ballot({
             {ballot.election.authority}
           </span>
         </div>
-        <h1 className="mt-1.5 text-[24px] font-extrabold leading-7 tracking-tight text-nv-ink">
+        <h1 className="mt-1.5 text-fluid-xl tracking-tight text-nv-ink">
           {ballot.election.title}
         </h1>
         <p className="nums-tabular mt-1 text-[13px] text-nv-muted">

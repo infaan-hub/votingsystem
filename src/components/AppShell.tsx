@@ -10,6 +10,7 @@ import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Button } from "@/src/components/ui/button";
+import { Tooltip } from "@/src/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,17 +45,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setMenuOpen(false);
   }, [pathname]);
 
+  // Prevent the page behind the drawer from scrolling while it is open.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [menuOpen]);
+
   const navGroups = useMemo(() => navGroupsFor(shell), [shell]);
   const bottomItems = useMemo<NavItem[]>(() => bottomNavFor(shell), [shell]);
   const chip = roleLabel(user?.role);
 
   const brand = (compact?: boolean) => (
-    <Link href="/" className="flex items-center gap-2" aria-label={`${t.name} home`}>
+    <Link
+      href="/"
+      className="flex min-w-0 max-w-[55vw] items-center gap-2 sm:max-w-none"
+      aria-label={`${t.name} home`}
+    >
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-nv-navy">
         <Vote className="h-4 w-4" aria-hidden="true" />
       </span>
       {!compact ? (
-        <span className="text-[15px] font-extrabold tracking-tight text-nv-ink">{t.name}</span>
+        <span className="truncate text-[15px] font-extrabold tracking-tight text-nv-ink">
+          {t.name}
+        </span>
       ) : null}
     </Link>
   );
@@ -90,21 +107,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           <nav className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto">
             {publicLinks.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.label}
-                aria-label={item.label}
-                aria-current={isActive(item) ? "page" : undefined}
-                className={cn(
-                  "grid h-11 w-11 shrink-0 place-items-center rounded-lg transition-colors duration-200",
-                  isActive(item)
-                    ? "bg-nv-primary text-nv-navy"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                )}
-              >
-                <item.icon className="h-5 w-5" aria-hidden="true" />
-              </Link>
+              <Tooltip key={item.href} content={item.label} side="right">
+                <Link
+                  href={item.href}
+                  title={item.label}
+                  aria-label={item.label}
+                  aria-current={isActive(item) ? "page" : undefined}
+                  className={cn(
+                    "grid h-11 w-11 shrink-0 place-items-center rounded-lg transition-colors duration-200",
+                    isActive(item)
+                      ? "bg-nv-primary text-nv-navy"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <item.icon className="h-5 w-5" aria-hidden="true" />
+                </Link>
+              </Tooltip>
             ))}
           </nav>
 
@@ -133,7 +151,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Button
               variant="subtle"
               size="dense"
-              className="absolute left-4 top-1/2 h-9 w-9 -translate-y-1/2 px-0 sm:left-6"
+              className="absolute left-3 top-1/2 h-11 w-11 -translate-y-1/2 px-0 sm:left-5"
               onClick={() => setMenuOpen((open) => !open)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
@@ -255,7 +273,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           <div className="ml-auto flex items-center gap-1">
-            <Button asChild variant="subtle" size="dense" aria-label="Search">
+            <Button
+              asChild
+              variant="subtle"
+              size="dense"
+              className="h-9 w-9 px-0"
+              aria-label="Search"
+            >
               <Link href="/elections">
                 <Search className="h-4 w-4" aria-hidden="true" />
               </Link>

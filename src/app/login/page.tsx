@@ -48,13 +48,13 @@ function LoginForm() {
   }
 
   return (
-    <section className="sheet relative -mt-7 flex flex-col bg-nv-surface px-6 pb-8 pt-7">
+    <section className="sheet relative -mt-7 flex flex-col bg-nv-surface px-6 pb-8 pt-7 sm:mx-auto sm:mt-10 sm:max-w-md sm:rounded-nv-lg">
       <span
         aria-hidden="true"
         className="absolute left-1/2 top-3 h-1.5 w-10 -translate-x-1/2 rounded-full bg-nv-line"
       />
 
-      <h2 className="text-[24px] font-bold leading-7 tracking-tight text-nv-ink">Login</h2>
+      <h2 className="text-fluid-xl tracking-tight text-nv-ink">Login</h2>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-5">
         {error ? (

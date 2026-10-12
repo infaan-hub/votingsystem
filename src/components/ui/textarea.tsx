@@ -37,7 +37,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
           className={cn(
-            "min-h-[96px] w-full rounded-lg border bg-card px-3.5 py-2.5 text-[16px] text-nv-ink",
+            "max-h-[280px] min-h-[96px] w-full resize-y rounded-lg border bg-card px-3.5 py-2.5 text-[16px] text-nv-ink",
             "placeholder:text-nv-muted focus:outline-none focus-visible:outline-none",
             "transition-colors duration-200",
             "focus:border-nv-primary focus:ring-2 focus:ring-nv-primary/25",

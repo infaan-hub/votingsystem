@@ -113,7 +113,7 @@ export default async function CandidateDetailPage({
             )}
           </span>
           <div className="min-w-0 pb-1">
-            <h1 className="text-[24px] font-extrabold leading-7 tracking-tight text-nv-navy">
+            <h1 className="text-fluid-xl tracking-tight text-nv-navy">
               {displayFullName(candidate.user)}
             </h1>
             <p className="mt-1 text-[13px] text-nv-navy/85">{candidate.position.name}</p>

@@ -53,7 +53,7 @@ export function Tile({
         gradientFor(tile.id),
         "group relative flex flex-col justify-end overflow-hidden rounded-[18px] bg-cover p-3.5 shadow-nv-card",
         "transition-transform duration-200 ease-out active:scale-[0.98]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2 focus-visible:ring-offset-nv-bg",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary focus-visible:ring-offset-2 focus-visible:ring-offset-nv-surface",
         wide ? "min-h-[92px] flex-row items-center gap-3.5" : "min-h-[104px]",
         className,
       )}

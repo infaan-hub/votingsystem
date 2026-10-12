@@ -303,7 +303,7 @@ function RequestElectionContent() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={onSubmit} className="space-y-4" noValidate>
+            <form onSubmit={onSubmit} className="max-w-2xl space-y-4" noValidate>
               {formError ? (
                 <p
                   role="alert"
