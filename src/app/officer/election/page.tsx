@@ -83,9 +83,14 @@ export default function OfficerElectionPage() {
           { label: "Election" },
         ]}
         actions={
-          <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
-            All elections
-          </LinkButton>
+          <>
+            <LinkButton href="/officer/election/new" className="w-auto">
+              Add election
+            </LinkButton>
+            <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+              All elections
+            </LinkButton>
+          </>
         }
       />
       <RequireRole role="officer">

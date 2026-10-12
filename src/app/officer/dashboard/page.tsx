@@ -32,10 +32,15 @@ export default function OfficerDashboardPage() {
         description="Your managed elections at a glance: lifecycle status, ballot counts, published campaigns and direct links into each workspace."
         breadcrumbs={[{ label: "Officer dashboard" }]}
         actions={
-          <span className="inline-flex items-center gap-2 rounded-full border border-nv-line bg-nv-primary-100 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.6px] text-nv-primary">
-            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-            Election officer
-          </span>
+          <>
+            <LinkButton href="/officer/election/new" className="w-auto">
+              Add election
+            </LinkButton>
+            <span className="inline-flex items-center gap-2 rounded-full border border-nv-line bg-nv-primary-100 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.6px] text-nv-primary">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              Election officer
+            </span>
+          </>
         }
       />
       <RequireRole role="officer">
