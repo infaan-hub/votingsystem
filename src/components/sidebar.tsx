@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import type { NavGroup } from "@/src/lib/nav";
 
@@ -20,21 +20,26 @@ function isActive(pathname: string, link: { href: string; exact?: boolean }): bo
 }
 
 /**
- * Navigation rail. Icons-only at the `md` breakpoint (72px) and labelled from
- * `lg` up (240px). White glass surface with charcoal text; the active item is
- * a pale-red tint with a red accent bar.
+ * Navigation rail below the top header. White glass with charcoal text; a
+ * three-line toggle at the top opens/closes it — closed shows icons only
+ * (72px), open shows labels (240px). The brand lives in the top header,
+ * never here.
  */
 export function Sidebar({
   links,
   groups,
-  brand,
+  collapsed = false,
+  onToggle,
   footer,
   roleBadge,
   onSignOut,
 }: {
   links?: SidebarLink[];
   groups?: NavGroup[];
-  brand?: React.ReactNode;
+  /** Icons-only rail when true; labels visible when false. */
+  collapsed?: boolean;
+  /** Three-line toggle button that expands/collapses the rail. */
+  onToggle?: () => void;
   footer?: React.ReactNode;
   /** Small chip above the footer, e.g. "Administrator". */
   roleBadge?: React.ReactNode;
@@ -49,10 +54,22 @@ export function Sidebar({
   return (
     <aside
       aria-label="Sidebar"
-      className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl md:flex lg:w-60"
+      className={cn(
+        "fixed bottom-0 left-0 top-16 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl md:flex",
+        collapsed ? "w-[72px]" : "w-60",
+      )}
     >
-      <div className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border px-2 lg:justify-start lg:px-5">
-        {brand}
+      <div className="flex h-14 shrink-0 items-center justify-center border-b border-sidebar-border">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="grid h-11 w-11 place-items-center rounded-lg text-sidebar-foreground transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
+        >
+          <Menu className="h-5 w-5" aria-hidden="true" />
+        </button>
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto p-2 lg:p-3">
@@ -60,12 +77,17 @@ export function Sidebar({
           <div className="flex flex-col gap-4">
             {groups.map((group) => (
               <div key={group.label}>
-                <p className="mb-1 hidden px-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/50 lg:block">
+                <p
+                  className={cn(
+                    "mb-1 px-3 text-[10.5px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/50",
+                    collapsed ? "hidden" : "block",
+                  )}
+                >
                   {group.label}
                 </p>
                 <ul className="flex flex-col gap-0.5">
                   {group.items.map((link) => (
-                    <NavLink key={link.href} link={link} pathname={pathname} />
+                    <NavLink key={link.href} link={link} pathname={pathname} collapsed={collapsed} />
                   ))}
                 </ul>
               </div>
@@ -74,7 +96,7 @@ export function Sidebar({
         ) : (
           <ul className="flex flex-col gap-0.5">
             {flat.map((link) => (
-              <NavLink key={link.href} link={link} pathname={pathname} />
+              <NavLink key={link.href} link={link} pathname={pathname} collapsed={collapsed} />
             ))}
           </ul>
         )}
@@ -86,20 +108,35 @@ export function Sidebar({
             type="button"
             onClick={onSignOut}
             title="Sign out"
+            aria-label="Sign out"
             className="group flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sidebar-foreground transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
           >
             <span className="shrink-0" aria-hidden="true">
               <LogOut className="h-[18px] w-[18px]" />
             </span>
-            <span className="hidden truncate text-[13px] font-semibold lg:inline">Sign out</span>
+            <span
+              className={cn(
+                "truncate text-[13px] font-semibold",
+                collapsed ? "hidden" : "inline",
+              )}
+            >
+              Sign out
+            </span>
           </button>
         </div>
       ) : null}
       {roleBadge ? (
-        <div className="hidden shrink-0 px-3 pb-1 lg:block">{roleBadge}</div>
+        <div className={cn("shrink-0 px-3 pb-1", collapsed ? "hidden" : "block")}>{roleBadge}</div>
       ) : null}
       {footer ? (
-        <div className="hidden shrink-0 border-t border-sidebar-border p-3 lg:block">{footer}</div>
+        <div
+          className={cn(
+            "shrink-0 border-t border-sidebar-border p-3",
+            collapsed ? "hidden" : "block",
+          )}
+        >
+          {footer}
+        </div>
       ) : null}
     </aside>
   );
@@ -108,9 +145,11 @@ export function Sidebar({
 function NavLink({
   link,
   pathname,
+  collapsed,
 }: {
   link: SidebarLink;
   pathname: string;
+  collapsed: boolean;
 }) {
   const active = isActive(pathname, link);
   const Icon = link.icon;
@@ -131,7 +170,14 @@ function NavLink({
         <span className="shrink-0" aria-hidden="true">
           <Icon className="h-[18px] w-[18px]" />
         </span>
-        <span className="hidden truncate text-[13px] font-semibold lg:inline">{link.label}</span>
+        <span
+          className={cn(
+            "truncate text-[13px] font-semibold",
+            collapsed ? "hidden" : "block",
+          )}
+        >
+          {link.label}
+        </span>
       </Link>
     </li>
   );
