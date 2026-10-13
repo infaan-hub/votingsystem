@@ -12,11 +12,11 @@ export type StatCardProps = {
 };
 
 const TONE: Record<NonNullable<StatCardProps["tone"]>, string> = {
-  default: "bg-nv-bg text-nv-ink",
-  primary: "bg-nv-primary-100 text-nv-primary-600",
-  success: "bg-emerald-950 text-emerald-300",
-  warning: "bg-amber-950 text-amber-300",
-  danger: "bg-red-950 text-red-300",
+  default: "bg-nv-canvas text-nv-primary",
+  primary: "bg-nv-primary-100 text-nv-primary",
+  success: "bg-emerald-50 text-emerald-700",
+  warning: "bg-amber-50 text-amber-700",
+  danger: "bg-red-50 text-red-700",
 };
 
 /** One headline metric. Numbers are tabular so columns of cards line up. */
@@ -24,7 +24,7 @@ export function StatCard({ label, value, caption, icon, tone = "default", classN
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-nv-md border border-nv-line bg-nv-surface p-4 shadow-nv-card",
+        "flex items-start gap-3 rounded-nv-md border border-nv-line bg-nv-surface p-4 shadow-nv-card backdrop-blur-xl",
         className,
       )}
     >

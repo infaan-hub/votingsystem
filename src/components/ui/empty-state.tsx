@@ -28,7 +28,7 @@ export function EmptyState({
       <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-nv-muted" />
       <div className="relative mx-auto flex max-w-md flex-col items-center gap-3">
         {icon ? (
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-nv-primary-100 text-nv-ink">
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-nv-primary-100 text-nv-primary">
             {icon}
           </span>
         ) : null}

@@ -113,7 +113,7 @@ export function ResponsiveDialog({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         className={cn(
-          "w-full max-w-md rounded-t-2xl border bg-popover text-popover-foreground shadow-float",
+          "w-full max-w-md rounded-t-2xl border border-nv-line bg-popover text-popover-foreground shadow-float backdrop-blur-xl",
           "max-h-[88dvh] overflow-y-auto pb-safe",
           "transition-transform sm:rounded-xl",
         )}

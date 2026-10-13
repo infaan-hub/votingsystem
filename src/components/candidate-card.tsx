@@ -67,7 +67,7 @@ export function CandidateCard({
         )}
 
         {candidate.partyCode ? (
-          <span className="absolute left-1.5 top-1.5 rounded-full bg-nv-primary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-nv-navy">
+          <span className="absolute left-1.5 top-1.5 rounded-full bg-nv-primary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
             {candidate.partyCode}
           </span>
         ) : null}

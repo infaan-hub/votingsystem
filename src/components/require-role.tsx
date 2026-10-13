@@ -62,7 +62,7 @@ export function RequireRole({
   if (!authorized) {
     return (
       <div className="mx-auto max-w-lg py-14 text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-red-950 text-red-300">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-nv-primary-100 text-nv-primary">
           <ShieldAlert className="h-6 w-6" aria-hidden="true" />
         </span>
         <h1 className="mt-4 text-fluid-xl text-nv-ink">Access required</h1>

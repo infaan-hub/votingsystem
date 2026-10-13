@@ -56,7 +56,7 @@ export default async function ThankYouPage({
             </p>
           </div>
 
-          <div className="flex items-start gap-2 rounded-nv-md bg-[#8f1023] p-3">
+          <div className="flex items-start gap-2 rounded-nv-md bg-nv-primary-100 p-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-nv-primary" aria-hidden="true" />
             <p className="text-[12px] leading-4 text-nv-text">
               Your vote is stored separately from your identity. Only aggregate

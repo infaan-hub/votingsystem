@@ -93,7 +93,7 @@ export function DropdownMenuContent({
     <div
       role="menu"
       className={cn(
-        "absolute z-40 mt-2 min-w-[12rem] overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-float",
+        "absolute z-40 mt-2 min-w-[12rem] overflow-hidden rounded-lg border border-nv-line bg-popover p-1 text-popover-foreground shadow-float backdrop-blur-xl",
         align === "end" ? "right-0" : "left-0",
         className,
       )}

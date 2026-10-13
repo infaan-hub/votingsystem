@@ -51,25 +51,21 @@ export default async function HomePage() {
     <div className="space-y-6">
       <FirstVisitOnboarding />
       {/* ---------------- Hero ---------------- */}
-      <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg border border-white/10 px-6 py-12 text-center sm:py-16">
-        <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-white" />
+      <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg border border-nv-line px-6 py-12 text-center shadow-nv-card sm:py-16">
+        <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-nv-primary" />
         <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-5">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white text-nv-navy shadow-float">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-nv-primary text-white shadow-float">
             <Vote className="h-8 w-8" aria-hidden="true" />
           </span>
-          <h1 className="text-display text-white">{t.name}</h1>
-          <p className="max-w-lg text-[15.5px] leading-relaxed text-white/85">
+          <h1 className="text-display text-nv-ink">{t.name}</h1>
+          <p className="max-w-lg text-[15.5px] leading-relaxed text-nv-muted">
             {tenant.tagline}
           </p>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Button asChild>
               <Link href="/elections">Browse elections</Link>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="border-white/40 bg-transparent text-white hover:bg-white/10"
-            >
+            <Button asChild variant="outline">
               <Link href="/results">View results</Link>
             </Button>
           </div>
@@ -121,7 +117,7 @@ export default async function HomePage() {
                 >
                   {isOpen ? "Voting open" : "Voting closed"}
                 </span>
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-primary text-nv-navy transition-transform group-hover:translate-x-0.5">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-nv-primary text-white transition-transform group-hover:translate-x-0.5">
                   <ChevronRight className="h-5 w-5" aria-hidden="true" />
                 </span>
               </div>

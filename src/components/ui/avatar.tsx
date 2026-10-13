@@ -22,7 +22,7 @@ function initialsOf(name: string): string {
  * across pages without storing a palette in the database.
  */
 const PALETTE = [
-  "bg-nv-primary text-nv-navy",
+  "bg-nv-primary text-white",
   "bg-emerald-200 text-emerald-900",
   "bg-teal-200 text-teal-900",
   "bg-lime-200 text-lime-900",

@@ -3,81 +3,99 @@
 /* ---------------------------------------------------------------------------
    Design tokens — NexVote identity.
 
-   Single fixed theme: deep crimson surfaces (#BB182E) with white text; buttons
-   are white with crimson labels. Every value is overridable per tenant
-   through the same variable names.
+   White-dominant glassmorphism: pure white canvas, translucent white glass
+   surfaces with red-tinted borders, deep red #BB182E for actions, active
+   states and branding. Charcoal text everywhere.
    --------------------------------------------------------------------------- */
 
 :root {
-  /* brand — white powers buttons and accents on the crimson canvas */
-  --nv-primary: #ffffff;
-  --nv-primary-600: color-mix(in srgb, #ffffff 88%, #bb182e);
-  --nv-primary-100: color-mix(in srgb, #ffffff 12%, #bb182e);
-  --nv-navy: #bb182e;
-  --nv-navy-600: #8f1023;
+  /* brand — deep red powers buttons, links and active states */
+  --nv-primary: #bb182e;
+  --nv-primary-600: #991426;
+  --nv-primary-100: #fbebee;
 
-  /* neutrals — white text on crimson surfaces */
-  --nv-ink: #ffffff;
-  --nv-text: color-mix(in srgb, #ffffff 92%, #bb182e);
-  --nv-muted: color-mix(in srgb, #ffffff 66%, #bb182e);
-  --nv-line: color-mix(in srgb, #ffffff 22%, #bb182e);
-  --nv-bg: #bb182e;
-  --nv-surface: #c42139;
+  /* dark anchors (charcoal) used for tooltips, avatars and dark chips */
+  --nv-navy: #242124;
+  --nv-navy-600: #171516;
+
+  /* neutrals — charcoal text on white */
+  --nv-ink: #242124;
+  --nv-text: #3f3a3c;
+  --nv-muted: #625b5d;
+  --nv-line: rgba(187, 24, 46, 0.14);
+  --nv-bg: #ffffff;
+  --nv-canvas: #faf8f9;
+  --nv-surface: rgba(255, 255, 255, 0.78);
 
   /* status */
-  --nv-success: #34d399;
-  --nv-warning: #fbbf24;
-  --nv-danger: #ffd0d5;
+  --nv-success: #157f4f;
+  --nv-warning: #a16207;
+  --nv-danger: #bb182e;
 
-  /* gradients — dark bands stay dark (white text), deep maroon anchors contrast */
-  --nv-grad-hero: linear-gradient(160deg, #c42139 0%, #bb182e 55%, #8f1023 100%);
-  --nv-grad-candidate: linear-gradient(160deg, #b7e9c0 0%, #8fd9a8 100%);
-  --nv-grad-profile: linear-gradient(135deg, #8f1023 0%, #c42139 100%);
+  /* gradients — light, airy surfaces; red only where it brands */
+  --nv-grad-hero: linear-gradient(160deg, #ffffff 0%, #fbebee 52%, #f6dde2 100%);
+  --nv-grad-candidate: linear-gradient(160deg, #fbebee 0%, #f3d5db 100%);
+  --nv-grad-profile: linear-gradient(135deg, #bb182e 0%, #991426 100%);
 
-  /* explore tiles */
-  --nv-tile-blue: linear-gradient(135deg, #6d1224, #3f0a14);
-  --nv-tile-orange: linear-gradient(135deg, #861528, #4a0d19);
-  --nv-tile-purple: linear-gradient(135deg, #5c1020, #360812);
-  --nv-tile-pink: linear-gradient(135deg, #92182c, #4e0e19);
-  --nv-tile-teal: linear-gradient(135deg, #751326, #420b16);
+  /* explore tiles — restrained red family, white labels */
+  --nv-tile-blue: linear-gradient(135deg, #c21e36, #8f1023);
+  --nv-tile-orange: linear-gradient(135deg, #bb182e, #7f0e20);
+  --nv-tile-purple: linear-gradient(135deg, #a8152a, #750c1c);
+  --nv-tile-pink: linear-gradient(135deg, #d1223c, #991426);
+  --nv-tile-teal: linear-gradient(135deg, #c42139, #86101f);
 
   /* chart series used by result bars and turnout splits */
-  --chart-1: #ffffff;
-  --chart-2: #2dd4bf;
-  --chart-3: #c4b5fd;
-  --chart-4: #fbbf24;
-  --chart-5: #f472b6;
-  --chart-6: #38bdf8;
-  --chart-7: #34d399;
-  --chart-8: #94a3b8;
+  --chart-1: #bb182e;
+  --chart-2: #2f5d8c;
+  --chart-3: #7e57c2;
+  --chart-4: #d4a017;
+  --chart-5: #c2185b;
+  --chart-6: #00897b;
+  --chart-7: #5d8a3c;
+  --chart-8: #90a4ae;
 
-  /* lifecycle pills — tinted chips with white labels */
-  --status-draft: #4a1019;
-  --status-draft-foreground: #ffffff;
-  --status-published: #0f3d2f;
-  --status-published-foreground: #ffffff;
-  --status-nominations: #3b2f06;
-  --status-nominations-foreground: #ffffff;
-  --status-ready: #3f1420;
-  --status-ready-foreground: #ffffff;
-  --status-open: #064e3b;
-  --status-open-foreground: #ffffff;
-  --status-closed: #450a0a;
-  --status-closed-foreground: #ffffff;
-  --status-results: #243a2c;
-  --status-results-foreground: #ffffff;
-  --status-archived: #4a1019;
-  --status-archived-foreground: #ffffff;
+  /* lifecycle pills — light tinted chips with dark labels */
+  --status-draft: #f6f3f4;
+  --status-draft-foreground: #625b5d;
+  --status-draft-border: #e8e3e5;
+  --status-published: #e7f6ee;
+  --status-published-foreground: #157f4f;
+  --status-published-border: #bce5d1;
+  --status-nominations: #fbf3dc;
+  --status-nominations-foreground: #8a6a0f;
+  --status-nominations-border: #f0dfa8;
+  --status-ready: #eaf2f9;
+  --status-ready-foreground: #2a5f8f;
+  --status-ready-border: #c6daee;
+  --status-open: #e6f6ec;
+  --status-open-foreground: #157f4f;
+  --status-open-border: #b8e5c9;
+  --status-closed: #fbeaea;
+  --status-closed-foreground: #a51c2c;
+  --status-closed-border: #f0c2c7;
+  --status-results: #eaf5ee;
+  --status-results-foreground: #2e6b4a;
+  --status-results-border: #c3e0ce;
+  --status-archived: #f3f1f2;
+  --status-archived-foreground: #6e676a;
+  --status-archived-border: #e4dfe1;
 
-  /* shape + depth */
+  /* shape + depth — soft, layered glass shadows */
   --nv-radius-sm: 8px;
   --nv-radius-md: 14px;
   --nv-radius-lg: 20px;
   --nv-radius-sheet: 28px;
-  --nv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.3);
-  --nv-shadow-sheet: 0 -8px 30px rgba(0, 0, 0, 0.55);
-  --nv-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(0, 0, 0, 0.4);
-  --nv-shadow-float: 0 24px 56px rgba(0, 0, 0, 0.6);
+  --nv-shadow-card: 0 8px 32px rgba(36, 33, 36, 0.055), 0 2px 8px rgba(187, 24, 46, 0.035);
+  --nv-shadow-sheet: 0 -8px 30px rgba(36, 33, 36, 0.1);
+  --nv-shadow-panel: 0 8px 32px rgba(36, 33, 36, 0.06), 0 2px 8px rgba(187, 24, 46, 0.04);
+  --nv-shadow-float: 0 24px 56px rgba(36, 33, 36, 0.12);
+
+  /* glass surfaces */
+  --nv-glass-bg: rgba(255, 255, 255, 0.76);
+  --nv-glass-bg-strong: rgba(255, 255, 255, 0.92);
+  --nv-glass-border: rgba(187, 24, 46, 0.16);
+  --nv-shadow-glass: 0 8px 32px rgba(36, 33, 36, 0.055), 0 2px 8px rgba(187, 24, 46, 0.035);
+  --nv-shadow-hover: 0 12px 36px rgba(36, 33, 36, 0.085), 0 4px 12px rgba(187, 24, 46, 0.075);
 
   /* type */
   --nv-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -95,29 +113,29 @@
   --foreground: var(--nv-ink);
   --card: var(--nv-surface);
   --card-foreground: var(--nv-ink);
-  --popover: var(--nv-surface);
+  --popover: rgba(255, 255, 255, 0.94);
   --popover-foreground: var(--nv-ink);
-  --muted: var(--nv-surface);
+  --muted: var(--nv-canvas);
   --muted-foreground: var(--nv-muted);
   --accent: var(--nv-primary-100);
-  --accent-foreground: var(--nv-ink);
-  --secondary: var(--nv-surface);
+  --accent-foreground: var(--nv-primary);
+  --secondary: var(--nv-canvas);
   --secondary-foreground: var(--nv-text);
   --primary: var(--nv-primary);
-  --primary-foreground: #bb182e;
+  --primary-foreground: #ffffff;
   --ring: var(--nv-primary);
   --destructive: var(--nv-danger);
-  --destructive-foreground: #bb182e;
+  --destructive-foreground: #ffffff;
   --success: var(--nv-success);
-  --success-foreground: #bb182e;
+  --success-foreground: #ffffff;
   --border: var(--nv-line);
-  --input: var(--nv-line);
-  /* Sidebar / navigation surface (darker crimson anchor). */
-  --sidebar: #8f1023;
-  --sidebar-foreground: color-mix(in srgb, #ffffff 78%, #8f1023);
-  --sidebar-accent: #c42139;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: color-mix(in srgb, #ffffff 16%, #8f1023);
+  --input: rgba(187, 24, 46, 0.18);
+  /* Sidebar / navigation surface (white glass with a red-tinted border). */
+  --sidebar: rgba(255, 255, 255, 0.82);
+  --sidebar-foreground: #3f3a3c;
+  --sidebar-accent: #fbebee;
+  --sidebar-accent-foreground: #bb182e;
+  --sidebar-border: rgba(187, 24, 46, 0.12);
 }
 
 /* ---------------------------------------------------------------------------
@@ -159,6 +177,8 @@
   --color-nv-muted: var(--nv-muted);
   --color-nv-line: var(--nv-line);
   --color-nv-surface: var(--nv-surface);
+  --color-nv-canvas: var(--nv-canvas);
+  --color-nv-bg: var(--nv-bg);
   --color-nv-success: var(--nv-success);
   --color-nv-warning: var(--nv-warning);
   --color-nv-danger: var(--nv-danger);
@@ -172,20 +192,28 @@
   /* Lifecycle pill colours: `bg-status-open`, `text-status-open-foreground`. */
   --color-status-draft: var(--status-draft);
   --color-status-draft-foreground: var(--status-draft-foreground);
+  --color-status-draft-border: var(--status-draft-border);
   --color-status-published: var(--status-published);
   --color-status-published-foreground: var(--status-published-foreground);
+  --color-status-published-border: var(--status-published-border);
   --color-status-nominations: var(--status-nominations);
   --color-status-nominations-foreground: var(--status-nominations-foreground);
+  --color-status-nominations-border: var(--status-nominations-border);
   --color-status-ready: var(--status-ready);
   --color-status-ready-foreground: var(--status-ready-foreground);
+  --color-status-ready-border: var(--status-ready-border);
   --color-status-open: var(--status-open);
   --color-status-open-foreground: var(--status-open-foreground);
+  --color-status-open-border: var(--status-open-border);
   --color-status-closed: var(--status-closed);
   --color-status-closed-foreground: var(--status-closed-foreground);
+  --color-status-closed-border: var(--status-closed-border);
   --color-status-results: var(--status-results);
   --color-status-results-foreground: var(--status-results-foreground);
+  --color-status-results-border: var(--status-results-border);
   --color-status-archived: var(--status-archived);
   --color-status-archived-foreground: var(--status-archived-foreground);
+  --color-status-archived-border: var(--status-archived-border);
 
   --radius-nv-sm: var(--nv-radius-sm);
   --radius-nv-md: var(--nv-radius-md);
@@ -231,6 +259,10 @@
 
   body {
     background-color: var(--background);
+    background-image:
+      radial-gradient(circle at 5% 5%, rgba(187, 24, 46, 0.035), transparent 32%),
+      radial-gradient(circle at 95% 95%, rgba(187, 24, 46, 0.025), transparent 30%);
+    background-attachment: fixed;
     color: var(--foreground);
     font-family: var(--nv-font);
     overscroll-behavior-y: none;
@@ -313,9 +345,9 @@
 @utility shimmer {
   background-image: linear-gradient(
     90deg,
-    color-mix(in oklab, #ffffff 8%, transparent) 25%,
-    color-mix(in oklab, #ffffff 16%, transparent) 37%,
-    color-mix(in oklab, #ffffff 8%, transparent) 63%
+    color-mix(in oklab, #bb182e 6%, transparent) 25%,
+    color-mix(in oklab, #bb182e 12%, transparent) 37%,
+    color-mix(in oklab, #bb182e 6%, transparent) 63%
   );
   background-size: 400% 100%;
   animation: nv-shimmer 1.4s ease infinite;
@@ -400,9 +432,42 @@
 /* Pill shell shared by every lifecycle badge. */
 @utility status-surface {
   border-width: 1px;
-  border-color: color-mix(in srgb, #ffffff 24%, #bb182e);
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* ---------------------------------------------------------------------------
+   Glassmorphism surfaces
+   Translucent white with red-tinted borders and background blur. A solid
+   white fallback is supplied by the background-color declaration for
+   browsers without backdrop-filter support.
+   --------------------------------------------------------------------------- */
+
+@utility glass-surface {
+  background: rgba(255, 255, 255, 0.76);
+  background-color: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  border: 1px solid rgba(187, 24, 46, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(36, 33, 36, 0.055), 0 2px 8px rgba(187, 24, 46, 0.035);
+}
+
+@utility glass-surface-strong {
+  background: rgba(255, 255, 255, 0.94);
+  background-color: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(187, 24, 46, 0.2);
+  box-shadow: 0 8px 32px rgba(36, 33, 36, 0.06);
+}
+
+@utility shadow-glass {
+  box-shadow: var(--nv-shadow-glass);
+}
+
+@utility shadow-glass-hover {
+  box-shadow: var(--nv-shadow-hover);
 }
 
 /* ---------------------------------------------------------------------------

@@ -111,7 +111,7 @@ export function Sheet({
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         className={cn(
-          "sheet flex max-h-[92dvh] w-full flex-col bg-nv-surface text-nv-ink",
+          "sheet flex max-h-[92dvh] w-full flex-col bg-nv-surface text-nv-ink backdrop-blur-xl",
           "transition-transform duration-200 ease-out lg:sheet-modal lg:max-h-[88dvh]",
           className,
         )}

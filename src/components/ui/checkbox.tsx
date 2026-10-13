@@ -32,13 +32,13 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           />
           <Check
             aria-hidden="true"
-            className="pointer-events-none absolute h-3.5 w-3.5 text-nv-navy opacity-0 transition-opacity peer-checked:opacity-100"
+            className="pointer-events-none absolute h-3.5 w-3.5 text-white opacity-0 transition-opacity peer-checked:opacity-100"
             strokeWidth={3}
           />
           <Minus
             aria-hidden="true"
             className={cn(
-              "pointer-events-none absolute h-3.5 w-3.5 text-nv-navy transition-opacity",
+              "pointer-events-none absolute h-3.5 w-3.5 text-white transition-opacity",
               indeterminate ? "opacity-100" : "opacity-0",
             )}
             strokeWidth={3}

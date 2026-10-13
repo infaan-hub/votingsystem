@@ -55,7 +55,7 @@ export function ResultsBars({ data, threshold, className }: ResultsBarsProps) {
               </span>
             </div>
             <div
-              className="relative h-2.5 w-full overflow-hidden rounded-full bg-white/10"
+              className="relative h-2.5 w-full overflow-hidden rounded-full bg-nv-primary-100"
               role="img"
               aria-label={`${entry.label}: ${entry.votes} votes, ${share.toFixed(1)} percent`}
             >

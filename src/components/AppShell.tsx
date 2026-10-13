@@ -65,7 +65,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       className="flex min-w-0 max-w-[55vw] items-center gap-2 sm:max-w-none"
       aria-label={`${t.name} home`}
     >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-nv-navy">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-white">
         <Vote className="h-4 w-4" aria-hidden="true" />
       </span>
       {!compact ? (
@@ -95,12 +95,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Desktop rail — icons only while the drawer is closed. */}
         <aside
           aria-label="Sidebar"
-          className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center border-r border-sidebar-border bg-sidebar py-4 md:flex"
+          className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center border-r border-sidebar-border bg-sidebar py-4 backdrop-blur-xl md:flex"
         >
           <Link
             href="/"
             aria-label={`${t.name} home`}
-            className="mb-4 grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-nv-primary text-nv-navy"
+            className="mb-4 grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-nv-primary text-white"
           >
             <Vote className="h-5 w-5" aria-hidden="true" />
           </Link>
@@ -116,7 +116,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "grid h-11 w-11 shrink-0 place-items-center rounded-lg transition-colors duration-200",
                     isActive(item)
-                      ? "bg-nv-primary text-nv-navy"
+                      ? "bg-nv-primary-100 text-nv-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}
                 >
@@ -179,7 +179,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               className="absolute inset-0 bg-black/60"
               onClick={() => setMenuOpen(false)}
             />
-            <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar">
+            <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl">
               <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
                 {brand()}
                 <Button
@@ -205,7 +205,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           className={cn(
                             "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
                             active
-                              ? "bg-nv-primary text-nv-navy"
+                              ? "bg-nv-primary-100 text-nv-primary shadow-[inset_3px_0_0_0_var(--nv-primary)]"
                               : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                           )}
                         >
@@ -267,7 +267,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-nv-line bg-nv-surface/90 backdrop-blur md:hidden">
         <div className="flex h-14 items-center gap-2 px-safe px-4">
           <Link href="/" className="flex items-center gap-2" aria-label={`${t.name} home`}>
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-nv-primary text-nv-navy">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-nv-primary text-white">
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="text-[16px] font-extrabold tracking-tight text-nv-ink">

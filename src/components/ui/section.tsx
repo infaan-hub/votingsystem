@@ -56,7 +56,10 @@ export function Section({
 }) {
   return (
     <section
-      className={cn("rounded-nv-md border border-nv-line bg-nv-surface p-5 shadow-nv-card", className)}
+      className={cn(
+        "rounded-nv-md border border-nv-line bg-nv-surface p-5 shadow-nv-card backdrop-blur-xl",
+        className,
+      )}
     >
       {title || actions ? (
         <header className="mb-4 flex flex-wrap items-start justify-between gap-3">

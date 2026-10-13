@@ -21,18 +21,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-nv-primary text-nv-navy shadow-[0_6px_18px_rgba(214,255,203,0.2)] hover:bg-nv-primary-600 active:bg-nv-primary-600",
+          "bg-nv-primary text-white shadow-[0_6px_18px_rgba(187,24,46,0.22)] hover:bg-nv-primary-600 hover:shadow-[0_10px_24px_rgba(187,24,46,0.3)] active:bg-nv-primary-600",
         navy: "bg-nv-navy text-white hover:brightness-110 active:brightness-95",
         dark: "bg-nv-navy-600 text-white hover:brightness-125 active:brightness-95",
         ghost:
-          "border border-nv-primary bg-transparent text-nv-primary hover:bg-nv-primary-100 active:bg-nv-primary-100",
+          "border border-nv-primary/35 bg-white/70 text-nv-primary hover:bg-nv-primary-100 active:bg-nv-primary-100",
         subtle:
-          "bg-transparent text-nv-muted hover:bg-nv-ink/10 hover:text-nv-ink active:bg-nv-ink/14",
-        destructive: "bg-nv-danger text-nv-navy hover:brightness-110 active:brightness-95",
-        success: "bg-nv-success text-nv-navy hover:brightness-105 active:brightness-95",
+          "bg-transparent text-nv-muted hover:bg-nv-primary-100 hover:text-nv-primary active:bg-nv-primary-100",
+        destructive: "bg-nv-danger text-white hover:bg-nv-primary-600 active:bg-nv-primary-600",
+        success: "bg-nv-success text-white hover:brightness-105 active:brightness-95",
         /** Legacy alias for the pre-NexVote outline style. */
         outline:
-          "border border-nv-line bg-transparent text-nv-ink hover:bg-nv-ink/10 active:bg-nv-ink/14",
+          "border border-nv-primary/35 bg-white/80 text-nv-primary hover:bg-nv-primary hover:text-white active:bg-nv-primary-600",
       },
       size: {
         default: "h-12 px-5",

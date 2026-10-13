@@ -21,8 +21,8 @@ function isActive(pathname: string, link: { href: string; exact?: boolean }): bo
 
 /**
  * Navigation rail. Icons-only at the `md` breakpoint (72px) and labelled from
- * `lg` up (240px). Always deep navy — the navigation surface is the brand
- * anchor in both light and dark themes.
+ * `lg` up (240px). White glass surface with charcoal text; the active item is
+ * a pale-red tint with a red accent bar.
  */
 export function Sidebar({
   links,
@@ -49,7 +49,7 @@ export function Sidebar({
   return (
     <aside
       aria-label="Sidebar"
-      className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col border-r border-sidebar-border bg-sidebar md:flex lg:w-60"
+      className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl md:flex lg:w-60"
     >
       <div className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border px-2 lg:justify-start lg:px-5">
         {brand}
@@ -124,7 +124,7 @@ function NavLink({
           "group flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary",
           active
-            ? "bg-nv-primary text-nv-navy shadow-[0_4px_14px_rgba(214,255,203,0.2)]"
+            ? "bg-nv-primary-100 text-nv-primary shadow-[inset_3px_0_0_0_var(--nv-primary)]"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         )}
       >

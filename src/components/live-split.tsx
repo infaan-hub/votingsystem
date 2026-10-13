@@ -33,7 +33,7 @@ export function LiveSplit({ entries }: { entries: LiveSplitEntry[] }) {
       </div>
 
       <div
-        className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-white/10"
+        className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-nv-primary-100"
         role="img"
         aria-label={`${leader.name} ${leaderPct.toFixed(1)} percent, ${challenger.name} ${challengerPct.toFixed(1)} percent`}
       >
@@ -74,7 +74,7 @@ function SplitSide({
         aria-hidden="true"
         className={cn(
           "grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold",
-          leading ? "bg-nv-primary text-nv-navy" : "bg-nv-primary-100 text-nv-ink",
+          leading ? "bg-nv-primary text-white" : "bg-nv-primary-100 text-nv-primary",
         )}
       >
         {initials || "?"}
