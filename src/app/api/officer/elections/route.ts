@@ -4,6 +4,7 @@ import { fieldErrors } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
 import { requireStateOfficer } from "@/src/lib/auth";
 import { managedElectionIds } from "@/src/lib/officer";
+import { recordAudit, clientIp } from "@/src/lib/audit";
 import { formatDateTime } from "@/src/lib/time";
 import { readPayload, type Payload } from "@/src/lib/request";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
@@ -20,6 +21,7 @@ const VOTER_ID_METHODS = [
   "custom",
 ] as const;
 const CAPACITY_MODES = ["open", "restricted"] as const;
+const MAX_ALLOWED_VOTERS = 500;
 
 async function uniqueSlug(base: string): Promise<string> {
   const root = slugify(base);
@@ -60,6 +62,47 @@ function serializeCreated(election: Election) {
     campaign_start_at: formatDateTime(election.campaignStartAt, tz),
     campaign_end_at: formatDateTime(election.campaignEndAt, tz),
   };
+}
+
+/**
+ * Resolves allow-list entries (email or username) to active accounts so the
+ * eligibility list stores real `u:<id>` rows — the only form that grants
+ * voting rights when voters identify with their platform account.
+ */
+async function resolveAllowedAccounts(entries: string[]): Promise<{
+  userIds: number[];
+  unmatched: string[];
+}> {
+  const normalized = [...new Set(entries.map((entry) => entry.trim()).filter(Boolean))];
+  if (!normalized.length) return { userIds: [], unmatched: [] };
+  const users = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      OR: normalized.flatMap((entry) => [
+        { username: { equals: entry, mode: "insensitive" as const } },
+        { email: { equals: entry, mode: "insensitive" as const } },
+      ]),
+    },
+    select: { id: true, username: true, email: true },
+  });
+  const byKey = new Map<string, number>();
+  for (const user of users) {
+    byKey.set(user.username.toLowerCase(), user.id);
+    byKey.set(user.email.toLowerCase(), user.id);
+  }
+  const userIds: number[] = [];
+  const unmatched: string[] = [];
+  const seen = new Set<number>();
+  for (const entry of normalized) {
+    const userId = byKey.get(entry.toLowerCase());
+    if (userId === undefined) {
+      unmatched.push(entry);
+    } else if (!seen.has(userId)) {
+      seen.add(userId);
+      userIds.push(userId);
+    }
+  }
+  return { userIds, unmatched };
 }
 
 const route = makeRoute({
@@ -172,6 +215,25 @@ const route = makeRoute({
       const timezone = strField(c, payload, "timezone", { required: false, maxLength: 60 }) || "UTC";
       c.throwIfAny();
 
+      // Emails or usernames of the people allowed to vote (capacity "restricted").
+      const rawAllowed = payload.allowed_voters;
+      if (rawAllowed !== undefined && rawAllowed !== null && !Array.isArray(rawAllowed)) {
+        throw fieldErrors({ allowed_voters: "Expected a list of emails or usernames." });
+      }
+      const allowedVoters: string[] = [];
+      for (const entry of ((rawAllowed as unknown[] | null) ?? [])) {
+        if (typeof entry !== "string" && typeof entry !== "number") {
+          throw fieldErrors({ allowed_voters: "Every entry must be an email or username." });
+        }
+        const value = String(entry).trim();
+        if (value) allowedVoters.push(value);
+      }
+      if (allowedVoters.length > MAX_ALLOWED_VOTERS) {
+        throw fieldErrors({
+          allowed_voters: `A maximum of ${MAX_ALLOWED_VOTERS} voters may be listed per election.`,
+        });
+      }
+
       if (!title) throw fieldErrors({ title: "This field is required." });
       if (voterIdMethod === "custom" && !voterIdLabel.trim()) {
         throw fieldErrors({ voter_id_label: "A label is required for a custom identifier." });
@@ -202,11 +264,14 @@ const route = makeRoute({
             title,
             slug,
             description,
-            status: "DRAFT",
-            isPublished: false,
+            // Officers publish their own elections: created live, with no
+            // draft stage and no administrator approval. The vote endpoint
+            // still enforces the voting window the officer scheduled.
+            status: "OPEN",
+            isPublished: true,
             createdBy: officer.id,
             timezone,
-            eligibilityPolicy: capacityMode === "open" ? "open" : "registered",
+            eligibilityPolicy: capacityMode === "open" ? "open" : "voter_list",
             capacityMode: capacityMode ?? "restricted",
             maxVoters: capacityMode === "open" ? null : (maxVoters ?? null),
             rulesText,
@@ -225,7 +290,45 @@ const route = makeRoute({
         }
         throw error;
       }
-      return json(serializeCreated(created), 201);
+
+      // Attach the allow-list for restricted elections. Unmatched entries are
+      // reported back so the officer can fix typos or register missing voters.
+      let votersAdded = 0;
+      let unmatchedVoters: string[] = [];
+      if (capacityMode !== "open" && allowedVoters.length) {
+        const resolved = await resolveAllowedAccounts(allowedVoters);
+        unmatchedVoters = resolved.unmatched;
+        if (resolved.userIds.length) {
+          await prisma.electionVoter.createMany({
+            data: resolved.userIds.map((userId) => ({
+              electionId: created.id,
+              uniqueKey: `u:${userId}`,
+              userId,
+              label: "",
+            })),
+            skipDuplicates: true,
+          });
+          votersAdded = await prisma.electionVoter.count({
+            where: { electionId: created.id },
+          });
+        }
+      }
+
+      await recordAudit({
+        actorId: officer.id,
+        action: "officer.election.create",
+        entityType: "Election",
+        entityId: created.id,
+        summary: `Election "${created.title}" created`,
+        detail: {
+          capacity_mode: created.capacityMode,
+          voters_added: votersAdded,
+          unmatched_voters: unmatchedVoters.length,
+        },
+        ipAddress: clientIp(req),
+      });
+
+      return json({ ...serializeCreated(created), voters_added: votersAdded, unmatched_voters: unmatchedVoters }, 201);
     },
   },
 });

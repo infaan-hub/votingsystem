@@ -54,7 +54,7 @@ type VoterRow = {
   created_at: string | null;
 };
 
-type AddResult = { added: number; skipped: number; total: number };
+type AddResult = { added: number; skipped: number; total: number; unmatched?: string[] };
 
 type ShareTokenPayload = {
   share_token: string;
@@ -215,21 +215,11 @@ function ManagementBody() {
     if (!entries.length) {
       setAddError([
         mode === "account"
-          ? "Enter at least one user id."
+          ? "Enter at least one email or username."
           : "Enter at least one identifier.",
       ]);
       setAddResult(null);
       return;
-    }
-    if (mode === "account") {
-      const invalid = entries.filter((entry) => !/^\d+$/.test(entry));
-      if (invalid.length) {
-        setAddError([
-          `Every user id must be a positive integer. Check: ${invalid.slice(0, 5).join(", ")}.`,
-        ]);
-        setAddResult(null);
-        return;
-      }
     }
 
     setAdding(true);
@@ -238,7 +228,7 @@ function ManagementBody() {
     try {
       const payload =
         mode === "account"
-          ? { user_ids: entries.map((entry) => Number(entry)) }
+          ? { accounts: entries }
           : {
               identifiers: entries,
               ...(label.trim() ? { label: label.trim() } : {}),
@@ -255,6 +245,15 @@ function ManagementBody() {
         description: `${result.skipped} skipped · ${result.total} total`,
         tone: "success",
       });
+      if (result.unmatched?.length) {
+        toast({
+          title: `${result.unmatched.length} entr${result.unmatched.length === 1 ? "y" : "ies"} not found`,
+          description: `No active account matches ${result.unmatched
+            .slice(0, 5)
+            .join(", ")}${result.unmatched.length > 5 ? "…" : ""}.`,
+          tone: "warning",
+        });
+      }
       voters.reload();
     } catch (cause) {
       const split = splitError(cause);
@@ -587,7 +586,7 @@ function ManagementBody() {
                 <EmptyState
                   icon={<UserPlus className="h-5 w-5" aria-hidden="true" />}
                   title="No eligible voters yet"
-                  description="Add the people who may vote before the election opens. Use account ids when voters already have accounts, or identifiers such as student IDs when you only know their membership number."
+                  description="For a limited election, add the people who may vote by email or username. Use identifiers such as student IDs when you only know their membership number."
                   action={
                     <Button
                       variant="outline"
@@ -713,8 +712,8 @@ function ManagementBody() {
                   options={[
                     {
                       value: "account",
-                      label: "By account (user ids)",
-                      description: "Numeric user ids of existing accounts, separated by commas or new lines.",
+                      label: "By email or username",
+                      description: "Email addresses or usernames of people who already have accounts.",
                     },
                     {
                       value: "identifier",
@@ -726,16 +725,18 @@ function ManagementBody() {
 
                 <Textarea
                   id="officer-voter-entries"
-                  label={mode === "account" ? "User ids" : "Identifiers"}
+                  label={mode === "account" ? "Emails or usernames" : "Identifiers"}
                   required
                   value={entryText}
                   onChange={(event) => setEntryText(event.target.value)}
                   placeholder={
-                    mode === "account" ? "1024, 1025\n1099" : "S12345, S12346\nE-778"
+                    mode === "account"
+                      ? "alice@school.edu, bob\ncharlie"
+                      : "S12345, S12346\nE-778"
                   }
                   hint={
                     mode === "account"
-                      ? "Comma or newline separated positive integers, up to 500 per request."
+                      ? "Comma or newline separated, up to 500 per request. Each person must already have an account."
                       : "Comma or newline separated, up to 500 per request. Identifiers are stored only as one-way salted hashes, so they cannot be read back."
                   }
                 />
@@ -780,6 +781,14 @@ function ManagementBody() {
                     skipped ·{" "}
                     <span className="nums-tabular font-semibold">{addResult.total}</span> total on
                     this election.
+                    {addResult.unmatched?.length ? (
+                      <span className="mt-1 block font-medium">
+                        {addResult.unmatched.length} entr
+                        {addResult.unmatched.length === 1 ? "y" : "ies"} did not match any active
+                        account: {addResult.unmatched.slice(0, 5).join(", ")}
+                        {addResult.unmatched.length > 5 ? "…" : ""}
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

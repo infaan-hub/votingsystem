@@ -67,11 +67,15 @@ const route = makeRoute({
 
       const rawUserIds = payload.user_ids;
       const rawIdentifiers = payload.identifiers;
+      const rawAccounts = payload.accounts;
       if (rawUserIds !== undefined && rawUserIds !== null && !Array.isArray(rawUserIds)) {
         throw fieldErrors({ user_ids: "Expected a list of user ids." });
       }
       if (rawIdentifiers !== undefined && rawIdentifiers !== null && !Array.isArray(rawIdentifiers)) {
         throw fieldErrors({ identifiers: "Expected a list of identifiers." });
+      }
+      if (rawAccounts !== undefined && rawAccounts !== null && !Array.isArray(rawAccounts)) {
+        throw fieldErrors({ accounts: "Expected a list of emails or usernames." });
       }
 
       const userIds: number[] = [];
@@ -97,14 +101,52 @@ const route = makeRoute({
         if (value) identifiers.push(value);
       }
 
-      const attempted = userIds.length + identifiers.length;
+      // Emails or usernames resolved to active accounts (`u:<id>` rows) — the
+      // form officers actually have at hand, instead of numeric user ids.
+      const accountEntries: string[] = [];
+      for (const entry of ((rawAccounts as unknown[] | null) ?? [])) {
+        if (typeof entry !== "string" && typeof entry !== "number") {
+          throw fieldErrors({ accounts: "Every entry must be an email or username." });
+        }
+        const value = String(entry).trim();
+        if (value) accountEntries.push(value);
+      }
+
+      const attempted = userIds.length + identifiers.length + accountEntries.length;
       if (attempted === 0) {
-        throw fieldErrors({ detail: "Provide at least one user id or identifier." });
+        throw fieldErrors({ detail: "Provide at least one user id, email/username, or identifier." });
       }
       if (attempted > MAX_VOTER_ENTRIES) {
         throw fieldErrors({
           detail: `A maximum of ${MAX_VOTER_ENTRIES} voters may be added per request.`,
         });
+      }
+
+      const unmatched: string[] = [];
+      if (accountEntries.length) {
+        const normalized = [...new Set(accountEntries.map((entry) => entry.trim().toLowerCase()))];
+        const users = await prisma.user.findMany({
+          where: {
+            isActive: true,
+            OR: normalized.flatMap((entry) => [
+              { username: { equals: entry, mode: "insensitive" as const } },
+              { email: { equals: entry, mode: "insensitive" as const } },
+            ]),
+          },
+          select: { id: true, username: true, email: true },
+        });
+        const byKey = new Map<string, number>();
+        for (const user of users) {
+          byKey.set(user.username.toLowerCase(), user.id);
+          byKey.set(user.email.toLowerCase(), user.id);
+        }
+        for (const entry of normalized) {
+          const userId = byKey.get(entry);
+          // Duplicates (e.g. the same person as email and username) collapse
+          // through the unique key, so they come back as `skipped`.
+          if (userId === undefined) unmatched.push(entry);
+          else userIds.push(userId);
+        }
       }
 
       const data = [
@@ -132,11 +174,11 @@ const route = makeRoute({
         entityType: "Election",
         entityId: election.id,
         summary: `Added ${result.count} eligible voter(s) to "${election.title}"`,
-        detail: { added: result.count, skipped, total },
+        detail: { added: result.count, skipped, total, unmatched: unmatched.length },
         ipAddress: clientIp(req),
       });
 
-      return json({ added: result.count, skipped, total });
+      return json({ added: result.count, skipped, total, unmatched });
     },
   },
 });

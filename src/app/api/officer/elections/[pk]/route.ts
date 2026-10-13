@@ -99,7 +99,13 @@ const route = makeRoute({
       const pk = Number(params.pk);
       const existing = await requireManagedElection(pk, officer);
 
-      if (!EDITABLE_STATUSES.has(existing.status)) {
+      // Elections are born OPEN (officers publish without admin approval), so
+      // OPEN stays editable until the first ballot is cast — after that the
+      // schedule and rules are frozen like any live election.
+      const openEditable =
+        existing.status === "OPEN" &&
+        (await prisma.vote.count({ where: { electionId: pk } })) === 0;
+      if (!EDITABLE_STATUSES.has(existing.status) && !openEditable) {
         throw fieldErrors({
           status:
             "This election can no longer be edited because voting has started or it is closed. " +
@@ -246,7 +252,12 @@ const route = makeRoute({
       const pk = Number(params.pk);
       const existing = await requireManagedElection(pk, officer);
 
-      if (!DELETABLE_STATUSES.has(existing.status)) {
+      const votes = await prisma.vote.count({ where: { electionId: pk } });
+      // OPEN elections (officers publish directly, with no draft stage) may be
+      // removed while still empty — the same grace pre-open elections get.
+      const deletable =
+        DELETABLE_STATUSES.has(existing.status) || (existing.status === "OPEN" && votes === 0);
+      if (!deletable) {
         throw fieldErrors({
           status:
             "Only draft, unpublished, archived, or not-yet-open elections can be deleted. " +
@@ -254,7 +265,6 @@ const route = makeRoute({
         });
       }
 
-      const votes = await prisma.vote.count({ where: { electionId: pk } });
       if (votes > 0) {
         throw fieldErrors({
           status:

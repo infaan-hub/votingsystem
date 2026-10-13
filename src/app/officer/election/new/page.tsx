@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 
 import { RequireRole } from "@/src/components/require-role";
 import { Button } from "@/src/components/ui/button";
@@ -10,9 +10,8 @@ import { Input } from "@/src/components/ui/input";
 import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
-import { Select } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
-import { TimeSelect } from "@/src/components/ui/time-select";
+import { useToast } from "@/src/components/ui/toast";
 import { useApp } from "@/src/components/AppProvider";
 import { FormAlert, apiFetch, firstError, splitError } from "../../_shared";
 
@@ -26,7 +25,13 @@ type CandidateDraft = {
   image3: File | null;
 };
 
-type CreatedElection = { id: number; slug: string; title: string };
+type CreatedElection = {
+  id: number;
+  slug: string;
+  title: string;
+  voters_added?: number;
+  unmatched_voters?: string[];
+};
 
 function newDraft(): CandidateDraft {
   return {
@@ -50,6 +55,7 @@ function isoDate(date: Date): string {
 export default function OfficerNewElectionPage() {
   const router = useRouter();
   const { token } = useApp();
+  const { toast } = useToast();
   const formId = useId();
 
   const defaults = useMemo(() => {
@@ -66,11 +72,9 @@ export default function OfficerNewElectionPage() {
   const [endDate, setEndDate] = useState(defaults.endDate);
   const [endTime, setEndTime] = useState("17:00");
 
-  const [rules, setRules] = useState("");
-  const [voterIdMethod, setVoterIdMethod] = useState("account");
-  const [voterIdLabel, setVoterIdLabel] = useState("");
   const [capacityMode, setCapacityMode] = useState<"open" | "restricted">("restricted");
-  const [maxVoters, setMaxVoters] = useState("");
+  const [allowedVoters, setAllowedVoters] = useState<string[]>([]);
+  const [allowedInput, setAllowedInput] = useState("");
 
   const [candidates, setCandidates] = useState<CandidateDraft[]>([newDraft()]);
 
@@ -78,6 +82,26 @@ export default function OfficerNewElectionPage() {
   const [progress, setProgress] = useState("");
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  function addAllowedVoters() {
+    const parts = allowedInput
+      .split(/[\s,]+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (!parts.length) return;
+    setAllowedVoters((current) => {
+      const next = [...current];
+      for (const part of parts) {
+        if (!next.some((entry) => entry.toLowerCase() === part.toLowerCase())) next.push(part);
+      }
+      return next;
+    });
+    setAllowedInput("");
+  }
+
+  function removeAllowedVoter(entry: string) {
+    setAllowedVoters((current) => current.filter((item) => item !== entry));
+  }
 
   function setCandidate(key: string, patch: Partial<CandidateDraft>) {
     setCandidates((rows) =>
@@ -103,14 +127,10 @@ export default function OfficerNewElectionPage() {
         errors.voting_end_at = ["End must be after start."];
       }
     }
-    if (voterIdMethod === "custom" && !voterIdLabel.trim()) {
-      errors.voter_id_label = ["A label is required for a custom identifier."];
-    }
-    if (capacityMode === "restricted" && maxVoters.trim()) {
-      const cap = Number(maxVoters);
-      if (!Number.isInteger(cap) || cap < 1) {
-        errors.max_voters = ["Maximum voters must be a whole number of at least 1."];
-      }
+    if (capacityMode === "restricted" && allowedVoters.length === 0) {
+      errors.allowed_voters = [
+        "Add at least one email or username so a limited election knows who may vote.",
+      ];
     }
     candidates.forEach((row, index) => {
       if (!row.fullName.trim()) {
@@ -146,12 +166,12 @@ export default function OfficerNewElectionPage() {
           voting_start_at: new Date(`${startDate}T${startTime}`).toISOString(),
           voting_end_at: new Date(`${endDate}T${endTime}`).toISOString(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-          rules_text: rules.trim(),
-          voter_id_method: voterIdMethod,
-          voter_id_label: voterIdMethod === "custom" ? voterIdLabel.trim() : "",
+          rules_text: "",
+          voter_id_method: "account",
+          voter_id_label: "",
           capacity_mode: capacityMode,
-          max_voters:
-            capacityMode === "restricted" && maxVoters.trim() ? Number(maxVoters) : null,
+          max_voters: null,
+          allowed_voters: capacityMode === "restricted" ? allowedVoters : [],
         }),
       });
 
@@ -182,6 +202,16 @@ export default function OfficerNewElectionPage() {
       }
 
       setProgress("Done.");
+      const unmatched = created.unmatched_voters ?? [];
+      if (unmatched.length) {
+        toast({
+          title: `${unmatched.length} voter${unmatched.length === 1 ? "" : "s"} not found`,
+          description: `No active account matches ${unmatched
+            .slice(0, 5)
+            .join(", ")}${unmatched.length > 5 ? "…" : ""}. Add them from Voter management once they register.`,
+          tone: "warning",
+        });
+      }
       router.push(`/officer/election?election=${created.id}`);
     } catch (error) {
       const split = splitError(error);
@@ -208,12 +238,7 @@ export default function OfficerNewElectionPage() {
       <PageHero
         eyebrow="Officer dashboard"
         title="Add election"
-        description="Create a new election with its schedule, voting rules and full candidate slate."
-        actions={
-          <LinkButton href="/officer/election" variant="heroGhost" className="w-auto">
-            Cancel
-          </LinkButton>
-        }
+        description="Create a new election with its schedule, voter list and full candidate slate. It goes live immediately — no approval needed."
       />
       <RequireRole role="officer">
         <form
@@ -273,8 +298,9 @@ export default function OfficerNewElectionPage() {
                   invalid={Boolean(firstError(fieldErrors, "voting_start_at"))}
                   error={firstError(fieldErrors, "voting_start_at")}
                 />
-                <TimeSelect
-                  label="Starts (time · 24h)"
+                <Input
+                  label="Starts (time)"
+                  type="time"
                   value={startTime}
                   onChange={(event) => setStartTime(event.target.value)}
                   required
@@ -288,8 +314,9 @@ export default function OfficerNewElectionPage() {
                   invalid={Boolean(firstError(fieldErrors, "voting_end_at"))}
                   error={firstError(fieldErrors, "voting_end_at")}
                 />
-                <TimeSelect
-                  label="Ends (time · 24h)"
+                <Input
+                  label="Ends (time)"
+                  type="time"
                   value={endTime}
                   onChange={(event) => setEndTime(event.target.value)}
                   required
@@ -299,82 +326,105 @@ export default function OfficerNewElectionPage() {
           </Section>
 
           <Section
-            title="Voting rules"
-            description="Who may vote, how voters identify themselves, and how many voters are allowed."
+            title="Who may vote"
+            description="Voters identify with their platform username. Choose whether the election is open to everyone or limited to a list you build."
           >
             <div className="space-y-5">
-              <Textarea
-                label="Who may vote"
-                value={rules}
-                onChange={(event) => setRules(event.target.value)}
-                placeholder="e.g. All currently enrolled students of the main campus may vote."
-                hint="Shown to voters on the ballot page. Access itself is still enforced by the eligibility settings."
-                maxLength={4000}
-              />
-              <Select
-                label="Voters identify with"
-                value={voterIdMethod}
-                onChange={(event) => setVoterIdMethod(event.target.value)}
-                options={[
-                  { value: "account", label: "Platform account" },
-                  { value: "email", label: "Email address" },
-                  { value: "phone", label: "Phone number" },
-                  { value: "membership", label: "Membership number" },
-                  { value: "employee", label: "Employee ID" },
-                  { value: "student_id", label: "Student ID" },
-                  { value: "custom", label: "Custom identifier" },
-                ]}
-              />
-              {voterIdMethod === "custom" ? (
-                <Input
-                  label="Custom identifier label"
-                  value={voterIdLabel}
-                  onChange={(event) => setVoterIdLabel(event.target.value)}
-                  placeholder="e.g. Library card number"
-                  maxLength={120}
-                  required
-                  invalid={Boolean(firstError(fieldErrors, "voter_id_label"))}
-                  error={firstError(fieldErrors, "voter_id_label")}
-                />
-              ) : null}
+              <div className="flex items-center justify-between gap-3 rounded-nv-md border border-nv-line bg-nv-surface px-4 py-3">
+                <span className="text-[12px] font-semibold uppercase tracking-[0.6px] text-nv-muted">
+                  Voters identify with
+                </span>
+                <span className="text-[14px] font-semibold text-nv-ink">Username</span>
+              </div>
 
               <fieldset className="space-y-2">
                 <legend className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.6px] text-nv-muted">
-                  Number of voters
+                  Who may vote
                 </legend>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <CapacityOption
                     name={`${formId}-capacity`}
-                    title="Limited"
-                    detail="A capped, restricted election (invite or approved voter list)."
-                    checked={capacityMode === "restricted"}
-                    onChange={() => setCapacityMode("restricted")}
-                  />
-                  <CapacityOption
-                    name={`${formId}-capacity`}
-                    title="Unlimited · public"
-                    detail="A public election with no pre-declared voter cap."
+                    title="Open to everyone"
+                    detail="Any signed-in student or staff account may vote."
                     checked={capacityMode === "open"}
                     onChange={() => setCapacityMode("open")}
                   />
+                  <CapacityOption
+                    name={`${formId}-capacity`}
+                    title="Limited to a list"
+                    detail="Only the people you add below may vote."
+                    checked={capacityMode === "restricted"}
+                    onChange={() => setCapacityMode("restricted")}
+                  />
                 </div>
               </fieldset>
+
               {capacityMode === "restricted" ? (
-                <Input
-                  label="Maximum voters (optional)"
-                  type="number"
-                  min={1}
-                  inputMode="numeric"
-                  value={maxVoters}
-                  onChange={(event) => setMaxVoters(event.target.value)}
-                  placeholder="Leave empty for no fixed cap"
-                  invalid={Boolean(firstError(fieldErrors, "max_voters"))}
-                  error={firstError(fieldErrors, "max_voters")}
-                />
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Input
+                        label="Allowed voters"
+                        value={allowedInput}
+                        onChange={(event) => setAllowedInput(event.target.value)}
+                        placeholder="Email or username, then Add"
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            addAllowedVoters();
+                          }
+                        }}
+                        invalid={Boolean(firstError(fieldErrors, "allowed_voters"))}
+                        error={firstError(fieldErrors, "allowed_voters")}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-auto"
+                      onClick={addAllowedVoters}
+                    >
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                      Add
+                    </Button>
+                  </div>
+                  {allowedVoters.length ? (
+                    <ul className="flex flex-wrap gap-2">
+                      {allowedVoters.map((entry) => (
+                        <li
+                          key={entry}
+                          className="flex items-center gap-1.5 rounded-full border border-nv-line bg-nv-surface py-1 pl-3 pr-1.5 text-[13px] font-medium text-nv-ink"
+                        >
+                          {entry}
+                          <button
+                            type="button"
+                            onClick={() => removeAllowedVoter(entry)}
+                            aria-label={`Remove ${entry}`}
+                            className="grid h-6 w-6 place-items-center rounded-full text-nv-muted transition-colors hover:bg-nv-danger/10 hover:text-nv-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
+                          >
+                            <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[12.5px] text-nv-muted">
+                      Add the email or username of everyone allowed to vote. Each person must
+                      already have an account on the platform.
+                    </p>
+                  )}
+                  <p className="text-[12px] text-nv-muted">
+                    <span className="nums-tabular font-semibold text-nv-ink">
+                      {allowedVoters.length}
+                    </span>{" "}
+                    voter{allowedVoters.length === 1 ? "" : "s"} on the list. You can manage the
+                    list any time from Voter management.
+                  </p>
+                </div>
               ) : (
                 <p className="text-[12.5px] text-nv-muted">
-                  This will be a public election — voters are not limited by a declared
-                  participant count. Eligibility rules still apply.
+                  Any signed-in student or staff account can vote in this election — no voter list
+                  is required.
                 </p>
               )}
             </div>

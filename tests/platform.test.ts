@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/src/lib/db";
 import { hashPassword } from "@/src/lib/password";
+import { isEligibleToVote } from "@/src/lib/eligibility";
 import { call, createTokenFor, jsonRequest, resetDb } from "./helpers";
 
 import { POST as contactPOST } from "@/src/app/api/contact/route";
@@ -13,7 +14,10 @@ import {
 import { PATCH as requestDecisionPATCH } from "@/src/app/api/admin/election-requests/[pk]/route";
 import { GET as auditGET } from "@/src/app/api/admin/audit-logs/route";
 import { POST as assignOfficerPOST } from "@/src/app/api/admin/officers/route";
-import { GET as officerElectionsGET } from "@/src/app/api/officer/elections/route";
+import {
+  GET as officerElectionsGET,
+  POST as officerElectionsPOST,
+} from "@/src/app/api/officer/elections/route";
 import {
   GET as votersGET,
   POST as votersPOST,
@@ -318,6 +322,127 @@ describe("platform: officer scope, voters, share links", () => {
     const stored = await prisma.electionVoter.findMany({ where: { electionId: seed.electionId } });
     expect(stored.some((row) => row.uniqueKey.startsWith("h:"))).toBe(true);
     expect(stored.some((row) => row.uniqueKey.includes("S12345"))).toBe(false);
+  });
+
+  it("creates an officer election live — no draft, no admin approval — with the voter allow-list", async () => {
+    const seed = await seedPlatform();
+    const adminToken = await createTokenFor(seed.adminId);
+    const officerToken = await createTokenFor(seed.officerId);
+
+    const assigned = await call(
+      assignOfficerPOST,
+      jsonRequest("/api/admin/officers", {
+        method: "POST",
+        token: adminToken,
+        body: {
+          username: "ReturningOfficer",
+          email: "officer@example.test",
+          scope: "all",
+          note: "Creates elections directly.",
+        },
+      }),
+    );
+    expect(assigned.status).toBe(201);
+
+    const now = Date.now();
+    const created = await call(
+      officerElectionsPOST,
+      jsonRequest("/api/officer/elections", {
+        method: "POST",
+        token: officerToken,
+        body: {
+          title: "Officer Created Election",
+          description: "Born open — nobody approves it.",
+          voting_start_at: new Date(now + HOUR).toISOString(),
+          voting_end_at: new Date(now + 2 * DAY).toISOString(),
+          capacity_mode: "restricted",
+          allowed_voters: ["voter@example.test", "ReturningOfficer", "ghost@example.test"],
+        },
+      }),
+    );
+    expect(created.status).toBe(201);
+    const body = (await created.json()) as {
+      id: number;
+      status: string;
+      is_published: boolean;
+      voters_added: number;
+      unmatched_voters: string[];
+    };
+    expect(body.status).toBe("OPEN");
+    expect(body.is_published).toBe(true);
+    expect(body.voters_added).toBe(2);
+    expect(body.unmatched_voters).toEqual(["ghost@example.test"]);
+
+    const row = await prisma.election.findUnique({ where: { id: body.id } });
+    expect(row?.status).toBe("OPEN");
+    expect(row?.isPublished).toBe(true);
+    expect(row?.eligibilityPolicy).toBe("voter_list");
+
+    const voters = await prisma.electionVoter.findMany({ where: { electionId: body.id } });
+    expect(voters).toHaveLength(2);
+    expect(voters.every((voter) => voter.uniqueKey.startsWith("u:"))).toBe(true);
+    expect(voters.map((voter) => voter.userId).sort()).toEqual(
+      [seed.officerId, seed.voterId].sort(),
+    );
+
+    // A user who is not on the allow-list cannot vote in this election.
+    const stranger = await prisma.user.create({
+      data: {
+        username: "stranger-voter",
+        email: "stranger@example.test",
+        firstName: "S",
+        lastName: "Tranger",
+        role: "student",
+        password: hashPassword("correct-horse-battery"),
+      },
+    });
+    const strangerFull = await prisma.user.findUnique({
+      where: { id: stranger.id },
+      include: { department: true, section: { include: { department: true } } },
+    });
+    expect(await isEligibleToVote(row!, strangerFull!)).toBe(false);
+  });
+
+  it("adds eligible voters by email or username and reports unmatched entries", async () => {
+    const seed = await seedPlatform();
+    const adminToken = await createTokenFor(seed.adminId);
+    const officerToken = await createTokenFor(seed.officerId);
+
+    await call(
+      assignOfficerPOST,
+      jsonRequest("/api/admin/officers", {
+        method: "POST",
+        token: adminToken,
+        body: { username: "ReturningOfficer", email: "officer@example.test", scope: "all" },
+      }),
+    );
+
+    const added = await call(
+      votersPOST,
+      jsonRequest(`/api/elections/${seed.electionId}/voters`, {
+        method: "POST",
+        token: officerToken,
+        body: { accounts: ["voter@example.test", "Voter-One", "nobody@example.test"] },
+      }),
+      { pk: String(seed.electionId) },
+    );
+    expect(added.status).toBe(200);
+    const result = (await added.json()) as {
+      added: number;
+      skipped: number;
+      total: number;
+      unmatched: string[];
+    };
+    expect(result.added).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.total).toBe(1);
+    expect(result.unmatched).toEqual(["nobody@example.test"]);
+
+    const stored = await prisma.electionVoter.findMany({
+      where: { electionId: seed.electionId },
+    });
+    expect(stored).toHaveLength(1);
+    expect(stored[0].uniqueKey).toBe(`u:${seed.voterId}`);
   });
 
   it("regenerates a share token and gates a private election behind the invite link", async () => {

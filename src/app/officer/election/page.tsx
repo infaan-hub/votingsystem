@@ -16,7 +16,6 @@ import { Select } from "@/src/components/ui/select";
 import { Section, KeyValueList } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Textarea } from "@/src/components/ui/textarea";
-import { TimeSelect } from "@/src/components/ui/time-select";
 import { Tooltip } from "@/src/components/ui/tooltip";
 import { useToast } from "@/src/components/ui/toast";
 import {
@@ -113,6 +112,15 @@ export default function OfficerElectionPage() {
 const EDITABLE_STATUSES = new Set(["DRAFT", "PUBLISHED", "NOMINATIONS", "READY"]);
 const DELETABLE_STATUSES = new Set(["DRAFT", "PUBLISHED", "NOMINATIONS", "READY", "ARCHIVED"]);
 
+/**
+ * Elections are born OPEN (officers publish directly, no admin approval), so
+ * an OPEN election with no ballots yet keeps the same edit/delete grace as a
+ * pre-open one — mirrors the server-side guards.
+ */
+function isOpenEditable(row: { status: string; counts: { votes: number } }): boolean {
+  return row.status === "OPEN" && row.counts.votes === 0;
+}
+
 function splitDateTimeParts(
   value: string | null | undefined,
 ): { date: string; time: string } {
@@ -188,7 +196,7 @@ function ElectionBody() {
         {selected ? (
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={selected.status} />
-            {EDITABLE_STATUSES.has(selected.status) ? (
+            {EDITABLE_STATUSES.has(selected.status) || isOpenEditable(selected) ? (
               <Button
                 variant="outline"
                 size="dense"
@@ -199,7 +207,7 @@ function ElectionBody() {
                 Edit
               </Button>
             ) : null}
-            {DELETABLE_STATUSES.has(selected.status) ? (
+            {DELETABLE_STATUSES.has(selected.status) || isOpenEditable(selected) ? (
               <Button
                 variant="outline"
                 size="dense"
@@ -676,8 +684,9 @@ function EditElectionDialog({
                 invalid={Boolean(firstError(fieldErrors, "voting_start_at"))}
                 error={firstError(fieldErrors, "voting_start_at")}
               />
-              <TimeSelect
-                label="Starts (time · 24h)"
+              <Input
+                label="Starts (time)"
+                type="time"
                 value={startTime}
                 onChange={(event) => setStartTime(event.target.value)}
                 required
@@ -691,8 +700,9 @@ function EditElectionDialog({
                 invalid={Boolean(firstError(fieldErrors, "voting_end_at"))}
                 error={firstError(fieldErrors, "voting_end_at")}
               />
-              <TimeSelect
-                label="Ends (time · 24h)"
+              <Input
+                label="Ends (time)"
+                type="time"
                 value={endTime}
                 onChange={(event) => setEndTime(event.target.value)}
                 required
