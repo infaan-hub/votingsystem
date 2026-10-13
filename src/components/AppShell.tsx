@@ -177,7 +177,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         groups={isPublic ? undefined : navGroups}
         links={isPublic ? publicRailLinks : undefined}
         collapsed={!railOpen}
-        onToggle={() => setRailOpen((open) => !open)}
         roleBadge={
           !isPublic && chip ? (
             <span className="inline-flex rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1 text-[11px] font-bold uppercase tracking-[0.6px] text-sidebar-accent-foreground">
@@ -272,8 +271,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMenuOpen(false)}
           />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl">
-            <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
-              {brand()}
+            <div className="flex h-14 shrink-0 items-center justify-end border-b border-sidebar-border px-3">
               <Button
                 variant="subtle"
                 size="dense"

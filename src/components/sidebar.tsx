@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import type { NavGroup } from "@/src/lib/nav";
 
@@ -20,16 +20,15 @@ function isActive(pathname: string, link: { href: string; exact?: boolean }): bo
 }
 
 /**
- * Navigation rail below the top header. White glass with charcoal text; a
- * three-line toggle at the top opens/closes it — closed shows icons only
- * (72px), open shows labels (240px). The brand lives in the top header,
- * never here.
+ * Navigation rail below the top header. White glass with charcoal text;
+ * collapsed shows icons only (72px), open shows labels (240px). The rail is
+ * opened and closed by the three-line toggle in the top header — the brand
+ * and any toggle live there, never here.
  */
 export function Sidebar({
   links,
   groups,
   collapsed = false,
-  onToggle,
   footer,
   roleBadge,
   onSignOut,
@@ -38,8 +37,6 @@ export function Sidebar({
   groups?: NavGroup[];
   /** Icons-only rail when true; labels visible when false. */
   collapsed?: boolean;
-  /** Three-line toggle button that expands/collapses the rail. */
-  onToggle?: () => void;
   footer?: React.ReactNode;
   /** Small chip above the footer, e.g. "Administrator". */
   roleBadge?: React.ReactNode;
@@ -59,19 +56,6 @@ export function Sidebar({
         collapsed ? "w-[72px]" : "w-60",
       )}
     >
-      <div className="flex h-14 shrink-0 items-center justify-center border-b border-sidebar-border">
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!collapsed}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="grid h-11 w-11 place-items-center rounded-lg text-sidebar-foreground transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
-        >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-        </button>
-      </div>
-
       <nav className="min-h-0 flex-1 overflow-y-auto p-2 lg:p-3">
         {groups ? (
           <div className="flex flex-col gap-4">
