@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, FileText, Inbox, RotateCw } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { BackButton } from "@/src/components/back-button";
 import { RequireRole } from "@/src/components/require-role";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
@@ -281,6 +282,7 @@ function RequestElectionContent() {
 
   return (
     <div className="space-y-6">
+      <BackButton fallback="/dashboard" />
       <PageHeader
         title="Request an election"
         description="Ask an administrator to set up a new election for your organization. Provide as much detail as you can — it speeds up the review."

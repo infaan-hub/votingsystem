@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, AtSign, KeyRound, Phone, ShieldCheck } from "lucide-react";
 
 import { AuthCard, AuthShell } from "@/src/components/auth-shell";
+import { BackButton } from "@/src/components/back-button";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { OtpInput, OtpKeypad } from "@/src/components/ui/otp-input";
@@ -111,13 +112,7 @@ export default function RegisterPage() {
   return (
     <AuthShell>
       <AuthCard>
-        <Link
-          href="/login"
-          className="inline-flex min-h-11 items-center gap-2 text-[13px] font-semibold text-nv-muted"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to login
-        </Link>
+        <BackButton label="Back to login" fallback="/login" />
 
         <header className="mt-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.6px] text-nv-primary">

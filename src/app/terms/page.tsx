@@ -1,6 +1,6 @@
-import { ArrowLeft, FileText } from "lucide-react";
-import Link from "next/link";
+import { FileText } from "lucide-react";
 
+import { BackButton } from "@/src/components/back-button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import tenant from "@/config/tenant";
 
@@ -11,13 +11,7 @@ export const metadata = {
 export default function TermsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5 px-4 pb-nav lg:pb-10">
-      <Link
-        href="/"
-        className="inline-flex min-h-11 items-center gap-2 text-[13px] font-semibold text-nv-muted"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back
-      </Link>
+      <BackButton fallback="/" />
 
       <header className="flex items-center gap-3">
         <span className="nv-grad-profile grid h-11 w-11 place-items-center rounded-xl text-white">

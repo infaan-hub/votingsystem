@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CheckCircle2,
   Fingerprint,
   Loader2,
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { BackButton } from "@/src/components/back-button";
 import { useToast } from "@/src/components/ui/toast";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -218,13 +218,10 @@ function Ballot({
     <div className="space-y-5">
       {/* ---------------- Header ---------------- */}
       <header>
-        <Link
-          href={`/elections/${ballot.election.slug}`}
-          className="inline-flex min-h-11 items-center gap-2 text-[13px] font-semibold text-nv-muted"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to election
-        </Link>
+        <BackButton
+          label="Back to election"
+          fallback={`/elections/${ballot.election.slug}`}
+        />
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <StatusBadge status={ballot.election.status} />
           <span className="text-[11px] font-semibold uppercase tracking-[0.4px] text-nv-muted">

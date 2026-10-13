@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Clock, Mail, Send, ShieldCheck } from "lucide-react";
 
+import { BackButton } from "@/src/components/back-button";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
@@ -90,6 +91,7 @@ export default function ContactPage() {
 
   return (
     <div className="space-y-6">
+      <BackButton fallback="/" />
       <PageHeader
         title="Contact support"
         description="Questions about an election, your account, or the platform? Send a message to the team running this service."

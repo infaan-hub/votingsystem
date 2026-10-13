@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { BackButton } from "@/src/components/back-button";
 import { LinkButton } from "@/src/components/ui/page-header";
 import { Button } from "@/src/components/ui/button";
 
@@ -31,6 +32,7 @@ export default function WelcomePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl py-8">
+      <BackButton fallback="/" />
       <div className="rounded-nv-md border border-nv-line bg-nv-surface p-6 text-center shadow-nv-card sm:p-8">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-nv-success/15 text-nv-success">
           <CheckCircle2 className="h-8 w-8" aria-hidden="true" />

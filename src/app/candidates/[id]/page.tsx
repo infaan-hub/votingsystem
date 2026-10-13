@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MapPin, ThumbsDown, ThumbsUp } from "lucide-react";
+import { MapPin, ThumbsDown, ThumbsUp } from "lucide-react";
 
 import { prisma } from "@/src/lib/db";
 import { candidatePhotoPath } from "@/src/lib/page-helpers";
+import { BackButton } from "@/src/components/back-button";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Tabs } from "@/src/components/ui/tabs";
@@ -88,13 +89,7 @@ export default async function CandidateDetailPage({
       {/* ---------------- Hero ---------------- */}
       <section className="nv-grad-candidate relative -mx-4 -mt-4 overflow-hidden px-4 pb-8 pt-3 lg:mx-0 lg:rounded-nv-lg">
         <div className="relative flex items-center justify-between">
-          <Link
-            href="/"
-            aria-label="Go back"
-            className="grid h-11 w-11 place-items-center rounded-full bg-nv-navy/20 text-nv-navy"
-          >
-            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          </Link>
+          <BackButton className="rounded-full bg-nv-navy/20 px-3 text-nv-navy hover:bg-nv-navy/30 hover:text-nv-navy" />
           <FavouriteShareButton name={displayFullName(candidate.user)} />
         </div>
 

@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft,
   CalendarClock,
   Clapperboard,
   Info,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { BackButton } from "@/src/components/back-button";
 import { ResultsBars, type ResultDatum } from "@/src/components/results-bars";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Avatar } from "@/src/components/ui/avatar";
@@ -357,13 +357,7 @@ function ElectionDetailContent() {
 
   return (
     <div className="space-y-8 pb-24 lg:pb-8">
-      <Link
-        href="/elections"
-        className="inline-flex min-h-11 items-center gap-2 text-[13px] font-semibold text-nv-muted hover:text-nv-ink"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back to elections
-      </Link>
+      <BackButton label="Back to elections" fallback="/elections" />
 
       <header className="space-y-4">
         <div className="relative h-44 w-full overflow-hidden rounded-nv-md sm:h-56">

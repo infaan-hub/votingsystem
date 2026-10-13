@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { prisma } from "@/src/lib/db";
+import { BackButton } from "@/src/components/back-button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ElectionCard } from "@/src/components/election-card";
 
@@ -30,13 +29,7 @@ export default async function CategoryDetailPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-nav lg:pb-0">
-      <Link
-        href="/categories"
-        className="inline-flex min-h-11 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back to categories
-      </Link>
+      <BackButton label="Back to categories" fallback="/categories" />
 
       <header className="mt-4 mb-8 max-w-2xl">
         <p className="text-4xl" aria-hidden="true">
