@@ -11,6 +11,7 @@ import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
 import { Section } from "@/src/components/ui/section";
 import { Select } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
+import { TimeSelect } from "@/src/components/ui/time-select";
 import { useApp } from "@/src/components/AppProvider";
 import { FormAlert, apiFetch, firstError, splitError } from "../../_shared";
 
@@ -275,9 +276,8 @@ export default function OfficerNewElectionPage() {
                   invalid={Boolean(firstError(fieldErrors, "voting_start_at"))}
                   error={firstError(fieldErrors, "voting_start_at")}
                 />
-                <Input
-                  label="Starts (time)"
-                  type="time"
+                <TimeSelect
+                  label="Starts (time · 24h)"
                   value={startTime}
                   onChange={(event) => setStartTime(event.target.value)}
                   required
@@ -291,9 +291,8 @@ export default function OfficerNewElectionPage() {
                   invalid={Boolean(firstError(fieldErrors, "voting_end_at"))}
                   error={firstError(fieldErrors, "voting_end_at")}
                 />
-                <Input
-                  label="Ends (time)"
-                  type="time"
+                <TimeSelect
+                  label="Ends (time · 24h)"
                   value={endTime}
                   onChange={(event) => setEndTime(event.target.value)}
                   required

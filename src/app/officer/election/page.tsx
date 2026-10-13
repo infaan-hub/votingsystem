@@ -1,25 +1,35 @@
 "use client";
 
-import { Suspense } from "react";
-import { ClipboardList, ExternalLink, RefreshCw, Vote } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { ClipboardList, ExternalLink, Pencil, RefreshCw, Trash2, Vote } from "lucide-react";
 
+import { useApp } from "@/src/components/AppProvider";
 import { RequireRole } from "@/src/components/require-role";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
+import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
+import { Input } from "@/src/components/ui/input";
 import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
-import { KeyValueList, Section } from "@/src/components/ui/section";
+import { Select } from "@/src/components/ui/select";
+import { Section, KeyValueList } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { Textarea } from "@/src/components/ui/textarea";
+import { TimeSelect } from "@/src/components/ui/time-select";
 import { Tooltip } from "@/src/components/ui/tooltip";
+import { useToast } from "@/src/components/ui/toast";
 import {
   ElectionPickerSection,
   ErrorBanner,
+  FormAlert,
   ListSkeleton,
   NoElectionsState,
   PickElectionAction,
   apiFetch,
   displayValue,
+  firstError,
   humanize,
+  splitError,
   useElectionSelection,
   useResource,
   windowText,
@@ -101,6 +111,17 @@ export default function OfficerElectionPage() {
   );
 }
 
+/** Statuses officers may still edit or delete from this screen. */
+const EDITABLE_STATUSES = new Set(["DRAFT", "PUBLISHED", "NOMINATIONS", "READY"]);
+const DELETABLE_STATUSES = new Set(["DRAFT", "PUBLISHED", "NOMINATIONS", "READY", "ARCHIVED"]);
+
+function splitDateTimeParts(
+  value: string | null | undefined,
+): { date: string; time: string } {
+  if (!value) return { date: "", time: "" };
+  return { date: value.slice(0, 10), time: value.slice(11, 16) || "09:00" };
+}
+
 function ElectionBody() {
   const { selected: selectedId, select } = useElectionSelection();
   const list = useResource<ManagedElection[]>(
@@ -110,6 +131,9 @@ function ElectionBody() {
 
   const rows = list.data ?? [];
   const selected = rows.find((row) => String(row.id) === selectedId) ?? null;
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const overview = useResource<PublicDetailPayload | null>(
     (token) =>
@@ -163,7 +187,33 @@ function ElectionBody() {
       {list.error ? <ErrorBanner message={list.error} onRetry={list.reload} /> : null}
 
       <ElectionPickerSection elections={rows} value={selectedId} onChange={select}>
-        {selected ? <StatusBadge status={selected.status} /> : null}
+        {selected ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={selected.status} />
+            {EDITABLE_STATUSES.has(selected.status) ? (
+              <Button
+                variant="outline"
+                size="dense"
+                className="w-auto"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+                Edit
+              </Button>
+            ) : null}
+            {DELETABLE_STATUSES.has(selected.status) ? (
+              <Button
+                variant="outline"
+                size="dense"
+                className="w-auto text-nv-danger hover:bg-nv-danger/10"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Delete
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </ElectionPickerSection>
 
       {selected ? (
@@ -172,6 +222,28 @@ function ElectionBody() {
           <LifecycleSection status={selected.status} />
           <BallotSection row={selected} ballot={ballot} />
           <ShareLinkSection row={selected} />
+          {editOpen ? (
+            <EditElectionDialog
+              row={selected}
+              onClose={() => setEditOpen(false)}
+              onSaved={() => {
+                setEditOpen(false);
+                list.reload();
+                overview.reload();
+              }}
+            />
+          ) : null}
+          {deleteOpen ? (
+            <DeleteElectionDialog
+              row={selected}
+              onClose={() => setDeleteOpen(false)}
+              onDeleted={() => {
+                setDeleteOpen(false);
+                select("");
+                list.reload();
+              }}
+            />
+          ) : null}
         </>
       ) : (
         <EmptyState
@@ -425,5 +497,323 @@ function ShareLinkSection({ row }: { row: ManagedElection }) {
         </LinkButton>
       </div>
     </Section>
+  );
+}
+
+type AdminElectionDetail = {
+  id: number;
+  title: string;
+  description: string;
+  rules_text: string;
+  voter_id_method: string;
+  voter_id_label: string;
+  capacity_mode: string;
+  max_voters: number | null;
+  timezone: string | null;
+  voting_start_at: string | null;
+  voting_end_at: string | null;
+};
+
+type DetailPayload = { election: AdminElectionDetail };
+
+function EditElectionDialog({
+  row,
+  onClose,
+  onSaved,
+}: {
+  row: ManagedElection;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { token } = useApp();
+  const { toast } = useToast();
+  const detail = useResource<DetailPayload>(
+    (authToken) => apiFetch<DetailPayload>(authToken, `/api/officer/elections/${row.id}`),
+    [row.id],
+  );
+
+  const [title, setTitle] = useState(row.title);
+  const [description, setDescription] = useState("");
+  const [rules, setRules] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("09:00");
+  const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("17:00");
+  const [voterIdMethod, setVoterIdMethod] = useState("account");
+  const [voterIdLabel, setVoterIdLabel] = useState("");
+  const [capacityMode, setCapacityMode] = useState<"open" | "restricted">("restricted");
+  const [maxVoters, setMaxVoters] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (!detail.data || hydrated) return;
+    const election = detail.data.election;
+    const start = splitDateTimeParts(election.voting_start_at ?? row.voting_start_at);
+    const end = splitDateTimeParts(election.voting_end_at ?? row.voting_end_at);
+    setTitle(election.title);
+    setDescription(election.description ?? "");
+    setRules(election.rules_text ?? "");
+    setStartDate(start.date);
+    setStartTime(start.time);
+    setEndDate(end.date);
+    setEndTime(end.time);
+    setVoterIdMethod(election.voter_id_method || "account");
+    setVoterIdLabel(election.voter_id_label ?? "");
+    setCapacityMode(election.capacity_mode === "open" ? "open" : "restricted");
+    setMaxVoters(election.max_voters != null ? String(election.max_voters) : "");
+    setHydrated(true);
+  }, [detail.data, hydrated, row.voting_start_at, row.voting_end_at]);
+
+  async function save(): Promise<void> {
+    if (saving) return;
+    const errors: Record<string, string[]> = {};
+    if (!title.trim()) errors.title = ["Title is required."];
+    if (!startDate || !startTime || !endDate || !endTime) {
+      errors.voting_start_at = ["Start and end date with time are required."];
+    } else {
+      const vs = new Date(`${startDate}T${startTime}`);
+      const ve = new Date(`${endDate}T${endTime}`);
+      if (Number.isNaN(vs.getTime()) || Number.isNaN(ve.getTime())) {
+        errors.voting_end_at = ["Enter a valid date and time."];
+      } else if (ve <= vs) {
+        errors.voting_end_at = ["End must be after start."];
+      }
+    }
+    if (voterIdMethod === "custom" && !voterIdLabel.trim()) {
+      errors.voter_id_label = ["A label is required for a custom identifier."];
+    }
+    if (capacityMode === "restricted" && maxVoters.trim()) {
+      const cap = Number(maxVoters);
+      if (!Number.isInteger(cap) || cap < 1) {
+        errors.max_voters = ["Maximum voters must be a whole number of at least 1."];
+      }
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      setFormErrors(["Please fix the highlighted fields below."]);
+      return;
+    }
+
+    setSaving(true);
+    setFormErrors([]);
+    try {
+      await apiFetch(token, `/api/officer/elections/${row.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          voting_start_at: new Date(`${startDate}T${startTime}`).toISOString(),
+          voting_end_at: new Date(`${endDate}T${endTime}`).toISOString(),
+          rules_text: rules.trim(),
+          voter_id_method: voterIdMethod,
+          voter_id_label: voterIdMethod === "custom" ? voterIdLabel.trim() : "",
+          capacity_mode: capacityMode,
+          max_voters:
+            capacityMode === "restricted" && maxVoters.trim() ? Number(maxVoters) : null,
+        }),
+      });
+      toast({ title: "Election updated", tone: "success" });
+      onSaved();
+    } catch (error) {
+      const split = splitError(error);
+      setFormErrors(split.form.length ? split.form : [split.message]);
+      setFieldErrors(split.fields);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title="Edit election"
+      description="Change the title, voting window, rules and voter settings for this election."
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={saving} className="sm:w-auto">
+            Cancel
+          </Button>
+          <Button onClick={() => void save()} disabled={saving || (detail.loading && !hydrated)} className="sm:w-auto">
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </>
+      }
+    >
+      <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+        <FormAlert messages={formErrors} />
+        {detail.loading && !hydrated ? <Skeleton className="h-64 w-full" /> : null}
+        {detail.error && !hydrated ? <ErrorBanner message={detail.error} onRetry={detail.reload} /> : null}
+        {hydrated ? (
+          <>
+            <Input
+              label="Title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              maxLength={200}
+              required
+              invalid={Boolean(firstError(fieldErrors, "title"))}
+              error={firstError(fieldErrors, "title")}
+            />
+            <Textarea
+              label="Description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              maxLength={2000}
+              invalid={Boolean(firstError(fieldErrors, "description"))}
+              error={firstError(fieldErrors, "description")}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Starts (date)"
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                required
+                invalid={Boolean(firstError(fieldErrors, "voting_start_at"))}
+                error={firstError(fieldErrors, "voting_start_at")}
+              />
+              <TimeSelect
+                label="Starts (time · 24h)"
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+                required
+              />
+              <Input
+                label="Ends (date)"
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+                required
+                invalid={Boolean(firstError(fieldErrors, "voting_end_at"))}
+                error={firstError(fieldErrors, "voting_end_at")}
+              />
+              <TimeSelect
+                label="Ends (time · 24h)"
+                value={endTime}
+                onChange={(event) => setEndTime(event.target.value)}
+                required
+              />
+            </div>
+            <Textarea
+              label="Who may vote"
+              value={rules}
+              onChange={(event) => setRules(event.target.value)}
+              maxLength={4000}
+            />
+            <Select
+              label="Voters identify with"
+              value={voterIdMethod}
+              onChange={(event) => setVoterIdMethod(event.target.value)}
+              options={[
+                { value: "account", label: "Platform account" },
+                { value: "email", label: "Email address" },
+                { value: "phone", label: "Phone number" },
+                { value: "membership", label: "Membership number" },
+                { value: "employee", label: "Employee ID" },
+                { value: "student_id", label: "Student ID" },
+                { value: "custom", label: "Custom identifier" },
+              ]}
+            />
+            {voterIdMethod === "custom" ? (
+              <Input
+                label="Custom identifier label"
+                value={voterIdLabel}
+                onChange={(event) => setVoterIdLabel(event.target.value)}
+                maxLength={120}
+                required
+                invalid={Boolean(firstError(fieldErrors, "voter_id_label"))}
+                error={firstError(fieldErrors, "voter_id_label")}
+              />
+            ) : null}
+            <Select
+              label="Capacity"
+              value={capacityMode}
+              onChange={(event) =>
+                setCapacityMode(event.target.value === "open" ? "open" : "restricted")
+              }
+              options={[
+                { value: "restricted", label: "Limited — capped voter list" },
+                { value: "open", label: "Unlimited · public" },
+              ]}
+            />
+            {capacityMode === "restricted" ? (
+              <Input
+                label="Maximum voters (optional)"
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={maxVoters}
+                onChange={(event) => setMaxVoters(event.target.value)}
+                placeholder="Leave empty for no fixed cap"
+                invalid={Boolean(firstError(fieldErrors, "max_voters"))}
+                error={firstError(fieldErrors, "max_voters")}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </div>
+    </Dialog>
+  );
+}
+
+function DeleteElectionDialog({
+  row,
+  onClose,
+  onDeleted,
+}: {
+  row: ManagedElection;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const { token } = useApp();
+  const { toast } = useToast();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+
+  async function confirm(): Promise<void> {
+    if (pending) return;
+    setPending(true);
+    setError("");
+    try {
+      await apiFetch(token, `/api/officer/elections/${row.id}`, { method: "DELETE" });
+      toast({ title: `"${row.title}" deleted`, tone: "success" });
+      onDeleted();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The election could not be deleted.");
+      setPending(false);
+    }
+  }
+
+  return (
+    <AlertDialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !pending) onClose();
+      }}
+      title={`Delete "${row.title}"?`}
+      description="This removes the election, its ballot, candidates and campaigns. It cannot be undone."
+      confirmLabel={pending ? "Deleting…" : "Delete election"}
+      tone="destructive"
+      loading={pending}
+      onConfirm={() => void confirm()}
+    >
+      {row.counts.votes > 0 ? (
+        <p className="mb-2 text-[13px] font-semibold text-nv-danger">
+          This election has {row.counts.votes} recorded ballot{row.counts.votes === 1 ? "" : "s"}.
+          Elections with votes cannot be deleted — ask an administrator to archive it instead.
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-[13px] font-medium text-nv-danger">
+          {error}
+        </p>
+      ) : null}
+    </AlertDialog>
   );
 }
