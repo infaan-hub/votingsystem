@@ -6,6 +6,7 @@ import { serializeElectionList } from "@/src/lib/serializers";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Tile, type TileData } from "@/src/components/ui/tile";
+import { PageHero } from "@/src/components/page-hero";
 import { FirstVisitOnboarding } from "@/src/components/first-visit";
 import tenant, { t } from "@/config/tenant";
 import { cn } from "@/src/lib/utils";
@@ -51,26 +52,27 @@ export default async function HomePage() {
     <div className="space-y-6">
       <FirstVisitOnboarding />
       {/* ---------------- Hero ---------------- */}
-      <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg border border-nv-line px-6 py-12 text-center shadow-nv-card sm:py-16">
-        <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-nv-primary" />
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-5">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-nv-primary text-white shadow-float">
+      <PageHero
+        avatar={
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/20 text-white shadow-float">
             <Vote className="h-8 w-8" aria-hidden="true" />
           </span>
-          <h1 className="text-display text-nv-ink">{t.name}</h1>
-          <p className="max-w-lg text-[15.5px] leading-relaxed text-nv-muted">
-            {tenant.tagline}
-          </p>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Button asChild>
+        }
+        title={t.name}
+        description={tenant.tagline}
+        align="center"
+        actions={
+          <>
+            <Button asChild variant="hero" className="sm:w-auto">
               <Link href="/elections">Browse elections</Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="heroGhost" className="sm:w-auto">
               <Link href="/results">View results</Link>
             </Button>
-          </div>
-        </div>
-      </section>
+          </>
+        }
+        className="-mt-6"
+      />
 
       {!election ? (
         <Card>

@@ -10,7 +10,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
-import { PageHeader } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Select } from "@/src/components/ui/select";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -64,13 +64,10 @@ const OWN_STATUS_API =
 export default function AdminUsersPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Users"
         description="Search student, staff and officer accounts, change roles, activate or deactivate accounts, and delete them permanently."
-        breadcrumbs={[
-          { label: "Administration", href: "/admin/dashboard" },
-          { label: "Users" },
-        ]}
       />
       <RequireRole role="admin">
         <UsersBody />

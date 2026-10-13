@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
-import { BackButton } from "@/src/components/back-button";
 import { ResultsBars, type ResultDatum } from "@/src/components/results-bars";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Avatar } from "@/src/components/ui/avatar";
@@ -22,6 +21,7 @@ import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
@@ -357,69 +357,84 @@ function ElectionDetailContent() {
 
   return (
     <div className="space-y-8 pb-24 lg:pb-8">
-      <BackButton label="Back to elections" fallback="/elections" />
-
-      <header className="space-y-4">
-        <div className="relative h-44 w-full overflow-hidden rounded-nv-md sm:h-56">
-          {election.image_url ? (
-            <img
-              src={election.image_url}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="nv-grad-candidate nv-dots h-full w-full text-nv-navy" aria-hidden="true" />
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge status={detail.lifecycle_status} />
-          {categoryName ? <Badge variant="secondary">{categoryName}</Badge> : null}
-          <Badge variant="outline">
-            <Lock className="h-3 w-3" aria-hidden="true" />
-            {detail.visibility === "private" ? "Private" : "Open access"}
-          </Badge>
-        </div>
-
-        <h1 className="text-display text-nv-ink">{election.title}</h1>
-
-        {votingOpen && election.voting_end_at ? (
-          <Countdown target={election.voting_end_at} prefix="Voting closes in" />
-        ) : election.status === "upcoming" ? (
-          <div className="flex flex-wrap gap-x-6 gap-y-1">
-            {campaignLive && election.campaign_end_at ? (
-              <Countdown target={election.campaign_end_at} prefix="Campaign closes in" />
-            ) : null}
-            {election.voting_start_at ? (
-              <Countdown target={election.voting_start_at} prefix="Voting opens in" />
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2">
-          {votingOpen ? (
-            <LinkButton href={`/vote/${election.slug}`}>
+      <PageHero
+        backHref="/elections"
+        backLabel="Back to elections"
+        title={election.title}
+        className="-mt-6"
+        badges={
+          <>
+            <StatusBadge status={detail.lifecycle_status} />
+            {categoryName ? <Badge variant="hero">{categoryName}</Badge> : null}
+            <Badge variant="hero">
+              <Lock className="h-3 w-3" aria-hidden="true" />
+              {detail.visibility === "private" ? "Private" : "Open access"}
+            </Badge>
+          </>
+        }
+        actions={
+          votingOpen ? (
+            <LinkButton href={`/vote/${election.slug}`} variant="hero" className="sm:w-auto">
               <Vote className="h-4 w-4" aria-hidden="true" />
               Cast your vote
             </LinkButton>
           ) : (
-            <Button disabled className="sm:w-auto">
-              <Vote className="h-4 w-4" aria-hidden="true" />
-              {election.status === "upcoming" ? "Voting has not opened yet" : "Voting is closed"}
-            </Button>
-          )}
-          {!votingOpen && election.status === "upcoming" ? (
-            <p className="text-[13px] text-nv-muted">
-              The ballot opens {formatDate(election.voting_start_at)}.
-            </p>
-          ) : null}
-          {!votingOpen && election.status === "ended" ? (
-            <p className="text-[13px] text-nv-muted">
-              Voting closed {formatDate(election.voting_end_at)}.
-            </p>
-          ) : null}
-        </div>
-      </header>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button disabled variant="hero" className="sm:w-auto">
+                <Vote className="h-4 w-4" aria-hidden="true" />
+                {election.status === "upcoming" ? "Voting has not opened yet" : "Voting is closed"}
+              </Button>
+              {election.status === "upcoming" && election.voting_start_at ? (
+                <p className="text-[13px] text-white/85">
+                  The ballot opens {formatDate(election.voting_start_at)}.
+                </p>
+              ) : null}
+              {election.status === "ended" && election.voting_end_at ? (
+                <p className="text-[13px] text-white/85">
+                  Voting closed {formatDate(election.voting_end_at)}.
+                </p>
+              ) : null}
+            </div>
+          )
+        }
+      >
+        {votingOpen && election.voting_end_at ? (
+          <Countdown
+            target={election.voting_end_at}
+            prefix="Voting closes in"
+            className="mt-4 text-white/85 [&>span]:text-white"
+          />
+        ) : election.status === "upcoming" ? (
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1">
+            {campaignLive && election.campaign_end_at ? (
+              <Countdown
+                target={election.campaign_end_at}
+                prefix="Campaign closes in"
+                className="text-white/85 [&>span]:text-white"
+              />
+            ) : null}
+            {election.voting_start_at ? (
+              <Countdown
+                target={election.voting_start_at}
+                prefix="Voting opens in"
+                className="text-white/85 [&>span]:text-white"
+              />
+            ) : null}
+          </div>
+        ) : null}
+      </PageHero>
+
+      <div className="relative h-44 w-full overflow-hidden rounded-nv-md sm:h-56">
+        {election.image_url ? (
+          <img
+            src={election.image_url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="nv-grad-candidate nv-dots h-full w-full text-nv-navy" aria-hidden="true" />
+        )}
+      </div>
 
       <Section title="About this election">
         {election.description ? (

@@ -15,7 +15,8 @@ import { RequireRole } from "@/src/components/require-role";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Progress } from "@/src/components/ui/progress";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -81,20 +82,17 @@ const ATTENTION_STATUSES = new Set(["PENDING", "UNDER_REVIEW"]);
 export default function AdminDashboardPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Platform dashboard"
         description="Everything that needs an administrator today: open requests, election lifecycle, recent activity and platform totals."
-        breadcrumbs={[
-          { label: "Administration", href: "/admin/dashboard" },
-          { label: "Dashboard" },
-        ]}
         actions={
           <>
-            <LinkButton href="/admin/election-requests" variant="primary" className="w-auto">
+            <LinkButton href="/admin/election-requests" variant="hero" className="w-auto">
               <Inbox className="h-4 w-4" aria-hidden="true" />
               Review requests
             </LinkButton>
-            <LinkButton href="/admin/elections" variant="outline" className="w-auto">
+            <LinkButton href="/admin/elections" variant="heroGhost" className="w-auto">
               <Vote className="h-4 w-4" aria-hidden="true" />
               Elections
             </LinkButton>

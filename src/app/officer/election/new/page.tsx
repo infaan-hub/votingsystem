@@ -7,7 +7,8 @@ import { Plus, Trash2 } from "lucide-react";
 import { RequireRole } from "@/src/components/require-role";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Select } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
@@ -204,16 +205,12 @@ export default function OfficerNewElectionPage() {
 
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Officer dashboard"
         title="Add election"
         description="Create a new election with its schedule, voting rules and full candidate slate."
-        breadcrumbs={[
-          { label: "Officer dashboard", href: "/officer/dashboard" },
-          { label: "Elections", href: "/officer/election" },
-          { label: "Add election" },
-        ]}
         actions={
-          <LinkButton href="/officer/election" variant="outline" className="w-auto">
+          <LinkButton href="/officer/election" variant="heroGhost" className="w-auto">
             Cancel
           </LinkButton>
         }

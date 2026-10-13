@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 
 import { prisma } from "@/src/lib/db";
-import { BackButton } from "@/src/components/back-button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ElectionCard } from "@/src/components/election-card";
+import { PageHero } from "@/src/components/page-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -28,21 +28,20 @@ export default async function CategoryDetailPage({
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-nav lg:pb-0">
-      <BackButton label="Back to categories" fallback="/categories" />
-
-      <header className="mt-4 mb-8 max-w-2xl">
-        <p className="text-4xl" aria-hidden="true">
-          {category.icon || "📋"}
-        </p>
-        <h1 className="mt-2 text-display text-fluid-3xl">{category.name}</h1>
-        {category.description ? (
-          <p className="mt-2 text-muted-foreground">{category.description}</p>
-        ) : null}
-        <p className="nums-tabular mt-2 text-sm font-medium">
-          {elections.length} published election{elections.length === 1 ? "" : "s"}
-        </p>
-      </header>
+    <div className="mx-auto max-w-7xl pb-nav lg:pb-0">
+      <PageHero
+        backHref="/categories"
+        backLabel="Back to categories"
+        avatar={
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/20 text-2xl" aria-hidden="true">
+            {category.icon || "📋"}
+          </span>
+        }
+        title={category.name}
+        description={category.description || undefined}
+        meta={`${elections.length} published election${elections.length === 1 ? "" : "s"}`}
+        className="-mt-6"
+      />
 
       {elections.length === 0 ? (
         <Card>

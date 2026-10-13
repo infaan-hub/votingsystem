@@ -7,7 +7,7 @@ import { PieChart, RotateCw, Trophy } from "lucide-react";
 import { ResultsBars, type ResultDatum } from "@/src/components/results-bars";
 import { Button } from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { PageHeader } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
@@ -136,9 +136,10 @@ export default function ResultsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title="Results"
         description="Final results from elections whose voting window has closed. Each entry links back to the election page for full details."
+        className="-mt-6"
       />
 
       {error ? (

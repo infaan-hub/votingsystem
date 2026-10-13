@@ -5,11 +5,10 @@ import Link from "next/link";
 import { CalendarDays, RotateCw, Vote } from "lucide-react";
 
 import { StatusBadge } from "@/src/components/status-badge";
-import { BackButton } from "@/src/components/back-button";
 import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { PageHeader } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { SearchInput } from "@/src/components/ui/filters";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -148,10 +147,11 @@ export default function ElectionHubPage() {
 
   return (
     <div className="space-y-6">
-      <BackButton fallback="/elections" />
-      <PageHeader
+      <PageHero
         title="Elections"
         description="Every published election you can take part in — open now, starting soon, or recently closed."
+        backHref="/elections"
+        className="-mt-6"
       />
 
       <SearchInput

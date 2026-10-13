@@ -10,7 +10,8 @@ import { Button } from "@/src/components/ui/button";
 import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Select } from "@/src/components/ui/select";
 import { Section, KeyValueList } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -84,19 +85,16 @@ type BallotPayload = {
 export default function OfficerElectionPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Officer dashboard"
         title="Run my election"
         description="Overview, lifecycle, ballot and share link for one of the elections you administer."
-        breadcrumbs={[
-          { label: "Officer dashboard", href: "/officer/dashboard" },
-          { label: "Election" },
-        ]}
         actions={
           <>
-            <LinkButton href="/officer/election/new" className="w-auto">
+            <LinkButton href="/officer/election/new" variant="hero" className="w-auto">
               Add election
             </LinkButton>
-            <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+            <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
               All elections
             </LinkButton>
           </>

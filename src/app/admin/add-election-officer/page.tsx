@@ -9,7 +9,8 @@ import { Button } from "@/src/components/ui/button";
 import { AlertDialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { RadioGroup } from "@/src/components/ui/radio-group";
 import { Section } from "@/src/components/ui/section";
 import { Select } from "@/src/components/ui/select";
@@ -81,15 +82,12 @@ const SCOPE_OPTIONS = [
 export default function AddElectionOfficerPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Election officers"
         description="Grant officer access, or create a fresh officer account with an invitation-only password. Officers also manage any election they created themselves."
-        breadcrumbs={[
-          { label: "Administration", href: "/admin/dashboard" },
-          { label: "Election officers" },
-        ]}
         actions={
-          <LinkButton href="/admin/users" variant="outline" className="w-auto">
+          <LinkButton href="/admin/users" variant="heroGhost" className="w-auto">
             View users
           </LinkButton>
         }

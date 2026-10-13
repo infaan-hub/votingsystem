@@ -10,7 +10,8 @@ import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
@@ -165,7 +166,7 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title={`Welcome back, ${user?.full_name ?? user?.username ?? "voter"}`}
         description="Everything you can vote in right now, what opens next, and the status of your requests."
       />

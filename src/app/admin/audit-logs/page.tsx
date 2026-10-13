@@ -9,7 +9,7 @@ import { Button } from "@/src/components/ui/button";
 import { Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
-import { PageHeader } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Pagination } from "@/src/components/ui/pagination";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -52,13 +52,10 @@ const ENTITY_OPTIONS = [
 export default function AdminAuditLogsPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Audit logs"
         description="Append-only record of administrative actions. Entries are written by server code alone, so this screen is read-only."
-        breadcrumbs={[
-          { label: "Administration", href: "/admin/dashboard" },
-          { label: "Audit logs" },
-        ]}
       />
       <RequireRole role="admin">
         <AuditBody />

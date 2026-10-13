@@ -11,7 +11,8 @@ import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
 import { Input } from "@/src/components/ui/input";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Textarea } from "@/src/components/ui/textarea";
@@ -112,15 +113,12 @@ const STATUS_OPTIONS = [
 export default function AdminElectionsPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Elections"
         description="Inspect every election, review its lifecycle detail, and move it through the legal status transitions."
-        breadcrumbs={[
-          { label: "Administration", href: "/admin/dashboard" },
-          { label: "Elections" },
-        ]}
         actions={
-          <LinkButton href="/admin/results" variant="outline" className="w-auto">
+          <LinkButton href="/admin/results" variant="heroGhost" className="w-auto">
             View results
           </LinkButton>
         }

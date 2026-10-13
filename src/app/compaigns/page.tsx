@@ -11,7 +11,8 @@ import { Button } from "@/src/components/ui/button";
 import { Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, SearchInput } from "@/src/components/ui/filters";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
 type Campaign = {
@@ -104,9 +105,10 @@ function CampaignsContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title="Campaigns"
         description="Manifestos and campaign videos candidates publish before their election opens for voting."
+        className="-mt-6"
       />
 
       <div className="flex flex-wrap items-center gap-2">

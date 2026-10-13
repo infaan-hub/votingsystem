@@ -13,7 +13,8 @@ import { Countdown } from "@/src/components/ui/countdown";
 import { AlertDialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Progress } from "@/src/components/ui/progress";
 import { RadioGroup } from "@/src/components/ui/radio-group";
 import { KeyValueList, Section } from "@/src/components/ui/section";
@@ -126,15 +127,12 @@ function shortKey(value: string): string {
 export default function OfficerManagementPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Officer dashboard"
         title="Election management"
         description="Full details of one election you administer: schedule, rules, ballot, eligible voters, capacity and a shareable voter link."
-        breadcrumbs={[
-          { label: "Officer dashboard", href: "/officer/dashboard" },
-          { label: "Management" },
-        ]}
         actions={
-          <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+          <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
             All elections
           </LinkButton>
         }

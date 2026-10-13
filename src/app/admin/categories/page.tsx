@@ -11,6 +11,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { PageHero } from "@/src/components/page-hero";
 import { cn } from "@/src/lib/utils";
 
 type Category = {
@@ -122,17 +123,13 @@ export default function AdminCategoriesPage() {
   const cell = density === "compact" ? "py-1.5" : "py-3";
 
   return (
-    <div className="mx-auto max-w-4xl px-4 pb-nav lg:pb-0">
-      <header className="mb-7">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Administration
-        </p>
-        <h1 className="mt-1 text-display text-fluid-3xl">Categories</h1>
-        <p className="mt-2 max-w-prose text-muted-foreground">
-          Categories define the rules an election follows. Nine ship with the
-          platform; you can add your own and reuse them across elections.
-        </p>
-      </header>
+    <div className="mx-auto max-w-4xl pb-nav lg:pb-0">
+      <PageHero
+        eyebrow="Administration"
+        title="Categories"
+        description="Categories define the rules an election follows. Nine ship with the platform; you can add your own and reuse them across elections."
+        className="-mt-6"
+      />
 
       {/* ---------------- Create ---------------- */}
       <Card className="mb-8">

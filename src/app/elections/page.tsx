@@ -9,7 +9,7 @@ import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FiltersToolbar, FilterSelect, SearchInput } from "@/src/components/ui/filters";
-import { PageHeader } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
 type PublicElection = {
@@ -125,9 +125,10 @@ export default function ElectionsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title="Elections"
         description="Published elections you can take part in — filter by status or category, or search by title."
+        className="-mt-6"
       />
 
       <FiltersToolbar

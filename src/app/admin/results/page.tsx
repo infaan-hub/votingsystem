@@ -10,7 +10,8 @@ import { AlertDialog } from "@/src/components/ui/dialog";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Select } from "@/src/components/ui/select";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -95,12 +96,12 @@ const ACTION_COPY: Record<ResultAction, { label: string; hint: string; tone: "de
 export default function AdminResultsPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Results"
         description="Turnout, per-position rankings and published winners for any election, plus the admin controls to finalize, publish or unpublish a tally."
-        breadcrumbs={[{ label: "Administration", href: "/admin/dashboard" }, { label: "Results" }]}
         actions={
-          <LinkButton href="/elections" variant="outline" className="w-auto">
+          <LinkButton href="/elections" variant="heroGhost" className="w-auto">
             Public elections
           </LinkButton>
         }

@@ -9,7 +9,9 @@ import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
+import { Badge } from "@/src/components/ui/badge";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
@@ -27,19 +29,19 @@ export default function OfficerDashboardPage() {
 
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Officer dashboard"
         title={user ? `Welcome, ${user.full_name}` : "Officer dashboard"}
         description="Your managed elections at a glance: lifecycle status, ballot counts, published campaigns and direct links into each workspace."
-        breadcrumbs={[{ label: "Officer dashboard" }]}
         actions={
           <>
-            <LinkButton href="/officer/election/new" className="w-auto">
+            <LinkButton href="/officer/election/new" variant="hero" className="w-auto">
               Add election
             </LinkButton>
-            <span className="inline-flex items-center gap-2 rounded-full border border-nv-line bg-nv-primary-100 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.6px] text-nv-primary">
+            <Badge variant="hero" className="gap-1.5 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.6px]">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Election officer
-            </span>
+            </Badge>
           </>
         }
       />

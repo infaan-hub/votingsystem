@@ -4,10 +4,11 @@ import { MapPin, ThumbsDown, ThumbsUp } from "lucide-react";
 
 import { prisma } from "@/src/lib/db";
 import { candidatePhotoPath } from "@/src/lib/page-helpers";
-import { BackButton } from "@/src/components/back-button";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
+import { Badge } from "@/src/components/ui/badge";
 import { Tabs } from "@/src/components/ui/tabs";
+import { PageHero } from "@/src/components/page-hero";
 import { FavouriteShareButton } from "@/src/components/favourite-share-button";
 import { ResultsBars, type ResultDatum } from "@/src/components/results-bars";
 import { t } from "@/config/tenant";
@@ -87,14 +88,10 @@ export default async function CandidateDetailPage({
   return (
     <div className="space-y-5">
       {/* ---------------- Hero ---------------- */}
-      <section className="nv-grad-candidate relative -mx-4 -mt-4 overflow-hidden px-4 pb-8 pt-3 lg:mx-0 lg:rounded-nv-lg">
-        <div className="relative flex items-center justify-between">
-          <BackButton className="rounded-full bg-nv-navy/20 px-3 text-nv-navy hover:bg-nv-navy/30 hover:text-nv-navy" />
-          <FavouriteShareButton name={displayFullName(candidate.user)} />
-        </div>
-
-        <div className="relative mt-4 flex items-end gap-4">
-          <span className="grid h-28 w-24 shrink-0 place-items-center overflow-hidden rounded-nv-md bg-nv-navy/20">
+      <PageHero
+        backHref="/"
+        avatar={
+          <span className="grid h-24 w-20 shrink-0 place-items-center overflow-hidden rounded-nv-md bg-white/20 text-2xl font-bold text-white">
             {photo ? (
               <img
                 src={photo}
@@ -104,23 +101,27 @@ export default async function CandidateDetailPage({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-3xl font-bold text-nv-navy/85">{initials}</span>
+              <span>{initials}</span>
             )}
           </span>
-          <div className="min-w-0 pb-1">
-            <h1 className="text-fluid-xl tracking-tight text-nv-navy">
-              {displayFullName(candidate.user)}
-            </h1>
-            <p className="mt-1 text-[13px] text-nv-navy/85">{candidate.position.name}</p>
-            {candidate.department ? (
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-nv-navy/20 px-2.5 py-1 text-[11px] font-semibold text-nv-navy">
-                <MapPin className="h-3 w-3" aria-hidden="true" />
-                {t.constituency}: {candidate.department.name}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </section>
+        }
+        title={displayFullName(candidate.user)}
+        meta={candidate.position.name}
+        className="-mt-6"
+        badges={
+          candidate.department ? (
+            <Badge variant="hero">
+              <MapPin className="h-3 w-3" aria-hidden="true" />
+              {t.constituency}: {candidate.department.name}
+            </Badge>
+          ) : null
+        }
+        actions={
+          <span className="inline-flex items-center gap-2 [&_button]:bg-white/20 [&_button]:text-white hover:[&_button]:bg-white/30 [&_span]:bg-white/20 [&_span]:text-white">
+            <FavouriteShareButton name={displayFullName(candidate.user)} />
+          </span>
+        }
+      />
 
       {/* ---------------- Tabs ---------------- */}
       <Tabs

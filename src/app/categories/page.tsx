@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/src/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { PageHero } from "@/src/components/page-hero";
 
 export const dynamic = "force-dynamic";
 
@@ -12,17 +13,13 @@ export default async function CategoriesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-nav lg:pb-0">
-      <header className="mb-8 max-w-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Categories
-        </p>
-        <h1 className="mt-1 text-display text-fluid-3xl">Election categories</h1>
-        <p className="mt-2 text-muted-foreground">
-          Categories define the rules an election follows. Nine are provided out
-          of the box; administrators can create their own.
-        </p>
-      </header>
+    <div className="mx-auto max-w-7xl pb-nav lg:pb-0">
+      <PageHero
+        eyebrow="Categories"
+        title="Election categories"
+        description="Categories define the rules an election follows. Nine are provided out of the box; administrators can create their own."
+        className="-mt-6"
+      />
 
       {categories.length === 0 ? (
         <Card>

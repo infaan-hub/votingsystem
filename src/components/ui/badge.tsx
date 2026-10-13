@@ -13,6 +13,8 @@ const badgeVariants = cva(
         outline: "text-foreground",
         success: "border-transparent bg-success text-success-foreground hover:bg-success/80",
         muted: "border-transparent bg-muted text-muted-foreground hover:bg-muted/80",
+        /** On a primary-gradient hero: translucent white chip. */
+        hero: "border-white/35 bg-white/20 text-white hover:bg-white/30",
       },
     },
     defaultVariants: {

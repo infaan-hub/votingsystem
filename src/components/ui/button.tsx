@@ -33,6 +33,11 @@ const buttonVariants = cva(
         /** Legacy alias for the pre-NexVote outline style. */
         outline:
           "border border-nv-primary/35 bg-white/80 text-nv-primary hover:bg-nv-primary hover:text-white active:bg-nv-primary-600",
+        /** On a primary-gradient hero: solid white with primary-coloured text. */
+        hero: "bg-white text-nv-primary shadow-[0_6px_18px_rgba(0,0,0,0.14)] hover:bg-white/92 active:bg-white/88",
+        /** On a primary-gradient hero: translucent outline that stays legible. */
+        heroGhost:
+          "border border-white/45 bg-white/12 text-white hover:bg-white/22 active:bg-white/28",
       },
       size: {
         default: "h-12 px-5",

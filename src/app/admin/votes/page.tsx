@@ -10,7 +10,8 @@ import { Button } from "@/src/components/ui/button";
 import { Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
@@ -67,12 +68,12 @@ const STATUS_OPTIONS = [
 export default function AdminVotesPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Votes"
         description="Aggregate ballot counts only. This report never shows who voted or how any individual voted, so secret ballots stay secret."
-        breadcrumbs={[{ label: "Administration", href: "/admin/dashboard" }, { label: "Votes" }]}
         actions={
-          <LinkButton href="/admin/results" variant="outline" className="w-auto">
+          <LinkButton href="/admin/results" variant="heroGhost" className="w-auto">
             View results
           </LinkButton>
         }

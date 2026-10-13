@@ -11,7 +11,8 @@ import { Button } from "@/src/components/ui/button";
 import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { RadioGroup } from "@/src/components/ui/radio-group";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -109,15 +110,12 @@ function fromLocalInput(value: string): string | null {
 export default function OfficerCampaignPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Officer dashboard"
         title="Campaigns"
         description="Publish short candidate stories, cover images and videos that appear on the campaign feed for your election."
-        breadcrumbs={[
-          { label: "Officer dashboard", href: "/officer/dashboard" },
-          { label: "Campaigns" },
-        ]}
         actions={
-          <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+          <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
             All elections
           </LinkButton>
         }

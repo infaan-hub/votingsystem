@@ -1,7 +1,7 @@
 import { FileText } from "lucide-react";
 
-import { BackButton } from "@/src/components/back-button";
 import { Card, CardContent } from "@/src/components/ui/card";
+import { PageHero } from "@/src/components/page-hero";
 import tenant from "@/config/tenant";
 
 export const metadata = {
@@ -10,20 +10,19 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="mx-auto max-w-2xl space-y-5 px-4 pb-nav lg:pb-10">
-      <BackButton fallback="/" />
-
-      <header className="flex items-center gap-3">
-        <span className="nv-grad-profile grid h-11 w-11 place-items-center rounded-xl text-white">
-          <FileText className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div>
-          <h1 className="text-[24px] font-extrabold leading-7 tracking-tight text-nv-ink">
-            Terms of use
-          </h1>
-          <p className="text-[12px] text-nv-muted">{tenant.authority.name}</p>
-        </div>
-      </header>
+    <div className="mx-auto max-w-2xl space-y-5 pb-nav lg:pb-10">
+      <PageHero
+        backHref="/"
+        avatar={
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/20 text-white">
+            <FileText className="h-5 w-5" aria-hidden="true" />
+          </span>
+        }
+        title="Terms of use"
+        meta={tenant.authority.name}
+        variant="compact"
+        className="-mt-6"
+      />
 
       <Card>
         <CardContent className="space-y-4 p-5">

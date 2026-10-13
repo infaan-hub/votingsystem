@@ -18,6 +18,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { useToast } from "@/src/components/ui/toast";
+import { PageHero } from "@/src/components/page-hero";
 import { initialsFor } from "@/src/lib/page-helpers";
 import tenant, { t } from "@/config/tenant";
 
@@ -111,20 +112,16 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-5">
-      {/* ---------------- Navy banner ---------------- */}
-      <section className="nv-grad-profile relative -mx-4 -mt-4 overflow-hidden rounded-b-[28px] px-4 pb-6 pt-6">
-        <div className="relative flex items-center gap-3.5">
+      {/* ---------------- Profile hero ---------------- */}
+      <PageHero
+        avatar={
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-white/20 text-xl font-bold text-white">
             {initialsFor(user.full_name || user.username)}
           </span>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[20px] font-extrabold text-white">
-              {user.full_name || user.username}
-            </h1>
-            <p className="nums-tabular truncate text-[13px] text-white/80">
-              {t.idLabel}: {user.username}
-            </p>
-          </div>
+        }
+        title={user.full_name || user.username}
+        meta={`${t.idLabel}: ${user.username}`}
+        actions={
           <button
             type="button"
             onClick={onEditRequest}
@@ -133,13 +130,12 @@ export default function ProfilePage() {
           >
             <Pencil className="h-5 w-5" aria-hidden="true" />
           </button>
-        </div>
-
-        <dl className="relative mt-5 grid grid-cols-2 gap-3">
-          <BannerStat term="Role" value={user.role} />
-          <BannerStat term="Sign-in" value={user.auth_provider} />
-        </dl>
-      </section>
+        }
+        stats={[
+          { label: "Role", value: user.role },
+          { label: "Sign-in", value: user.auth_provider },
+        ]}
+      />
 
       {/* ---------------- Constituency card ---------------- */}
       <Card>
@@ -270,17 +266,6 @@ export default function ProfilePage() {
           Sign out
         </Button>
       </section>
-    </div>
-  );
-}
-
-function BannerStat({ term, value }: { term: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-white/15 px-3 py-2">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.4px] text-white/75">
-        {term}
-      </dt>
-      <dd className="text-[13px] font-bold capitalize text-white">{value}</dd>
     </div>
   );
 }

@@ -9,7 +9,8 @@ import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Select } from "@/src/components/ui/select";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -94,13 +95,10 @@ const REASON_NEEDED = new Set(["REJECTED", "CHANGES_REQUESTED"]);
 export default function ElectionRequestsPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Administration"
         title="Election requests"
         description="Review requests for new elections, optionally assign an officer, and approve, reject or send each one back for changes."
-        breadcrumbs={[
-          { label: "Administration", href: "/admin/dashboard" },
-          { label: "Election requests" },
-        ]}
       />
       <RequireRole role="admin">
         <RequestsBody />

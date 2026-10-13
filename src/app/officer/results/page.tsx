@@ -9,7 +9,8 @@ import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
-import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
+import { LinkButton } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
@@ -92,15 +93,12 @@ const VISIBILITY_POLICIES: { key: string; label: string; detail: string }[] = [
 export default function OfficerResultsPage() {
   return (
     <>
-      <PageHeader
+      <PageHero
+        eyebrow="Officer dashboard"
         title="Results"
         description="Ballot totals, turnout, winners and per-position bars for one of your elections."
-        breadcrumbs={[
-          { label: "Officer dashboard", href: "/officer/dashboard" },
-          { label: "Results" },
-        ]}
         actions={
-          <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+          <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
             All elections
           </LinkButton>
         }

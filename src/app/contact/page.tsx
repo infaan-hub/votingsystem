@@ -4,10 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Clock, Mail, Send, ShieldCheck } from "lucide-react";
 
-import { BackButton } from "@/src/components/back-button";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { PageHeader } from "@/src/components/ui/page-header";
+import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Textarea } from "@/src/components/ui/textarea";
 import tenant from "@/config/tenant";
@@ -91,10 +90,11 @@ export default function ContactPage() {
 
   return (
     <div className="space-y-6">
-      <BackButton fallback="/" />
-      <PageHeader
+      <PageHero
         title="Contact support"
         description="Questions about an election, your account, or the platform? Send a message to the team running this service."
+        backHref="/"
+        className="-mt-6"
       />
 
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
