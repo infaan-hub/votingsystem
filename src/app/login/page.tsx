@@ -3,13 +3,14 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { KeyRound, Vote } from "lucide-react";
+import { KeyRound } from "lucide-react";
 
+import { AuthCard, AuthShell } from "@/src/components/auth-shell";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useApp } from "@/src/components/AppProvider";
 import { useToast } from "@/src/components/ui/toast";
-import tenant, { t } from "@/config/tenant";
+import { t } from "@/config/tenant";
 
 /** Sends each role to its own dashboard (or back to the guarded page). */
 function dashboardPathFor(role: string, next?: string | null): string {
@@ -48,12 +49,7 @@ function LoginForm() {
   }
 
   return (
-    <section className="sheet relative -mt-7 flex flex-col bg-nv-surface px-6 pb-8 pt-7 sm:mx-auto sm:mt-10 sm:max-w-md sm:rounded-nv-lg">
-      <span
-        aria-hidden="true"
-        className="absolute left-1/2 top-3 h-1.5 w-10 -translate-x-1/2 rounded-full bg-nv-line"
-      />
-
+    <AuthCard>
       <h2 className="text-fluid-xl tracking-tight text-nv-ink">Login</h2>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-5">
@@ -102,30 +98,16 @@ function LoginForm() {
       <Button asChild variant="outline" className="mt-3">
         <Link href="/register">Register</Link>
       </Button>
-    </section>
+    </AuthCard>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="app-shell flex min-h-dvh flex-col bg-nv-bg">
-      {/* ---------------- Hero ---------------- */}
-      <section className="nv-grad-hero relative flex min-h-[40dvh] flex-1 flex-col items-center justify-center px-6 pt-10 text-center">
-        <span className="grid h-20 w-20 place-items-center rounded-2xl bg-nv-primary text-white shadow-float">
-          <Vote className="h-10 w-10" aria-hidden="true" />
-        </span>
-        <h1 className="relative mt-5 text-[34px] font-extrabold leading-[38px] tracking-tight text-nv-ink">
-          {t.name}
-        </h1>
-        <p className="relative mt-2 max-w-[20rem] text-[14px] leading-5 text-nv-muted">
-          {tenant.tagline}
-        </p>
-      </section>
-
-      {/* ---------------- Login sheet ---------------- */}
+    <AuthShell>
       <Suspense>
         <LoginForm />
       </Suspense>
-    </div>
+    </AuthShell>
   );
 }
