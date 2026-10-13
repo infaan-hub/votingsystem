@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { Avatar } from "@/src/components/ui/avatar";
 import { cn } from "@/src/lib/utils";
 import type { NavGroup } from "@/src/lib/nav";
 
@@ -31,6 +32,7 @@ export function Sidebar({
   collapsed = false,
   footer,
   roleBadge,
+  profile,
   onSignOut,
 }: {
   links?: SidebarLink[];
@@ -40,6 +42,8 @@ export function Sidebar({
   footer?: React.ReactNode;
   /** Small chip above the footer, e.g. "Administrator". */
   roleBadge?: React.ReactNode;
+  /** Signed-in user's picture + name, pinned at the top of the rail. */
+  profile?: { name: string; src: string | null };
   /** Renders a Sign out control pinned under the nav (desktop rail). */
   onSignOut?: () => void;
 }) {
@@ -56,6 +60,27 @@ export function Sidebar({
         collapsed ? "w-[72px]" : "w-60",
       )}
     >
+      {profile ? (
+        <div className="shrink-0 border-b border-sidebar-border p-2 lg:p-3">
+          <Link
+            href="/profile"
+            title={profile.name}
+            className={cn(
+              "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
+              "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary",
+              collapsed && "justify-center px-0",
+            )}
+          >
+            <Avatar src={profile.src ?? undefined} name={profile.name} size={32} />
+            <span
+              className={cn("truncate text-[13px] font-semibold", collapsed && "hidden")}
+            >
+              {profile.name}
+            </span>
+          </Link>
+        </div>
+      ) : null}
       <nav className="min-h-0 flex-1 overflow-y-auto p-2 lg:p-3">
         {groups ? (
           <div className="flex flex-col gap-4">

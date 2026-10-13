@@ -60,6 +60,11 @@ export function serializeUserSummary(user: UserWithRelations) {
     registration_number: user.registrationNumber,
     staff_id: user.staffId,
     auth_provider: user.authProvider,
+    // `?v=` is the byte length so a replaced photo busts browser caches.
+    photo_url:
+      user.photoBytes && user.photoBytes.length
+        ? `/api/users/${user.id}/photo/?v=${user.photoBytes.length}`
+        : null,
   };
 }
 

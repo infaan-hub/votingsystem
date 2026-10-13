@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Vote } from "lucide-react";
 
+import { Avatar } from "@/src/components/ui/avatar";
 import { cn } from "@/src/lib/utils";
 import type { NavItem } from "@/src/lib/nav";
 
@@ -44,10 +45,19 @@ export function BottomNav({ items }: { items?: BottomNavItem[] }) {
                   active ? "text-nv-primary" : "text-nv-muted",
                 )}
               >
-                <Icon
-                  className={cn("h-[22px] w-[22px]", active && "stroke-[2.5]")}
-                  aria-hidden="true"
-                />
+                {item.avatarSrc ? (
+                  <Avatar
+                    src={item.avatarSrc}
+                    name={item.label}
+                    size={22}
+                    className={cn(active && "ring-2 ring-nv-primary")}
+                  />
+                ) : (
+                  <Icon
+                    className={cn("h-[22px] w-[22px]", active && "stroke-[2.5]")}
+                    aria-hidden="true"
+                  />
+                )}
                 <span className={cn("text-[10px] leading-none", active && "font-bold")}>
                   {item.label}
                 </span>

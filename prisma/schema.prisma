@@ -115,7 +115,12 @@ model User {
   staffId            String    @default("")
   phoneNumber        String    @default("")
   googleId           String?   @unique
-  authProvider       String    @default("local")
+  authProvider       String   @default("local")
+  /// Profile picture stored as bytes, like Candidate.photo and Election.image.
+  photo              String?
+  photoBytes         Bytes?
+  photoContentType   String    @default("")
+  photoFilename      String    @default("")
 
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)

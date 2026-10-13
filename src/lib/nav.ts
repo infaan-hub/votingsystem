@@ -22,6 +22,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** Exact-match highlighting (used for `/`). */
   exact?: boolean;
+  /** When set, the bottom nav renders this image instead of the icon. */
+  avatarSrc?: string;
 };
 
 export type NavGroup = {

@@ -1,25 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bookmark,
+  Camera,
   ChevronRight,
   LogOut,
   MessageSquare,
   Pencil,
   Shield,
   Vote,
+  X,
 } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { Avatar } from "@/src/components/ui/avatar";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { useToast } from "@/src/components/ui/toast";
 import { PageHero } from "@/src/components/page-hero";
-import { initialsFor } from "@/src/lib/page-helpers";
 import tenant, { t } from "@/config/tenant";
 
 const FAVOURITES_KEY = "nexvote-favourites";
@@ -36,10 +38,12 @@ function readFavourites(): number[] {
 }
 
 export default function ProfilePage() {
-  const { user, token, handleLogout } = useApp();
+  const { user, token, handleLogout, refreshUser } = useApp();
   const { toast } = useToast();
   const [favourites, setFavourites] = useState<number[]>([]);
   const [votesCast, setVotesCast] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFavourites(readFavourites());
@@ -90,6 +94,59 @@ export default function ProfilePage() {
     });
   }
 
+  async function onPhotoSelected(file: File) {
+    if (!token) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("photo", file);
+      const response = await fetch("/api/users/me/photo/", {
+        method: "PUT",
+        headers: { Authorization: `Token ${token}` },
+        body: form,
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          photo?: string[];
+          detail?: string;
+        } | null;
+        throw new Error(data?.photo?.[0] ?? data?.detail ?? "Upload failed.");
+      }
+      await refreshUser();
+      toast({ title: "Profile photo updated", tone: "success" });
+    } catch (error) {
+      toast({
+        title: "Could not upload photo",
+        description: error instanceof Error ? error.message : "Please try again.",
+        tone: "error",
+      });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function onRemovePhoto() {
+    if (!token || uploading) return;
+    setUploading(true);
+    try {
+      const response = await fetch("/api/users/me/photo/", {
+        method: "DELETE",
+        headers: { Authorization: `Token ${token}` },
+      });
+      if (!response.ok) throw new Error("Remove failed.");
+      await refreshUser();
+      toast({ title: "Profile photo removed", tone: "success" });
+    } catch {
+      toast({
+        title: "Could not remove photo",
+        description: "Please try again.",
+        tone: "error",
+      });
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (!user) {
     return (
       <Card>
@@ -112,11 +169,51 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-5">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) void onPhotoSelected(file);
+        }}
+      />
       {/* ---------------- Profile hero ---------------- */}
       <PageHero
         avatar={
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-white/20 text-xl font-bold text-white">
-            {initialsFor(user.full_name || user.username)}
+          <span className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              aria-label={
+                user.photo_url ? "Change profile photo" : "Upload a profile photo"
+              }
+              className="relative block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-60"
+            >
+              <Avatar
+                src={user.photo_url ?? undefined}
+                name={user.full_name || user.username}
+                size={64}
+                className="bg-white/20 text-white ring-2 ring-white/40"
+              />
+              <span className="absolute -bottom-0.5 -right-0.5 grid h-7 w-7 place-items-center rounded-full bg-white text-nv-primary shadow-float">
+                <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            </button>
+            {user.photo_url ? (
+              <button
+                type="button"
+                onClick={() => void onRemovePhoto()}
+                disabled={uploading}
+                aria-label="Remove profile photo"
+                className="absolute -left-1 -top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-nv-muted shadow transition-colors hover:text-nv-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 disabled:opacity-60"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            ) : null}
           </span>
         }
         title={user.full_name || user.username}

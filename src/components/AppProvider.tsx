@@ -13,6 +13,7 @@ type UserSummary = {
   email: string;
   role: string;
   auth_provider: string;
+  photo_url: string | null;
 };
 
 type AuthResponse = {
@@ -29,6 +30,8 @@ type AppContextType = {
   handleRegistration: (authResponse: AuthResponse) => Promise<UserSummary>;
   handleGoogleLogin: (payload: { credential: string }) => Promise<UserSummary>;
   handleLogout: () => Promise<void>;
+  /** Re-fetches the signed-in user (e.g. after a photo upload). */
+  refreshUser: () => Promise<UserSummary | null>;
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -118,9 +121,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, [token]);
 
+  const refreshUser = useCallback(async () => {
+    if (!token) return null;
+    try {
+      const response = await fetchCurrentUser(token);
+      setUser(response);
+      return response;
+    } catch {
+      return null;
+    }
+  }, [token]);
+
   const value = useMemo(
-    () => ({ token, user, elections, appError, handleLogin, handleRegistration, handleGoogleLogin, handleLogout }),
-    [token, user, elections, appError, handleLogin, handleRegistration, handleGoogleLogin, handleLogout],
+    () => ({ token, user, elections, appError, handleLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser }),
+    [token, user, elections, appError, handleLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

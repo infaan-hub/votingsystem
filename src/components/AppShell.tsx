@@ -10,14 +10,6 @@ import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Button } from "@/src/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu";
 import tenant, { t } from "@/config/tenant";
 import {
   bottomNavFor,
@@ -58,9 +50,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [menuOpen]);
 
   const navGroups = useMemo(() => navGroupsFor(shell), [shell]);
-  const bottomItems = useMemo<NavItem[]>(() => bottomNavFor(shell), [shell]);
+  const bottomItems = useMemo<NavItem[]>(() => {
+    const items = bottomNavFor(shell);
+    // The Profile tab shows the signed-in user's picture instead of the icon.
+    const src = user?.photo_url;
+    if (!src) return items;
+    return items.map((item) =>
+      item.href === "/profile" ? { ...item, avatarSrc: src } : item,
+    );
+  }, [shell, user?.photo_url]);
   const chip = roleLabel(user?.role);
   const isPublic = shell === "public";
+  const profileName = user?.full_name || user?.username || "";
+  const profileSrc = user?.photo_url ?? null;
 
   const publicLinks = useMemo(
     () =>
@@ -84,7 +86,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     [isPublic, publicLinks],
   );
 
-  const isActive = (item: NavItem) =>
+  const isActive = (item: { href: string; exact?: boolean }) =>
     item.exact
       ? pathname === item.href
       : pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -177,6 +179,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         groups={isPublic ? undefined : navGroups}
         links={isPublic ? publicRailLinks : undefined}
         collapsed={!railOpen}
+        profile={!isPublic && user ? { name: profileName, src: profileSrc } : undefined}
         roleBadge={
           !isPublic && chip ? (
             <span className="inline-flex rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1 text-[11px] font-bold uppercase tracking-[0.6px] text-sidebar-accent-foreground">
@@ -235,27 +238,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <Search className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  aria-label="Account menu"
-                  className="grid h-9 w-9 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary/40"
-                >
-                  <Avatar name={user?.full_name ?? user?.username ?? ""} size={32} />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    {user?.full_name ?? user?.username ?? "Account"}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => router.push("/profile")}>
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={handleLogout} danger>
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           )}
         </div>
@@ -282,6 +264,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
             <nav className="min-h-0 flex-1 overflow-y-auto p-3">
+              {!isPublic && user ? (
+                <div className="mb-3 border-b border-sidebar-border pb-3">
+                  <Link
+                    href="/profile"
+                    className={cn(
+                      "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
+                      isActive({ href: "/profile" })
+                        ? "bg-nv-primary-100 text-nv-primary shadow-[inset_3px_0_0_0_var(--nv-primary)]"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    )}
+                  >
+                    <Avatar src={profileSrc ?? undefined} name={profileName} size={32} />
+                    <span className="truncate text-[13px] font-semibold">{profileName}</span>
+                  </Link>
+                </div>
+              ) : null}
               {isPublic ? (
                 <ul className="flex flex-col gap-0.5">
                   {publicLinks.map((item) => (
