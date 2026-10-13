@@ -60,14 +60,14 @@ export default function OnboardingPage() {
         </main>
 
         <footer className="flex flex-col gap-3 border-t border-white/15 pt-6 sm:flex-row sm:items-center">
-          <LinkButton href="/register" className="sm:w-auto">
-            Create account
+          <LinkButton href="/welcome" className="sm:w-auto">
+            Get started
           </LinkButton>
           <Button asChild variant="ghost" className="border-white/60 bg-transparent text-white hover:bg-white/10 sm:w-auto">
             <Link href="/login">Sign in</Link>
           </Button>
-          <LinkButton href="/elections" variant="subtle" className="sm:w-auto">
-            Explore elections
+          <LinkButton href="/register" variant="subtle" className="sm:w-auto">
+            Create account
           </LinkButton>
         </footer>
       </div>

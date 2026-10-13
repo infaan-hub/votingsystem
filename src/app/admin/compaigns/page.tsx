@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Megaphone, RefreshCw } from "lucide-react";
+import { Megaphone, RefreshCw, Trash2 } from "lucide-react";
 
 import { RequireRole } from "@/src/components/require-role";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import { Dialog } from "@/src/components/ui/dialog";
+import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
 import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
@@ -125,6 +125,8 @@ function CampaignsBody() {
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState("");
   const [pending, setPending] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CampaignRow | null>(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
 
   const campaigns = data ?? [];
 
@@ -174,6 +176,32 @@ function CampaignsBody() {
       });
     } finally {
       setPending(false);
+    }
+  }
+
+  async function deleteCampaign() {
+    if (!deleteTarget) return;
+    setDeleteSaving(true);
+    try {
+      await apiRequest(token, `/api/admin/campaigns/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      toast({
+        title: "Campaign deleted",
+        description: `"${deleteTarget.topic}" was permanently removed.`,
+        tone: "success",
+      });
+      setDeleteTarget(null);
+      setDetail(null);
+      await reload();
+    } catch (cause) {
+      toast({
+        title: "Delete failed",
+        description: cause instanceof Error ? cause.message : undefined,
+        tone: "error",
+      });
+    } finally {
+      setDeleteSaving(false);
     }
   }
 
@@ -318,6 +346,15 @@ function CampaignsBody() {
                           </Button>
                           <Button size="dense" className="w-auto" onClick={() => openModeration(row)}>
                             Moderate
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="dense"
+                            className="w-auto border-nv-danger/40 text-nv-danger hover:bg-nv-danger/10"
+                            onClick={() => setDeleteTarget(row)}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            Delete
                           </Button>
                         </div>
                       </TableCell>
@@ -474,6 +511,24 @@ function CampaignsBody() {
           </div>
         }
       </Dialog>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteSaving) setDeleteTarget(null);
+        }}
+        title="Delete this campaign permanently?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.topic}" by ${deleteTarget.candidate.user.full_name} will be removed for good, including its images and video.`
+            : undefined
+        }
+        confirmLabel="Delete campaign"
+        cancelLabel="Keep campaign"
+        tone="destructive"
+        loading={deleteSaving}
+        onConfirm={() => void deleteCampaign()}
+      />
     </div>
   );
 }

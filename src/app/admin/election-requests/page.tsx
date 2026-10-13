@@ -113,7 +113,7 @@ function RequestsBody() {
   const token = useToken();
   const { toast } = useToast();
   const requestsResource = useResource<RequestRow[]>(
-    (authToken) => apiRequest<RequestRow[]>(authToken, "/api/admin/election-requests/all"),
+    (authToken) => apiRequest<RequestRow[]>(authToken, "/api/admin/election-requests"),
     [],
   );
   const officersResource = useResource<Officer[]>(

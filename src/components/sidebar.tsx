@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import type { NavGroup } from "@/src/lib/nav";
 
@@ -29,6 +30,7 @@ export function Sidebar({
   brand,
   footer,
   roleBadge,
+  onSignOut,
 }: {
   links?: SidebarLink[];
   groups?: NavGroup[];
@@ -36,6 +38,8 @@ export function Sidebar({
   footer?: React.ReactNode;
   /** Small chip above the footer, e.g. "Administrator". */
   roleBadge?: React.ReactNode;
+  /** Renders a Sign out control pinned under the nav (desktop rail). */
+  onSignOut?: () => void;
 }) {
   const pathname = usePathname();
   const flat: SidebarLink[] = groups
@@ -76,6 +80,21 @@ export function Sidebar({
         )}
       </nav>
 
+      {onSignOut ? (
+        <div className="shrink-0 border-t border-sidebar-border p-2 lg:p-3">
+          <button
+            type="button"
+            onClick={onSignOut}
+            title="Sign out"
+            className="group flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sidebar-foreground transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
+          >
+            <span className="shrink-0" aria-hidden="true">
+              <LogOut className="h-[18px] w-[18px]" />
+            </span>
+            <span className="hidden truncate text-[13px] font-semibold lg:inline">Sign out</span>
+          </button>
+        </div>
+      ) : null}
       {roleBadge ? (
         <div className="hidden shrink-0 px-3 pb-1 lg:block">{roleBadge}</div>
       ) : null}

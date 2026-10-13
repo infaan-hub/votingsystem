@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, RefreshCw, UserPlus } from "lucide-react";
+import { CheckCircle2, RefreshCw, ShieldCheck, Trash2, UserPlus } from "lucide-react";
 
 import { RequireRole } from "@/src/components/require-role";
+import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
+import { AlertDialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
@@ -14,7 +16,7 @@ import { Select } from "@/src/components/ui/select";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
-import { apiRequest, useResource, useToken } from "../_shared";
+import { apiRequest, useResource, useToken, type Resource } from "../_shared";
 
 type UserOption = {
   id: number;
@@ -44,6 +46,17 @@ type Assignment = {
   organization: { id: number; name: string } | null;
 };
 
+type OfficerRow = {
+  id: number;
+  username: string;
+  full_name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  joined_at: string | null;
+  assignments: Assignment[];
+};
+
 type Mode = "existing" | "new";
 
 const SCOPE_OPTIONS = [
@@ -69,11 +82,11 @@ export default function AddElectionOfficerPage() {
   return (
     <>
       <PageHeader
-        title="Add election officer"
-        description="Grant an existing account officer access, or create a fresh officer account with an invitation-only password."
+        title="Election officers"
+        description="Grant officer access, or create a fresh officer account with an invitation-only password. Officers also manage any election they created themselves."
         breadcrumbs={[
           { label: "Administration", href: "/admin/dashboard" },
-          { label: "Add election officer" },
+          { label: "Election officers" },
         ]}
         actions={
           <LinkButton href="/admin/users" variant="outline" className="w-auto">
@@ -82,13 +95,27 @@ export default function AddElectionOfficerPage() {
         }
       />
       <RequireRole role="admin">
-        <OfficerForm />
+        <OfficerManager />
       </RequireRole>
     </>
   );
 }
 
-function OfficerForm() {
+function OfficerManager() {
+  const officers = useResource<OfficerRow[]>(
+    (authToken) => apiRequest<OfficerRow[]>(authToken, "/api/admin/officers"),
+    [],
+  );
+
+  return (
+    <>
+      <OfficerForm onCreated={officers.reload} />
+      <OfficersSection officers={officers} />
+    </>
+  );
+}
+
+function OfficerForm({ onCreated }: { onCreated?: () => void }) {
   const token = useToken();
   const { toast } = useToast();
   const users = useResource<{ users: UserOption[] }>(
@@ -176,6 +203,7 @@ function OfficerForm() {
         body: JSON.stringify(body),
       });
       setCreated(assignment);
+      onCreated?.();
       toast({ title: "Officer assignment created", tone: "success" });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "The request failed.";
@@ -405,6 +433,157 @@ function scopeLabel(scope: string): string {
   if (scope === "election") return "One election";
   if (scope === "organization") return "One organization";
   return scope;
+}
+
+function OfficersSection({ officers }: { officers: Resource<OfficerRow[]> }) {
+  const token = useToken();
+  const { toast } = useToast();
+  const [pendingRevoke, setPendingRevoke] = useState<Assignment | null>(null);
+  const [revoking, setRevoking] = useState(false);
+
+  const rows = officers.data ?? [];
+
+  async function revoke() {
+    if (!pendingRevoke) return;
+    setRevoking(true);
+    try {
+      await apiRequest(token, `/api/admin/officers/${pendingRevoke.id}`, {
+        method: "DELETE",
+      });
+      toast({
+        title: "Assignment revoked",
+        description: `${pendingRevoke.officer.full_name || pendingRevoke.officer.username} lost this scope. Their account still exists.`,
+        tone: "success",
+      });
+      setPendingRevoke(null);
+      officers.reload();
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "The request failed.";
+      toast({ title: "Could not revoke assignment", description: message, tone: "error" });
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  if (officers.loading && !officers.data) {
+    return (
+      <div className="mt-6">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (officers.error && !officers.data) {
+    return (
+      <div className="mt-6 space-y-4">
+        <ErrorBanner message={officers.error} onRetry={() => officers.reload()} />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mt-6">
+        <Section
+          title="Current officers"
+          description="Every officer account and its scoped assignments. Revoking an assignment removes that scope; the account itself stays active."
+          actions={
+            <Button variant="outline" size="dense" className="w-auto" onClick={() => officers.reload()}>
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Refresh
+            </Button>
+          }
+        >
+          {rows.length === 0 ? (
+            <EmptyState
+              icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+              title="No officer accounts yet"
+              description="Officers appear here once an account is granted officer access above."
+            />
+          ) : (
+            <ul className="space-y-3">
+              {rows.map((officer) => (
+                <li
+                  key={officer.id}
+                  className="rounded-nv-md border border-nv-line bg-nv-surface p-4 shadow-nv-card"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="min-w-0 truncate text-[14px] font-bold text-nv-ink">
+                      {officer.full_name || officer.username}
+                    </p>
+                    <span className="text-[12.5px] text-nv-muted">@{officer.username}</span>
+                    <Badge variant={officer.role === "admin" ? "default" : "secondary"} className="text-[11px]">
+                      {officer.role}
+                    </Badge>
+                    <Badge variant={officer.is_active ? "success" : "muted"} className="text-[11px]">
+                      {officer.is_active ? "Active" : "Disabled"}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-[12.5px] text-nv-muted">
+                    {officer.email}
+                    {officer.joined_at ? ` · joined ${officer.joined_at}` : ""}
+                  </p>
+
+                  {officer.assignments.length === 0 ? (
+                    <p className="mt-3 text-[12.5px] text-nv-muted">
+                      No scoped assignments — manages only elections they created themselves.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {officer.assignments.map((assignment) => (
+                        <li
+                          key={assignment.id}
+                          className="flex flex-wrap items-center gap-2 rounded-lg border border-nv-line/70 bg-nv-bg/50 px-3 py-2"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-nv-ink">
+                            {scopeLabel(assignment.scope)}
+                            {assignment.election ? ` · ${assignment.election.title}` : ""}
+                            {assignment.organization ? ` · ${assignment.organization.name}` : ""}
+                          </span>
+                          <Badge variant={assignment.is_active ? "success" : "muted"} className="text-[11px]">
+                            {assignment.is_active ? "Active" : "Revoked"}
+                          </Badge>
+                          {assignment.is_active ? (
+                            <Button
+                              variant="outline"
+                              size="dense"
+                              className="w-auto border-nv-danger/40 text-nv-danger hover:bg-nv-danger/10"
+                              onClick={() => setPendingRevoke(assignment)}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              Revoke
+                            </Button>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+      </div>
+
+      <AlertDialog
+        open={pendingRevoke !== null}
+        onOpenChange={(open) => {
+          if (!open && !revoking) setPendingRevoke(null);
+        }}
+        title="Revoke officer assignment?"
+        description={
+          pendingRevoke
+            ? `${pendingRevoke.officer.full_name || pendingRevoke.officer.username} will immediately lose this scope. Their account stays active.`
+            : undefined
+        }
+        confirmLabel="Revoke assignment"
+        cancelLabel="Keep it"
+        tone="destructive"
+        loading={revoking}
+        onConfirm={() => void revoke()}
+      />
+    </>
+  );
 }
 
 function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {

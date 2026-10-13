@@ -5,7 +5,7 @@ import { RefreshCw, Users } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
 import { RequireRole } from "@/src/components/require-role";
-import { Dialog } from "@/src/components/ui/dialog";
+import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/empty-state";
@@ -55,18 +55,18 @@ const ROLE_FILTER_OPTIONS = [
   { value: "staff", label: "Staff" },
 ];
 
-const ACTIVE_INACTIVE_API =
-  "The admin users API does not expose or accept an is_active flag, so accounts cannot be activated or deactivated from here.";
-
 const OWN_ROLE_API =
   "You are signed in as this account, so its role cannot be changed from this screen.";
+
+const OWN_STATUS_API =
+  "You are signed in as this account, so it cannot be deactivated or deleted from this screen.";
 
 export default function AdminUsersPage() {
   return (
     <>
       <PageHeader
         title="Users"
-        description="Search student, staff and officer accounts, review their role, and change roles where the API allows it."
+        description="Search student, staff and officer accounts, change roles, activate or deactivate accounts, and delete them permanently."
         breadcrumbs={[
           { label: "Administration", href: "/admin/dashboard" },
           { label: "Users" },
@@ -94,9 +94,12 @@ function UsersBody() {
   const [roleTarget, setRoleTarget] = useState<UserRow | null>(null);
   const [nextRole, setNextRole] = useState("");
   const [roleSaving, setRoleSaving] = useState(false);
+  const [statusTarget, setStatusTarget] = useState<UserRow | null>(null);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
 
   const users = data?.users ?? [];
-  const hasActivationData = users.some((row) => typeof row.is_active === "boolean");
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -135,6 +138,62 @@ function UsersBody() {
       });
     } finally {
       setRoleSaving(false);
+    }
+  }
+
+  function confirmStatusToggle(row: UserRow) {
+    setStatusTarget(row);
+  }
+
+  async function saveStatus() {
+    if (!statusTarget) return;
+    const nextActive = statusTarget.is_active === false;
+    setStatusSaving(true);
+    try {
+      await apiRequest(token, `/api/admin/users/${statusTarget.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: nextActive }),
+      });
+      toast({
+        title: nextActive ? "Account activated" : "Account deactivated",
+        description: `@${statusTarget.username} can ${nextActive ? "now" : "no longer"} sign in.`,
+        tone: "success",
+      });
+      setStatusTarget(null);
+      await reload();
+    } catch (cause) {
+      toast({
+        title: "Status change failed",
+        description: cause instanceof Error ? cause.message : undefined,
+        tone: "error",
+      });
+    } finally {
+      setStatusSaving(false);
+    }
+  }
+
+  async function deleteUser() {
+    if (!deleteTarget) return;
+    setDeleteSaving(true);
+    try {
+      await apiRequest(token, `/api/admin/users/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      toast({
+        title: "Account deleted",
+        description: `@${deleteTarget.username} was permanently removed.`,
+        tone: "success",
+      });
+      setDeleteTarget(null);
+      await reload();
+    } catch (cause) {
+      toast({
+        title: "Delete failed",
+        description: cause instanceof Error ? cause.message : undefined,
+        tone: "error",
+      });
+    } finally {
+      setDeleteSaving(false);
     }
   }
 
@@ -222,11 +281,7 @@ function UsersBody() {
           ) : filtered.length === 0 ? (
             <EmptyState
               title="No users match your filters"
-              description={
-                activeFilter && !hasActivationData
-                  ? "The admin users API does not report activation status, so the active and inactive filters cannot match any account."
-                  : "Nothing matches the current search and filters."
-              }
+              description="Nothing matches the current search and filters."
               action={
                 <Button
                   variant="outline"
@@ -251,6 +306,7 @@ function UsersBody() {
                     <TableHead>Full name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -268,6 +324,11 @@ function UsersBody() {
                         <TableCell>
                           <Badge variant={row.role === "officer" ? "secondary" : "muted"}>
                             {row.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={row.is_active === false ? "muted" : "success"}>
+                            {row.is_active === false ? "Inactive" : "Active"}
                           </Badge>
                         </TableCell>
                         <TableCell className="nums-tabular whitespace-nowrap text-[12.5px]">
@@ -294,21 +355,40 @@ function UsersBody() {
                               </Button>
                             )}
                             {isSelf ? (
-                              <Tooltip content="You cannot deactivate your own administrator session from this screen.">
-                                <span tabIndex={0}>
-                                  <Button variant="subtle" size="dense" className="w-auto" disabled>
-                                    Deactivate
-                                  </Button>
-                                </span>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip content={ACTIVE_INACTIVE_API}>
+                              <Tooltip content={OWN_STATUS_API}>
                                 <span tabIndex={0}>
                                   <Button variant="subtle" size="dense" className="w-auto" disabled>
                                     {row.is_active === false ? "Activate" : "Deactivate"}
                                   </Button>
                                 </span>
                               </Tooltip>
+                            ) : (
+                              <Button
+                                variant="subtle"
+                                size="dense"
+                                className="w-auto"
+                                onClick={() => confirmStatusToggle(row)}
+                              >
+                                {row.is_active === false ? "Activate" : "Deactivate"}
+                              </Button>
+                            )}
+                            {isSelf ? (
+                              <Tooltip content={OWN_STATUS_API}>
+                                <span tabIndex={0}>
+                                  <Button variant="outline" size="dense" className="w-auto" disabled>
+                                    Delete
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="dense"
+                                className="w-auto border-nv-danger/40 text-nv-danger hover:bg-nv-danger/10"
+                                onClick={() => setDeleteTarget(row)}
+                              >
+                                Delete
+                              </Button>
                             )}
                           </div>
                         </TableCell>
@@ -360,6 +440,46 @@ function UsersBody() {
           </div>
         }
       </Dialog>
+
+      <AlertDialog
+        open={statusTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !statusSaving) setStatusTarget(null);
+        }}
+        title={
+          statusTarget?.is_active === false ? "Activate this account?" : "Deactivate this account?"
+        }
+        description={
+          statusTarget
+            ? statusTarget.is_active === false
+              ? `@${statusTarget.username} will be able to sign in again immediately.`
+              : `@${statusTarget.username} will be signed out and blocked from signing in until reactivated.`
+            : undefined
+        }
+        confirmLabel={statusTarget?.is_active === false ? "Activate" : "Deactivate"}
+        cancelLabel="Cancel"
+        tone={statusTarget?.is_active === false ? "default" : "destructive"}
+        loading={statusSaving}
+        onConfirm={() => void saveStatus()}
+      />
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteSaving) setDeleteTarget(null);
+        }}
+        title="Delete this account permanently?"
+        description={
+          deleteTarget
+            ? `@${deleteTarget.username} (${deleteTarget.full_name || deleteTarget.email}) will be removed for good. Ballots already cast stay anonymised — deleting the account cannot undo or link them.`
+            : undefined
+        }
+        confirmLabel="Delete account"
+        cancelLabel="Keep account"
+        tone="destructive"
+        loading={deleteSaving}
+        onConfirm={() => void deleteUser()}
+      />
     </div>
   );
 }

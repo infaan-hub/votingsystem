@@ -258,6 +258,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {tenant.authority.name}
           </p>
         }
+        onSignOut={() => {
+          void handleLogout().then(() => router.push("/"));
+        }}
       />
 
       {/* Top bar — phones and tablets; desktop uses the rail. */}

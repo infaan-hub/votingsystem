@@ -6,12 +6,15 @@ import { Info, ListChecks, RefreshCw } from "lucide-react";
 import { RequireRole } from "@/src/components/require-role";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
+import { Checkbox } from "@/src/components/ui/checkbox";
 import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
+import { Input } from "@/src/components/ui/input";
 import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
 import {
   Table,
@@ -148,6 +151,12 @@ function ElectionsBody() {
     null,
   );
   const [pending, setPending] = useState(false);
+  const [edit, setEdit] = useState<AdminElection | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPublished, setEditPublished] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const rows = elections.data ?? [];
   const categoryNames = useMemo(() => {
@@ -175,6 +184,41 @@ function ElectionsBody() {
   function askTransition(election: AdminElection, target: string) {
     setDetail(null);
     setTransition({ election, target });
+  }
+
+  function openEdit(row: AdminElection) {
+    setDetail(null);
+    setEdit(row);
+    setEditTitle(row.title);
+    setEditDescription(row.description ?? "");
+    setEditPublished(row.is_published === true);
+    setEditError("");
+  }
+
+  async function saveEdit() {
+    if (!edit) return;
+    if (!editTitle.trim()) {
+      setEditError("A title is required.");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await apiRequest(token, `/api/admin/elections/${edit.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDescription,
+          is_published: editPublished,
+        }),
+      });
+      toast({ title: "Election updated", tone: "success" });
+      setEdit(null);
+      await elections.reload();
+    } catch (cause) {
+      setEditError(cause instanceof Error ? cause.message : "The request failed.");
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   async function runTransition() {
@@ -330,6 +374,14 @@ function ElectionsBody() {
                             >
                               Details
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="dense"
+                              className="w-auto"
+                              onClick={() => openEdit(row)}
+                            >
+                              Edit
+                            </Button>
                             {targets.slice(0, 2).map((target) => (
                               <Button
                                 key={target}
@@ -446,6 +498,16 @@ function ElectionsBody() {
             <Button variant="outline" size="dense" className="w-auto" onClick={() => setDetail(null)}>
               Close
             </Button>
+            {detail ? (
+              <Button
+                variant="outline"
+                size="dense"
+                className="w-auto"
+                onClick={() => openEdit(detail)}
+              >
+                Edit
+              </Button>
+            ) : null}
             <LinkButton
               href={`/admin/results?election=${detail?.id ?? ""}`}
               variant="outline"
@@ -453,6 +515,70 @@ function ElectionsBody() {
             >
               View results
             </LinkButton>
+          </div>
+        }
+      </Dialog>
+
+      <Dialog
+        open={edit !== null}
+        onOpenChange={(open) => {
+          if (!open && !editSaving) setEdit(null);
+        }}
+        title={edit ? `Edit “${edit.title}”` : "Edit election"}
+        description="Change the title, description, or published flag. The slug updates automatically when the title changes."
+      >
+        {edit ? (
+          <div className="space-y-4 pb-2">
+            {editError ? (
+              <div
+                role="alert"
+                className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 p-3 text-[13px] text-nv-danger"
+              >
+                {editError}
+              </div>
+            ) : null}
+            <Input
+              label="Title"
+              value={editTitle}
+              onChange={(event) => {
+                setEditTitle(event.target.value);
+                setEditError("");
+              }}
+              error={!editTitle.trim() ? "A title is required." : undefined}
+            />
+            <Textarea
+              label="Description"
+              value={editDescription}
+              onChange={(event) => setEditDescription(event.target.value)}
+              placeholder="What is this election about?"
+            />
+            <Checkbox
+              label="Published"
+              description="Published elections are visible to voters on the public pages."
+              checked={editPublished}
+              onChange={(event) => setEditPublished(event.target.checked)}
+            />
+          </div>
+        ) : null}
+        footer={
+          <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+            <Button
+              variant="outline"
+              size="dense"
+              className="w-auto"
+              disabled={editSaving}
+              onClick={() => setEdit(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="dense"
+              className="w-auto"
+              disabled={editSaving || !editTitle.trim()}
+              onClick={() => void saveEdit()}
+            >
+              {editSaving ? "Saving…" : "Save changes"}
+            </Button>
           </div>
         }
       </Dialog>

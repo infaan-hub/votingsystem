@@ -9,13 +9,27 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { OtpInput, OtpKeypad } from "@/src/components/ui/otp-input";
 import { useToast } from "@/src/components/ui/toast";
+import { useApp } from "@/src/components/AppProvider";
 import tenant, { t } from "@/config/tenant";
 
 type Step = "form" | "otp";
 
+type AuthPayload = {
+  token: string;
+  user: {
+    id: number;
+    username: string;
+    full_name: string;
+    email: string;
+    role: string;
+    auth_provider: string;
+  };
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { handleRegistration } = useApp();
   const [step, setStep] = useState<Step>("form");
   const [identifier, setIdentifier] = useState("");
   const [phone, setPhone] = useState("");
@@ -24,6 +38,7 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authPayload, setAuthPayload] = useState<AuthPayload | null>(null);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -57,14 +72,16 @@ export default function RegisterPage() {
         return;
       }
 
-      // Phone verification is optional per tenant; when disabled the voter goes
-      // straight to sign-in rather than stalling on an unsupported screen.
+      // Phone verification is optional per tenant; when disabled the new
+      // account is signed in immediately and the user lands on /welcome.
       if (tenant.features.phoneVerification) {
+        setAuthPayload(data as AuthPayload);
         setStep("otp");
         toast({ title: "Verification code sent", tone: "info" });
       } else {
-        toast({ title: "Account created", description: "You can now sign in.", tone: "success" });
-        router.push("/login");
+        await handleRegistration(data as AuthPayload);
+        toast({ title: "Account created", description: "Welcome aboard!", tone: "success" });
+        router.push("/welcome");
       }
     } catch {
       setError("Registration failed. Please try again.");
@@ -80,7 +97,11 @@ export default function RegisterPage() {
         onBack={() => setStep("form")}
         onVerified={() => {
           toast({ title: "Phone verified", tone: "success" });
-          router.push("/login");
+          if (authPayload) {
+            void handleRegistration(authPayload).then(() => router.push("/welcome"));
+          } else {
+            router.push("/login");
+          }
         }}
       />
     );

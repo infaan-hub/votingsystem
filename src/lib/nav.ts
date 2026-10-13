@@ -9,6 +9,7 @@ import {
   PieChart,
   Settings2,
   ShieldCheck,
+  Tags,
   UserRound,
   Users,
   Vote,
@@ -105,7 +106,10 @@ export const ADMIN_NAV: NavGroup[] = [
   },
   {
     label: "Integrity",
-    items: [{ href: "/admin/audit-logs", label: "Audit logs", icon: FileClock }],
+    items: [
+      { href: "/admin/categories", label: "Categories", icon: Tags },
+      { href: "/admin/audit-logs", label: "Audit logs", icon: FileClock },
+    ],
   },
   {
     label: "Account",

@@ -57,6 +57,8 @@ function serializeCreated(election: Election) {
     max_voters: election.maxVoters,
     voting_start_at: formatDateTime(election.votingStartAt, tz),
     voting_end_at: formatDateTime(election.votingEndAt, tz),
+    campaign_start_at: formatDateTime(election.campaignStartAt, tz),
+    campaign_end_at: formatDateTime(election.campaignEndAt, tz),
   };
 }
 
@@ -120,6 +122,8 @@ const route = makeRoute({
             visibility: election.visibility,
             voting_start_at: formatDateTime(election.votingStartAt, tz),
             voting_end_at: formatDateTime(election.votingEndAt, tz),
+            campaign_start_at: formatDateTime(election.campaignStartAt, tz),
+            campaign_end_at: formatDateTime(election.campaignEndAt, tz),
             category: election.category
               ? { id: election.category.id, name: election.category.name }
               : null,

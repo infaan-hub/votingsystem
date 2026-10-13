@@ -1,4 +1,4 @@
-import { json, makeRoute } from "@/src/lib/api";
+import { json, makeRoute, noContent } from "@/src/lib/api";
 import { fieldErrors, notFoundModel } from "@/src/lib/http";
 import { Collector, choiceField, strField } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
@@ -9,7 +9,7 @@ import { CAMPAIGN_INCLUDE, serializeCampaign } from "@/src/app/api/campaigns/rou
 
 const MODERATION_STATUSES = ["PUBLISHED", "HIDDEN", "REJECTED"] as const;
 
-export const PATCH = makeRoute({
+const route = makeRoute({
   permission: "admin",
   intParams: ["pk"],
   handlers: {
@@ -58,5 +58,28 @@ export const PATCH = makeRoute({
 
       return json(serializeCampaign(updated, { admin: true }));
     },
+    DELETE: async (req, params, state) => {
+      const admin = requireStateAdmin(state);
+      const pk = Number(params.pk);
+      const existing = await prisma.campaign.findUnique({ where: { id: pk } });
+      if (!existing) throw notFoundModel("Campaign");
+
+      await prisma.campaign.delete({ where: { id: pk } });
+
+      await recordAudit({
+        actorId: admin.id,
+        action: "admin.campaign.delete",
+        entityType: "Campaign",
+        entityId: pk,
+        summary: `Campaign #${pk} "${existing.topic}" deleted`,
+        detail: { election_id: existing.electionId },
+        ipAddress: clientIp(req),
+      });
+
+      return noContent();
+    },
   },
 });
+
+export const PATCH = route;
+export const DELETE = route;

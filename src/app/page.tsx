@@ -6,6 +6,7 @@ import { serializeElectionList } from "@/src/lib/serializers";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Tile, type TileData } from "@/src/components/ui/tile";
+import { FirstVisitOnboarding } from "@/src/components/first-visit";
 import tenant, { t } from "@/config/tenant";
 import { cn } from "@/src/lib/utils";
 
@@ -48,6 +49,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-6">
+      <FirstVisitOnboarding />
       {/* ---------------- Hero ---------------- */}
       <section className="nv-grad-hero relative overflow-hidden rounded-nv-lg border border-white/10 px-6 py-12 text-center sm:py-16">
         <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-white" />

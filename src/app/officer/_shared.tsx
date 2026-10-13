@@ -19,6 +19,8 @@ export type ManagedElection = {
   visibility: string;
   voting_start_at: string | null;
   voting_end_at: string | null;
+  campaign_start_at?: string | null;
+  campaign_end_at?: string | null;
   category: { id: number; name: string } | null;
   counts: {
     positions: number;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { ClipboardList, ExternalLink, Link2, RefreshCw, Vote } from "lucide-react";
+import { ClipboardList, ExternalLink, RefreshCw, Vote } from "lucide-react";
 
 import { RequireRole } from "@/src/components/require-role";
 import { StatusBadge } from "@/src/components/status-badge";
@@ -59,7 +59,6 @@ type ElectionAdminDetail = {
 
 type PublicDetailPayload = {
   detail: ElectionAdminDetail;
-  invite_path?: string | null;
 };
 
 type BallotPayload = {
@@ -172,7 +171,7 @@ function ElectionBody() {
           <OverviewSection row={selected} overview={overview} />
           <LifecycleSection status={selected.status} />
           <BallotSection row={selected} ballot={ballot} />
-          <ShareLinkSection row={selected} invitePath={overview.data?.invite_path ?? null} />
+          <ShareLinkSection row={selected} />
         </>
       ) : (
         <EmptyState
@@ -399,36 +398,7 @@ function BallotSection({
   );
 }
 
-function ShareLinkSection({
-  row,
-  invitePath,
-}: {
-  row: ManagedElection;
-  invitePath: string | null;
-}) {
-  if (invitePath) {
-    return (
-      <Section
-        title="Share link"
-        description="Send this address to voters who may not find the election through the public listings."
-      >
-        <div className="flex flex-wrap items-end gap-3">
-          <p className="min-w-0 flex-1 break-all rounded-nv-md border border-nv-line bg-nv-bg p-3 text-[13px] text-nv-text">
-            {invitePath}
-          </p>
-          <LinkButton
-            href={`/officer/management?election=${row.id}`}
-            variant="outline"
-            className="w-auto"
-          >
-            <Link2 className="h-4 w-4" aria-hidden="true" />
-            Manage link
-          </LinkButton>
-        </div>
-      </Section>
-    );
-  }
-
+function ShareLinkSection({ row }: { row: ManagedElection }) {
   return (
     <Section
       title="Share link"

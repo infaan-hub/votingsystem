@@ -10,7 +10,7 @@ import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { LinkButton, PageHeader } from "@/src/components/ui/page-header";
-import { Section } from "@/src/components/ui/section";
+import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
 import {
@@ -23,6 +23,7 @@ import {
   humanize,
   useElectionSelection,
   useResource,
+  windowText,
   type ManagedElection,
 } from "../_shared";
 
@@ -171,6 +172,46 @@ function ResultsBody() {
       <ElectionPickerSection elections={rows} value={selectedId} onChange={select}>
         {selected ? <StatusBadge status={selected.status} /> : null}
       </ElectionPickerSection>
+
+      {selected ? (
+        <Section
+          title="Schedule & campaign"
+          description="When campaigns and voting run for this election, and how many campaigns are live."
+        >
+          <div className="space-y-4">
+            <KeyValueList
+              items={[
+                {
+                  label: "Campaign window",
+                  value: windowText(selected.campaign_start_at, selected.campaign_end_at),
+                },
+                {
+                  label: "Voting window",
+                  value: windowText(selected.voting_start_at, selected.voting_end_at),
+                },
+                {
+                  label: "Published campaigns",
+                  value: (
+                    <span className="nums-tabular">{selected.counts.published_campaigns}</span>
+                  ),
+                },
+                {
+                  label: "Eligible voters",
+                  value: <span className="nums-tabular">{selected.counts.eligible_voters}</span>,
+                },
+              ]}
+            />
+            <div className="space-y-2">
+              {selected.campaign_end_at ? (
+                <Countdown target={selected.campaign_end_at} prefix="Campaign ends in" />
+              ) : null}
+              {selected.voting_end_at ? (
+                <Countdown target={selected.voting_end_at} prefix="Voting ends in" />
+              ) : null}
+            </div>
+          </div>
+        </Section>
+      ) : null}
 
       {!selected ? (
         <EmptyState
