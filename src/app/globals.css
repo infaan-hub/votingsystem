@@ -3,43 +3,43 @@
 /* ---------------------------------------------------------------------------
    Design tokens — NexVote identity.
 
-   Single fixed theme: deep teal surfaces (#042F32) with white text; buttons
-   are white with dark-teal labels. Every value is overridable per tenant
+   Single fixed theme: deep crimson surfaces (#BB182E) with white text; buttons
+   are white with crimson labels. Every value is overridable per tenant
    through the same variable names.
    --------------------------------------------------------------------------- */
 
 :root {
-  /* brand — white powers buttons and accents on the teal canvas */
+  /* brand — white powers buttons and accents on the crimson canvas */
   --nv-primary: #ffffff;
-  --nv-primary-600: color-mix(in srgb, #ffffff 88%, #042f32);
-  --nv-primary-100: color-mix(in srgb, #ffffff 12%, #042f32);
-  --nv-navy: #042f32;
-  --nv-navy-600: #021f21;
+  --nv-primary-600: color-mix(in srgb, #ffffff 88%, #bb182e);
+  --nv-primary-100: color-mix(in srgb, #ffffff 12%, #bb182e);
+  --nv-navy: #bb182e;
+  --nv-navy-600: #8f1023;
 
-  /* neutrals — white text on teal surfaces */
+  /* neutrals — white text on crimson surfaces */
   --nv-ink: #ffffff;
-  --nv-text: color-mix(in srgb, #ffffff 92%, #042f32);
-  --nv-muted: color-mix(in srgb, #ffffff 66%, #042f32);
-  --nv-line: color-mix(in srgb, #ffffff 22%, #042f32);
-  --nv-bg: #042f32;
-  --nv-surface: #06373b;
+  --nv-text: color-mix(in srgb, #ffffff 92%, #bb182e);
+  --nv-muted: color-mix(in srgb, #ffffff 66%, #bb182e);
+  --nv-line: color-mix(in srgb, #ffffff 22%, #bb182e);
+  --nv-bg: #bb182e;
+  --nv-surface: #c42139;
 
   /* status */
   --nv-success: #34d399;
   --nv-warning: #fbbf24;
-  --nv-danger: #ff8a80;
+  --nv-danger: #ffd0d5;
 
-  /* gradients — dark bands stay dark (white text), green panels deepen for contrast */
-  --nv-grad-hero: linear-gradient(160deg, #06383c 0%, #042f32 55%, #0b4d3f 100%);
+  /* gradients — dark bands stay dark (white text), deep maroon anchors contrast */
+  --nv-grad-hero: linear-gradient(160deg, #c42139 0%, #bb182e 55%, #8f1023 100%);
   --nv-grad-candidate: linear-gradient(160deg, #b7e9c0 0%, #8fd9a8 100%);
-  --nv-grad-profile: linear-gradient(135deg, #021f21 0%, #06373b 100%);
+  --nv-grad-profile: linear-gradient(135deg, #8f1023 0%, #c42139 100%);
 
   /* explore tiles */
-  --nv-tile-blue: linear-gradient(135deg, #0a4a44, #043431);
-  --nv-tile-orange: linear-gradient(135deg, #0d4236, #04332a);
-  --nv-tile-purple: linear-gradient(135deg, #0e4048, #04313a);
-  --nv-tile-pink: linear-gradient(135deg, #123f3a, #04332f);
-  --nv-tile-teal: linear-gradient(135deg, #0a4a3f, #043630);
+  --nv-tile-blue: linear-gradient(135deg, #6d1224, #3f0a14);
+  --nv-tile-orange: linear-gradient(135deg, #861528, #4a0d19);
+  --nv-tile-purple: linear-gradient(135deg, #5c1020, #360812);
+  --nv-tile-pink: linear-gradient(135deg, #92182c, #4e0e19);
+  --nv-tile-teal: linear-gradient(135deg, #751326, #420b16);
 
   /* chart series used by result bars and turnout splits */
   --chart-1: #ffffff;
@@ -52,13 +52,13 @@
   --chart-8: #94a3b8;
 
   /* lifecycle pills — tinted chips with white labels */
-  --status-draft: #0a3a3d;
+  --status-draft: #4a1019;
   --status-draft-foreground: #ffffff;
   --status-published: #0f3d2f;
   --status-published-foreground: #ffffff;
   --status-nominations: #3b2f06;
   --status-nominations-foreground: #ffffff;
-  --status-ready: #083344;
+  --status-ready: #3f1420;
   --status-ready-foreground: #ffffff;
   --status-open: #064e3b;
   --status-open-foreground: #ffffff;
@@ -66,7 +66,7 @@
   --status-closed-foreground: #ffffff;
   --status-results: #243a2c;
   --status-results-foreground: #ffffff;
-  --status-archived: #0a3a3d;
+  --status-archived: #4a1019;
   --status-archived-foreground: #ffffff;
 
   /* shape + depth */
@@ -104,20 +104,20 @@
   --secondary: var(--nv-surface);
   --secondary-foreground: var(--nv-text);
   --primary: var(--nv-primary);
-  --primary-foreground: #042f32;
+  --primary-foreground: #bb182e;
   --ring: var(--nv-primary);
   --destructive: var(--nv-danger);
-  --destructive-foreground: #042f32;
+  --destructive-foreground: #bb182e;
   --success: var(--nv-success);
-  --success-foreground: #042f32;
+  --success-foreground: #bb182e;
   --border: var(--nv-line);
   --input: var(--nv-line);
-  /* Sidebar / navigation surface (darker teal anchor). */
-  --sidebar: #021f21;
-  --sidebar-foreground: color-mix(in srgb, #ffffff 78%, #021f21);
-  --sidebar-accent: #06373b;
+  /* Sidebar / navigation surface (darker crimson anchor). */
+  --sidebar: #8f1023;
+  --sidebar-foreground: color-mix(in srgb, #ffffff 78%, #8f1023);
+  --sidebar-accent: #c42139;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: color-mix(in srgb, #ffffff 16%, #021f21);
+  --sidebar-border: color-mix(in srgb, #ffffff 16%, #8f1023);
 }
 
 /* ---------------------------------------------------------------------------
@@ -400,7 +400,7 @@
 /* Pill shell shared by every lifecycle badge. */
 @utility status-surface {
   border-width: 1px;
-  border-color: color-mix(in srgb, #ffffff 24%, #042f32);
+  border-color: color-mix(in srgb, #ffffff 24%, #bb182e);
   font-weight: 600;
   letter-spacing: 0.01em;
 }

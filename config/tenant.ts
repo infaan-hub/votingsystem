@@ -107,10 +107,10 @@ const tenant: TenantConfig = {
   colors: {
     primary: "#FFFFFF",
     primary600: "#E5E7EB",
-    primary100: "#123B33",
-    navy: "#042F32",
+    primary100: "#7A0F1F",
+    navy: "#BB182E",
   },
-  themeColor: "#042F32",
+  themeColor: "#BB182E",
   locales: ["en"],
   defaultLocale: "en",
   direction: "ltr",
