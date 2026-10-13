@@ -4,14 +4,14 @@ import { cn } from "@/src/lib/utils";
 import tenant, { t } from "@/config/tenant";
 
 /**
- * Compact brand header shared by Login, Register and the OTP step.
- * Fixed, balanced height (~190px phone / ~240px from the `sm` breakpoint) on
- * a subtle white-to-pale-red gradient — the height never depends on the form.
+ * Brand panel shared by Login and Register. On phones it is a compact
+ * header above the form; from the `md` breakpoint it becomes a full-height
+ * left column so the form sits centred on the right.
  */
 export function AuthBrandHeader() {
   return (
     <header
-      className="flex min-h-[190px] w-full flex-col items-center justify-center px-5 py-8 text-center sm:min-h-[240px] sm:py-10"
+      className="flex min-h-[190px] w-full flex-col items-center justify-center px-5 py-8 text-center sm:py-10 md:min-h-0 md:w-[42%] md:max-w-[520px] md:shrink-0 md:px-10 md:py-16"
       style={{
         background: "linear-gradient(135deg, #FFFFFF 0%, #FCF1F3 55%, #F8E3E7 100%)",
       }}
@@ -33,22 +33,33 @@ export function AuthBrandHeader() {
 }
 
 /**
- * Page shell for every authentication screen: the brand header plus a
- * centred column capped at 480px so Login and Register share one width system.
+ * Page shell for every authentication screen. Login/Register: brand panel
+ * on the left on desktop (top on phone) plus a centred form column capped
+ * at 480px. The OTP step renders without the brand, centred alone.
  */
 export function AuthShell({
   children,
   showBrand = true,
 }: {
   children: React.ReactNode;
-  /** The OTP verification step renders without the brand header. */
+  /** The OTP verification step renders without the brand panel. */
   showBrand?: boolean;
 }) {
+  if (!showBrand) {
+    return (
+      <div className="app-shell min-h-dvh w-full bg-white pb-safe">
+        <div className="mx-auto w-full max-w-[480px] px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-10 max-[360px]:px-3">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="app-shell min-h-dvh w-full bg-white pb-safe">
-      {showBrand ? <AuthBrandHeader /> : null}
-      <div className="mx-auto w-full max-w-[480px] px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-10 max-[360px]:px-3">
-        {children}
+    <div className="app-shell flex min-h-dvh w-full flex-col bg-white pb-safe md:flex-row md:items-stretch">
+      <AuthBrandHeader />
+      <div className="flex flex-1 items-center justify-center px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-10 max-[360px]:px-3">
+        <div className="w-full max-w-[480px] min-w-0">{children}</div>
       </div>
     </div>
   );
