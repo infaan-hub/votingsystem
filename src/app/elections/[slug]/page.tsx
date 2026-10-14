@@ -356,7 +356,7 @@ function ElectionDetailContent() {
   const inviteUsed = invite.trim().length > 0;
 
   return (
-    <div className="space-y-8 pb-24 lg:pb-8">
+    <div className="space-y-8 pb-36 lg:pb-8">
       <PageHero
         backHref="/elections"
         backLabel="Back to elections"
@@ -679,7 +679,7 @@ function ElectionDetailContent() {
       </Section>
 
       {votingOpen ? (
-        <div className="fixed inset-x-0 bottom-16 z-40 border-t border-nv-line bg-nv-surface/95 px-4 py-3 shadow-panel backdrop-blur lg:bottom-4">
+        <div className="fixed inset-x-0 bottom-above-nav z-40 border-t border-nv-line bg-nv-surface/95 px-4 py-3 shadow-panel backdrop-blur lg:bottom-4">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-[13.5px] font-bold text-nv-ink">{election.title}</p>

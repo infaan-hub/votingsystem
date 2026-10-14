@@ -337,6 +337,12 @@
   padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Bottom offset for sticky/fixed bars that must sit directly above the
+   phone bottom nav (64px bar + iOS/Android safe-area inset). */
+@utility bottom-above-nav {
+  bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+}
+
 @utility nums-tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";

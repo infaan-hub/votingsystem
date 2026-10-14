@@ -36,10 +36,19 @@ export function Sheet({
   const panelRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  // Parents pass an inline onOpenChange, so its identity changes on every
+  // re-render (every keystroke in a form sheet). Reading it through a ref
+  // keeps the effects below stable instead of re-running per keystroke.
+  const onOpenChangeRef = useRef(onOpenChange);
+  useEffect(() => {
+    onOpenChangeRef.current = onOpenChange;
+  });
+  const focusPlacedRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
       setDragOffset(0);
+      focusPlacedRef.current = false;
       return;
     }
     const previousOverflow = document.body.style.overflow;
@@ -48,7 +57,7 @@ export function Sheet({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && dismissible) {
         event.preventDefault();
-        onOpenChange(false);
+        onOpenChangeRef.current(false);
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
@@ -68,16 +77,31 @@ export function Sheet({
     };
 
     window.addEventListener("keydown", onKeyDown);
-    const focusTimer = window.setTimeout(() => {
-      panelRef.current?.querySelector<HTMLElement>("input, button")?.focus();
-    }, 60);
-
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      window.clearTimeout(focusTimer);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onOpenChange, dismissible]);
+  }, [open, dismissible]);
+
+  // Move focus into the sheet once per open. Never re-run this on parent
+  // re-renders (typing) and never steal focus from the field being used.
+  useEffect(() => {
+    if (!open || focusPlacedRef.current) return;
+    focusPlacedRef.current = true;
+    const focusTimer = window.setTimeout(() => {
+      const active = document.activeElement;
+      if (active && panelRef.current?.contains(active)) return;
+      // Prefer the first form field; the close button comes first in the DOM
+      // but focusing it would swallow the user's first keystrokes.
+      const field = panelRef.current?.querySelector<HTMLElement>(
+        "input, select, textarea",
+      );
+      (field ?? panelRef.current?.querySelector<HTMLElement>("button"))?.focus();
+    }, 60);
+    return () => {
+      window.clearTimeout(focusTimer);
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -89,7 +113,7 @@ export function Sheet({
     setDragOffset(Math.max(0, event.touches[0].clientY - dragStart.current));
   };
   const onTouchEnd = () => {
-    if (dragOffset > 112) onOpenChange(false);
+    if (dragOffset > 112) onOpenChangeRef.current(false);
     dragStart.current = null;
     setDragOffset(0);
   };
@@ -101,49 +125,54 @@ export function Sheet({
       aria-modal="true"
       aria-labelledby={title ? "sheet-title" : undefined}
       onClick={(event) => {
-        if (dismissible && event.target === event.currentTarget) onOpenChange(false);
+        if (dismissible && event.target === event.currentTarget) onOpenChangeRef.current(false);
       }}
     >
       <div
         ref={panelRef}
         style={dragOffset ? { transform: `translateY(${dragOffset}px)` } : undefined}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
         className={cn(
           "sheet flex max-h-[92dvh] w-full flex-col bg-nv-surface text-nv-ink backdrop-blur-xl",
           "transition-transform duration-200 ease-out lg:sheet-modal lg:max-h-[88dvh]",
           className,
         )}
       >
-        <div className="flex justify-center pt-2.5 lg:hidden" aria-hidden="true">
-          <span className="h-1.5 w-10 rounded-full bg-nv-line" />
-        </div>
+        {/* Drag-to-dismiss lives on the handle/header only — binding it to the
+            whole panel made scrolling the content dismiss the sheet on phones. */}
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className="flex justify-center pt-2.5 lg:hidden" aria-hidden="true">
+            <span className="h-1.5 w-10 rounded-full bg-nv-line" />
+          </div>
 
-        {title || dismissible ? (
-          <header className="flex items-start justify-between gap-3 px-5 pt-4">
-            <div className="min-w-0">
-              {title ? (
-                <h2 id="sheet-title" className="text-[22px] font-bold leading-7 tracking-tight">
-                  {title}
-                </h2>
+          {title || dismissible ? (
+            <header className="flex items-start justify-between gap-3 px-5 pt-4">
+              <div className="min-w-0">
+                {title ? (
+                  <h2 id="sheet-title" className="text-[22px] font-bold leading-7 tracking-tight">
+                    {title}
+                  </h2>
+                ) : null}
+                {description ? (
+                  <p className="mt-1 text-[13px] leading-5 text-nv-muted">{description}</p>
+                ) : null}
+              </div>
+              {dismissible ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenChangeRef.current(false)}
+                  aria-label="Close"
+                  className="-mr-1.5 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-nv-muted transition-colors hover:bg-nv-surface"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
               ) : null}
-              {description ? (
-                <p className="mt-1 text-[13px] leading-5 text-nv-muted">{description}</p>
-              ) : null}
-            </div>
-            {dismissible ? (
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                aria-label="Close"
-                className="-mr-1.5 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-nv-muted transition-colors hover:bg-nv-surface"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            ) : null}
-          </header>
-        ) : null}
+            </header>
+          ) : null}
+        </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
 

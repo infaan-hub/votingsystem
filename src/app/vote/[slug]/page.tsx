@@ -14,6 +14,8 @@ import {
 import { useApp } from "@/src/components/AppProvider";
 import { BackButton } from "@/src/components/back-button";
 import { useToast } from "@/src/components/ui/toast";
+import { Avatar } from "@/src/components/ui/avatar";
+import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Sheet } from "@/src/components/ui/sheet";
@@ -180,42 +182,46 @@ function Ballot({
 
   if (!token) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
-          <span className="nv-grad-candidate grid h-14 w-14 place-items-center rounded-full text-nv-navy">
-            <LogIn className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <h1 className="text-[18px] font-bold text-nv-ink">Sign in to vote</h1>
-          <p className="max-w-sm text-[13px] text-nv-muted">
-            You need an authenticated account to receive a ballot.
-          </p>
-          <Button asChild className="sm:w-52">
-            <Link href={`/login?next=${encodeURIComponent(`/vote/${slug}`)}`}>Sign in</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="mx-auto max-w-md">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+            <span className="nv-grad-candidate grid h-14 w-14 place-items-center rounded-full text-nv-navy">
+              <LogIn className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <h1 className="text-fluid-lg text-nv-ink">Sign in to vote</h1>
+            <p className="max-w-sm text-[13px] text-nv-muted">
+              You need an authenticated account to receive a ballot.
+            </p>
+            <Button asChild className="sm:w-52">
+              <Link href={`/login?next=${encodeURIComponent(`/vote/${slug}`)}`}>Sign in</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (error && !ballot) {
     return (
-      <Card>
-        <CardContent className="py-14 text-center">
-          <p role="alert" className="text-[13px] text-nv-danger">
-            {error}
-          </p>
-          <Button variant="ghost" className="mx-auto mt-4 w-auto px-5" onClick={load}>
-            Try again
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="mx-auto max-w-md">
+        <Card>
+          <CardContent className="py-14 text-center">
+            <p role="alert" className="text-[13px] text-nv-danger">
+              {error}
+            </p>
+            <Button variant="ghost" className="mx-auto mt-4 w-auto px-5" onClick={load}>
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (!ballot) return <BallotSkeleton />;
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-3xl space-y-5">
       {/* ---------------- Header ---------------- */}
       <header>
         <BackButton
@@ -265,7 +271,7 @@ function Ballot({
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <h2
                       id={`q-${position.id}`}
-                      className="text-[16px] font-bold text-nv-ink"
+                      className="text-fluid-lg text-nv-ink"
                     >
                       {position.name}
                     </h2>
@@ -281,14 +287,14 @@ function Ballot({
                     )}
                   </div>
 
-                  <ul className="space-y-2">
+                  <ul className="grid gap-2 sm:grid-cols-2">
                     {position.candidates.map((candidate) => {
                       const checked = picks.includes(candidate.id);
                       return (
                         <li key={candidate.id}>
                           <label
                             className={cn(
-                              "flex items-center gap-3 rounded-nv-md border bg-nv-surface p-3 transition-colors duration-200",
+                              "flex items-center gap-3 rounded-nv-md border bg-nv-surface p-4 shadow-nv-card transition-colors duration-200",
                               locked
                                 ? "cursor-not-allowed opacity-60"
                                 : "cursor-pointer hover:border-nv-primary/50",
@@ -303,26 +309,26 @@ function Ballot({
                               onChange={() => toggle(position, candidate.id)}
                               className="h-5 w-5 shrink-0 accent-[var(--nv-primary)]"
                             />
-                            <span
-                              aria-hidden="true"
-                              className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
-                            >
-                              {initialsFor(candidate.user.full_name || candidate.user.username)}
-                            </span>
+                            <Avatar
+                              name={candidate.user.full_name || candidate.user.username}
+                              src={candidate.photo_url}
+                              size={40}
+                              className="shrink-0"
+                            />
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[14px] font-bold text-nv-ink">
+                              <span className="block truncate text-[14.5px] font-bold text-nv-ink">
                                 {candidate.user.full_name || candidate.user.username}
                               </span>
                               {candidate.slogan ? (
-                                <span className="block truncate text-[12px] text-nv-muted">
+                                <span className="block truncate text-[12.5px] font-semibold text-nv-primary">
                                   {candidate.slogan}
                                 </span>
                               ) : null}
                             </span>
                             {candidate.party_code ? (
-                              <span className="shrink-0 rounded-full bg-nv-primary px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                              <Badge className="shrink-0 text-[10px]">
                                 {candidate.party_code}
-                              </span>
+                              </Badge>
                             ) : null}
                           </label>
                         </li>
@@ -335,7 +341,7 @@ function Ballot({
           </div>
 
           {/* ---------------- Sticky CTA ---------------- */}
-          <div className="sticky bottom-20 z-30 lg:bottom-4">
+          <div className="sticky bottom-above-nav z-30 lg:bottom-4">
             <div className="rounded-nv-lg border border-nv-line bg-nv-surface/95 p-3 shadow-nv-sheet backdrop-blur">
               {!complete ? (
                 <p className="px-1 pb-2 text-[12px] text-nv-muted">
@@ -462,16 +468,6 @@ function ConfirmSheet({
       </div>
     </Sheet>
   );
-}
-
-function initialsFor(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 }
 
 function BallotSkeleton() {
