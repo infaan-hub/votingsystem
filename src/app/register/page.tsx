@@ -143,7 +143,8 @@ export default function RegisterPage() {
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}
-            autoCapitalize="characters"
+            autoCapitalize="none"
+            autoCorrect="off"
             required
           />
 

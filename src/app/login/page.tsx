@@ -63,7 +63,7 @@ function LoginForm() {
         ) : null}
 
         <Input
-          label={`${t.idLabel} or username`}
+          label="Username"
           placeholder={t.idPlaceholder}
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
@@ -94,10 +94,6 @@ function LoginForm() {
           Create here
         </Link>
       </p>
-
-      <Button asChild variant="outline" className="mt-3">
-        <Link href="/register">Register</Link>
-      </Button>
     </AuthCard>
   );
 }

@@ -115,11 +115,11 @@ const tenant: TenantConfig = {
   defaultLocale: "en",
   direction: "ltr",
   idType: {
-    label: "Membership ID",
-    shortLabel: "ID",
-    placeholder: "XX-0000000",
+    label: "Username",
+    shortLabel: "Username",
+    placeholder: "e.g. alice",
     pattern: null,
-    invalidMessage: "Enter a valid membership ID.",
+    invalidMessage: "Enter a valid username.",
     required: true,
   },
   geography: {

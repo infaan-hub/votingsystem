@@ -42,7 +42,7 @@ export function Sidebar({
   footer?: React.ReactNode;
   /** Small chip above the footer, e.g. "Administrator". */
   roleBadge?: React.ReactNode;
-  /** Signed-in user's picture + name, pinned at the top of the rail. */
+  /** Signed-in user's picture; the Profile nav item shows it instead of an icon. */
   profile?: { name: string; src: string | null };
   /** Renders a Sign out control pinned under the nav (desktop rail). */
   onSignOut?: () => void;
@@ -60,27 +60,6 @@ export function Sidebar({
         collapsed ? "w-[72px]" : "w-60",
       )}
     >
-      {profile ? (
-        <div className="shrink-0 border-b border-sidebar-border p-2 lg:p-3">
-          <Link
-            href="/profile"
-            title={profile.name}
-            className={cn(
-              "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
-              "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary",
-              collapsed && "justify-center px-0",
-            )}
-          >
-            <Avatar src={profile.src ?? undefined} name={profile.name} size={32} />
-            <span
-              className={cn("truncate text-[13px] font-semibold", collapsed && "hidden")}
-            >
-              {profile.name}
-            </span>
-          </Link>
-        </div>
-      ) : null}
       <nav className="min-h-0 flex-1 overflow-y-auto p-2 lg:p-3">
         {groups ? (
           <div className="flex flex-col gap-4">
@@ -96,7 +75,13 @@ export function Sidebar({
                 </p>
                 <ul className="flex flex-col gap-0.5">
                   {group.items.map((link) => (
-                    <NavLink key={link.href} link={link} pathname={pathname} collapsed={collapsed} />
+                    <NavLink
+                      key={link.href}
+                      link={link}
+                      pathname={pathname}
+                      collapsed={collapsed}
+                      profile={profile}
+                    />
                   ))}
                 </ul>
               </div>
@@ -105,7 +90,13 @@ export function Sidebar({
         ) : (
           <ul className="flex flex-col gap-0.5">
             {flat.map((link) => (
-              <NavLink key={link.href} link={link} pathname={pathname} collapsed={collapsed} />
+              <NavLink
+                key={link.href}
+                link={link}
+                pathname={pathname}
+                collapsed={collapsed}
+                profile={profile}
+              />
             ))}
           </ul>
         )}
@@ -155,13 +146,17 @@ function NavLink({
   link,
   pathname,
   collapsed,
+  profile,
 }: {
   link: SidebarLink;
   pathname: string;
   collapsed: boolean;
+  profile?: { name: string; src: string | null };
 }) {
   const active = isActive(pathname, link);
   const Icon = link.icon;
+  // The Profile nav item shows the signed-in user's picture instead of an icon.
+  const showAvatar = link.href === "/profile" && Boolean(profile);
   return (
     <li>
       <Link
@@ -177,7 +172,16 @@ function NavLink({
         )}
       >
         <span className="shrink-0" aria-hidden="true">
-          <Icon className="h-[18px] w-[18px]" />
+          {showAvatar ? (
+            <Avatar
+              src={profile!.src ?? undefined}
+              name={profile!.name}
+              size={20}
+              className={cn(active && "ring-2 ring-nv-primary")}
+            />
+          ) : (
+            <Icon className="h-[18px] w-[18px]" />
+          )}
         </span>
         <span
           className={cn(
