@@ -5,7 +5,7 @@ import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { serializeAnnouncement } from "@/src/lib/serializers";
 import { notify } from "@/src/lib/notifications/notify";
-import { eligibleUserIdsForPosition } from "@/src/lib/services";
+import { electionRecipientIds } from "@/src/lib/notifications/events";
 
 const ANNOUNCEMENT_TYPES = ["notice", "campaign", "result"] as const;
 
@@ -43,20 +43,15 @@ export const POST = makeRoute({
         },
       });
 
-      // Push + in-app notification to every voter eligible for this election
-      // (union of position eligibility). Idempotent on the announcement id.
+      // Push + in-app notification to every voter eligible for this election,
+      // resolved through the shared recipient helper (position eligibility ∪
+      // voter-list accounts — the same source of truth every election event
+      // uses). Idempotent on the announcement id.
       try {
-        const positions = await prisma.position.findMany({
-          where: { electionId: election.id },
-          include: { department: true, section: { include: { department: true } } },
-        });
-        const eligible = new Set<number>();
-        for (const position of positions) {
-          for (const id of await eligibleUserIdsForPosition(position)) eligible.add(id);
-        }
-        if (eligible.size) {
+        const eligible = await electionRecipientIds(election);
+        if (eligible.length) {
           await notify({
-            recipientIds: [...eligible],
+            recipientIds: eligible,
             title: `Announcement: ${title}`,
             body: message.slice(0, 200),
             targetUrl: `/elections/${election.slug}`,

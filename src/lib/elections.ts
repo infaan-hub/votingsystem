@@ -3,6 +3,7 @@ import { fieldErrors, notFoundModel } from "@/src/lib/http";
 import { slugify } from "@/src/lib/slug";
 import { serializeElectionList } from "@/src/lib/serializers";
 import { formatDateTime } from "@/src/lib/time";
+import { notifyElectionStatusChange } from "@/src/lib/notifications/events";
 import type { Election } from "@/src/generated/prisma/client";
 
 /** Stored `Election.status` state machine. */
@@ -177,11 +178,17 @@ export async function transitionElection(
   if (target === "CLOSED") updates.resultFinalizedAt = election.resultFinalizedAt ?? now;
   if (target === "RESULTS_PUBLISHED") updates.resultPublishedAt = now;
 
-  return prisma.election.update({
+  const updated = await prisma.election.update({
     where: { id: election.id },
     data: updates,
     include: { category: true, organization: true },
   });
+
+  // Lifecycle fan-out runs only after the transition committed; the helper
+  // compares the persisted previous status with the result and never throws.
+  await notifyElectionStatusChange(election.status, updated);
+
+  return updated;
 }
 
 /** True when ballots may be accepted right now (lifecycle + wall clock). */

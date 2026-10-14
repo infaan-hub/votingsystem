@@ -3,6 +3,7 @@ import { notFoundModel } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
 import { requireStateAdmin } from "@/src/lib/auth";
 import { recordAudit, clientIp } from "@/src/lib/audit";
+import { notifyOfficerRevoked } from "@/src/lib/notifications/events";
 
 /**
  * DELETE: deactivate an officer assignment. The officer keeps their account
@@ -22,10 +23,20 @@ export const DELETE = makeRoute({
       });
       if (!existing) throw notFoundModel("OfficerAssignment");
 
+      // Resolve the affected officer while the assignment still exists, and
+      // only notify when this call actually revoked an active assignment —
+      // a repeated DELETE must stay silent.
+      const wasActive = existing.isActive;
+      const revokedOfficer = { id: existing.id, officerId: existing.officerId };
+
       const updated = await prisma.officerAssignment.update({
         where: { id: pk },
         data: { isActive: false },
       });
+
+      if (wasActive) {
+        await notifyOfficerRevoked(revokedOfficer);
+      }
 
       await recordAudit({
         actorId: admin.id,

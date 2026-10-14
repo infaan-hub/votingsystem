@@ -12,6 +12,7 @@ import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { ValidationError, validateElection } from "@/src/lib/validation";
 import { serializeElectionDetail } from "@/src/lib/serializers";
+import { notifyElectionRescheduled } from "@/src/lib/notifications/events";
 
 const SCHEDULE_FIELDS = [
   "campaign_start_at",
@@ -127,10 +128,19 @@ export const PATCH = makeRoute({
       if (updates.title === undefined) updates.title = election.title.trim();
       if (updates.description === undefined) updates.description = election.description.trim();
 
+      const previousSchedule = {
+        votingStartAt: election.votingStartAt,
+        votingEndAt: election.votingEndAt,
+      };
       const saved = await prisma.election.update({
         where: { id: election.id },
         data: updates,
       });
+
+      // Fires only when the persisted voting instants actually differ and the
+      // election is public; retries of an unchanged schedule stay silent.
+      await notifyElectionRescheduled(previousSchedule, saved);
+
       return json(await serializeElectionDetail(saved));
     },
   },

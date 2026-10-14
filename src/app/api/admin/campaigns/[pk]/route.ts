@@ -6,6 +6,7 @@ import { readPayload } from "@/src/lib/request";
 import { requireStateAdmin } from "@/src/lib/auth";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { CAMPAIGN_INCLUDE, serializeCampaign } from "@/src/app/api/campaigns/route";
+import { notifyCampaignModerated } from "@/src/lib/notifications/events";
 
 const MODERATION_STATUSES = ["PUBLISHED", "HIDDEN", "REJECTED"] as const;
 
@@ -35,16 +36,43 @@ const route = makeRoute({
         });
       }
 
-      const updated = await prisma.campaign.update({
+      const moderation = {
+        moderationNote: moderationNote ?? existing.moderationNote,
+        moderatedBy: admin.id,
+        moderatedAt: new Date(),
+      };
+      const statusChanged = existing.status !== status;
+      if (statusChanged) {
+        // Guarded compare-and-swap on the previous status: only the request
+        // that actually flips the persisted status notifies, so retries and
+        // concurrent moderation requests cannot duplicate the event.
+        const flip = await prisma.campaign.updateMany({
+          where: { id: pk, status: existing.status },
+          data: { status, ...moderation },
+        });
+        if (flip.count !== 1) {
+          throw fieldErrors({
+            status: "This campaign was just updated by someone else. Reload and try again.",
+          });
+        }
+      } else {
+        // Unchanged status: keep the pre-existing behavior of refreshing the
+        // note/moderator without firing a notification.
+        await prisma.campaign.update({ where: { id: pk }, data: moderation });
+      }
+
+      const updated = await prisma.campaign.findUnique({
         where: { id: pk },
-        data: {
-          status,
-          moderationNote: moderationNote ?? existing.moderationNote,
-          moderatedBy: admin.id,
-          moderatedAt: new Date(),
-        },
         include: CAMPAIGN_INCLUDE,
       });
+      if (!updated) throw notFoundModel("Campaign");
+
+      if (statusChanged) {
+        // The moderatedAt instant of this flip versions the idempotency key:
+        // retries stay silent (status already set), legitimate reversals
+        // notify again. Never includes the moderation note.
+        await notifyCampaignModerated(updated, status, updated.moderatedAt!.getTime());
+      }
 
       await recordAudit({
         actorId: admin.id,

@@ -3,17 +3,8 @@ import { fieldErrors, notFoundModel } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { serializeElectionAdmin } from "@/src/app/api/admin/elections/route";
-
-const LEGAL_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ["PUBLISHED", "ARCHIVED"],
-  PUBLISHED: ["NOMINATIONS", "ARCHIVED"],
-  NOMINATIONS: ["READY", "ARCHIVED"],
-  READY: ["OPEN", "ARCHIVED"],
-  OPEN: ["CLOSED"],
-  CLOSED: ["RESULTS_PUBLISHED"],
-  RESULTS_PUBLISHED: ["ARCHIVED"],
-  ARCHIVED: [],
-};
+import { LEGAL_TRANSITIONS } from "@/src/lib/elections";
+import { notifyElectionStatusChange } from "@/src/lib/notifications/events";
 
 const route = makeRoute({
   permission: "admin",
@@ -31,6 +22,8 @@ const route = makeRoute({
       const target = typeof payload.status === "string" ? payload.status : "";
       if (!target) throw fieldErrors({ status: "This field is required." });
 
+      // One state machine for every entry point (shared with the transition
+      // helper below and in src/lib/elections.ts).
       const allowed = LEGAL_TRANSITIONS[election.status] ?? [];
       if (!allowed.includes(target)) {
         throw fieldErrors({
@@ -46,6 +39,11 @@ const route = makeRoute({
         data: updates,
         include: { category: true, organization: true },
       });
+
+      // Fire lifecycle notifications only after the transition committed.
+      // The helper compares persisted previous → new status and never throws.
+      await notifyElectionStatusChange(election.status, updated);
+
       return json(serializeElectionAdmin(updated));
     },
   },

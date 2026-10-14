@@ -9,6 +9,7 @@ import { formatDateTime } from "@/src/lib/time";
 import { readPayload, type Payload } from "@/src/lib/request";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { slugify } from "@/src/lib/slug";
+import { notifyVotersAdded } from "@/src/lib/notifications/events";
 import type { Election } from "@/src/generated/prisma/client";
 
 const VOTER_ID_METHODS = [
@@ -311,6 +312,8 @@ const route = makeRoute({
           votersAdded = await prisma.electionVoter.count({
             where: { electionId: created.id },
           });
+          // Fresh election: every resolved account is a new list entry.
+          await notifyVotersAdded(created, resolved.userIds);
         }
       }
 

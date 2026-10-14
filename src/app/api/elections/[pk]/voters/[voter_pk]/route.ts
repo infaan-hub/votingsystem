@@ -4,6 +4,7 @@ import { prisma } from "@/src/lib/db";
 import { requireStateOfficer } from "@/src/lib/auth";
 import { requireManagedElection } from "@/src/lib/officer";
 import { recordAudit, clientIp } from "@/src/lib/audit";
+import { electionRecipientIds, notifyVoterRemoved } from "@/src/lib/notifications/events";
 
 export const DELETE = makeRoute({
   permission: "officer",
@@ -18,7 +19,16 @@ export const DELETE = makeRoute({
       });
       if (!existing) throw notFoundModel("ElectionVoter");
 
+      // Capture the account while the row still exists, then re-resolve
+      // eligibility AFTER the delete so the wording reflects real remaining
+      // rights (position or other rules may still qualify this user).
+      const removedUserId = existing.userId;
       await prisma.electionVoter.delete({ where: { id: existing.id } });
+
+      if (removedUserId !== null) {
+        const stillEligible = (await electionRecipientIds(election)).includes(removedUserId);
+        await notifyVoterRemoved(election, removedUserId, stillEligible);
+      }
 
       await recordAudit({
         actorId: officer.id,

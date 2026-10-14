@@ -10,6 +10,12 @@ import { Collector, strField, dateTimeField, choiceField, intField } from "@/src
 import { readPayload, type Payload } from "@/src/lib/request";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
+import {
+  PUBLIC_ACTIVE_STATUSES,
+  electionRecipientIds,
+  notifyElectionRemoved,
+  notifyElectionRescheduled,
+} from "@/src/lib/notifications/events";
 
 const VOTER_ID_METHODS = [
   "account",
@@ -245,6 +251,13 @@ const route = makeRoute({
         ipAddress: clientIp(req),
       });
 
+      // Same helper as the admin schedule route: only real, published
+      // schedule changes ping voters, with a key per schedule revision.
+      await notifyElectionRescheduled(
+        { votingStartAt: existing.votingStartAt, votingEndAt: existing.votingEndAt },
+        updated,
+      );
+
       return json(serializeElectionAdmin(updated));
     },
     DELETE: async (req, params, state) => {
@@ -273,6 +286,15 @@ const route = makeRoute({
         });
       }
 
+      // Resolve recipients while positions/voter lists still exist — the
+      // delete cascades them away. Only previously public elections produce
+      // a cancellation notice; drafts and already-archived rows stay silent
+      // (archiving notified separately), so one election never double-pings.
+      const previousStatus = existing.status;
+      const removedRecipients = PUBLIC_ACTIVE_STATUSES.has(previousStatus)
+        ? await electionRecipientIds(existing)
+        : [];
+
       await prisma.election.delete({ where: { id: pk } });
 
       await recordAudit({
@@ -284,6 +306,10 @@ const route = makeRoute({
         detail: { status: existing.status, slug: existing.slug },
         ipAddress: clientIp(req),
       });
+
+      if (removedRecipients.length) {
+        await notifyElectionRemoved(existing, removedRecipients);
+      }
 
       return noContent();
     },

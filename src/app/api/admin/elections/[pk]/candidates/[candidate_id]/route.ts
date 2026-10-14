@@ -20,6 +20,7 @@ import {
 } from "@/src/lib/validation";
 import { serializeCandidate } from "@/src/lib/serializers";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
+import { notifyCandidateReviewed } from "@/src/lib/notifications/events";
 import type {
   Candidate,
   Department,
@@ -230,7 +231,8 @@ const route = makeRoute({
       const candidateUpdates: Record<string, unknown> = {};
       if (slogan !== undefined) candidateUpdates.slogan = slogan;
       if (manifesto !== undefined) candidateUpdates.manifesto = manifesto;
-      if (approved !== undefined) candidateUpdates.approved = approved;
+      // `approved` is applied after the main update through a guarded flip so
+      // retries and concurrent PATCHes cannot double-notify (see below).
       if (resolvedPosition) {
         candidateUpdates.positionId = resolvedPosition.id;
         candidateUpdates.departmentId = resolvedPosition.departmentId;
@@ -287,6 +289,32 @@ const route = makeRoute({
         }
         throw error;
       }
+
+      // Guarded compare-and-swap on the previous value: only the request that
+      // actually flips the persisted status notifies, so a retried PATCH (or a
+      // concurrent one that finds the flip already applied) stays silent. The
+      // flip's timestamp versions the idempotency key, so a legitimate later
+      // reversal notifies again without ever duplicating the same event.
+      if (approved !== undefined && approved !== candidate.approved) {
+        const flip = await prisma.candidate.updateMany({
+          where: { id: candidate.id, approved: candidate.approved },
+          data: { approved },
+        });
+        if (flip.count === 1) {
+          updated.approved = approved;
+          const fresh = await prisma.candidate.findUnique({
+            where: { id: candidate.id },
+            select: { updatedAt: true },
+          });
+          await notifyCandidateReviewed(
+            election,
+            { id: candidate.id, userId: candidate.userId },
+            approved,
+            (fresh ?? updated).updatedAt.getTime(),
+          );
+        }
+      }
+
       return json(serializeCandidate(updated));
     },
     DELETE: async (_req, params) => {

@@ -9,6 +9,7 @@ import { identifierDigest } from "@/src/lib/eligibility";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { displayName } from "@/src/lib/serializers";
 import { formatDateTime } from "@/src/lib/time";
+import { notifyVotersAdded } from "@/src/lib/notifications/events";
 
 const MAX_VOTER_ENTRIES = 500;
 
@@ -164,6 +165,20 @@ const route = makeRoute({
         })),
       ];
 
+      // Snapshot which account rows already exist so only genuinely new
+      // list entries are notified (`createMany` reports an aggregate count).
+      const wantedUserIds = [...new Set(userIds)];
+      const preExisting = wantedUserIds.length
+        ? await prisma.electionVoter.findMany({
+            where: {
+              electionId: election.id,
+              uniqueKey: { in: wantedUserIds.map((userId) => `u:${userId}`) },
+            },
+            select: { uniqueKey: true },
+          })
+        : [];
+      const alreadyListed = new Set(preExisting.map((row) => row.uniqueKey.slice(2)));
+
       const result = await prisma.electionVoter.createMany({ data, skipDuplicates: true });
       const total = await prisma.electionVoter.count({ where: { electionId: election.id } });
       const skipped = data.length - result.count;
@@ -177,6 +192,13 @@ const route = makeRoute({
         detail: { added: result.count, skipped, total, unmatched: unmatched.length },
         ipAddress: clientIp(req),
       });
+
+      // Identifier-only rows have no account to notify; pre-existing accounts
+      // are excluded so a repeat upload never re-pings them.
+      const newlyAdded = wantedUserIds.filter((userId) => !alreadyListed.has(String(userId)));
+      if (newlyAdded.length) {
+        await notifyVotersAdded(election, newlyAdded);
+      }
 
       return json({ added: result.count, skipped, total, unmatched });
     },

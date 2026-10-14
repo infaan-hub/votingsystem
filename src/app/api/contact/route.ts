@@ -4,6 +4,7 @@ import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { formatDateTime } from "@/src/lib/time";
+import { notifyContactReceived } from "@/src/lib/notifications/events";
 
 export const CONTACT_STATUSES = ["NEW", "OPEN", "RESOLVED"] as const;
 
@@ -64,6 +65,11 @@ export const POST = makeRoute({
         summary: `Contact message: ${created.subject}`,
         ipAddress: clientIp(req),
       });
+
+      // Fan-out to active administrators only; recipients are resolved from
+      // the database, and the payload carries no sender details or message
+      // text. Never fails the public submission itself.
+      await notifyContactReceived(created.id);
 
       return json(serializeContact(created), 201);
     },

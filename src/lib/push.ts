@@ -167,6 +167,25 @@ async function sendOne(row: DeliveryRow, payload: PushPayload) {
           errorCode: code,
         },
       });
+      // The endpoint belongs to a known account record, so an honest in-app
+      // note is possible: one device stopped receiving pushes and needs
+      // re-enabling. Written directly (in-app only, no outbox row) so
+      // notification work can never recurse into delivery.
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientId: subscription.userId,
+            title: "Notifications need re-enabling",
+            body: "Push notifications stopped on a device you use. Re-enable notifications in your browser to keep receiving election updates.",
+            category: "account",
+            targetUrl: "/profile",
+            tag: "push-expired",
+            idempotencyKey: `push-expired-${subscription.id}`,
+          },
+        });
+      } catch {
+        // Duplicate (idempotency key) or transient failure: cleanup continues.
+      }
       await prisma.pushSubscription.deleteMany({ where: { id: subscription.id } });
       return "expired" as const;
     }
@@ -238,17 +257,24 @@ export async function deliverNotificationPushes(
 }
 
 /**
- * Opportunistically retries due queued/failed deliveries. Called from list and
- * notify paths so a serverless deployment still drains the outbox over time.
+ * Opportunistically retries due queued deliveries and rescues stale "pending"
+ * rows (outbox rows whose sending request was recycled before its attempt
+ * finished — otherwise a large deferred fan-out could strand them). Called
+ * from list and notify paths so a serverless deployment still drains the
+ * outbox over time.
  */
 export async function retryDuePushDeliveries(limit = 25): Promise<number> {
+  const now = new Date();
+  const staleCutoff = new Date(now.getTime() - 60_000);
   const due = await prisma.pushDelivery.findMany({
     where: {
-      status: "queued",
-      nextAttemptAt: { lte: new Date() },
       attemptCount: { lt: MAX_ATTEMPTS },
+      OR: [
+        { status: "queued", nextAttemptAt: { lte: now } },
+        { status: "pending", nextAttemptAt: null, createdAt: { lte: staleCutoff } },
+      ],
     },
-    orderBy: { nextAttemptAt: "asc" },
+    orderBy: { createdAt: "asc" },
     take: limit,
     include: { subscription: true, notification: true },
   });

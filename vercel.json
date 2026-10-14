@@ -4,6 +4,12 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 * * * *"
+    }
+  ],
   "github": {
     "silent": true
   }

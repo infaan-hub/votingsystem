@@ -6,6 +6,7 @@ import { readPayload } from "@/src/lib/request";
 import { requireStateAdmin } from "@/src/lib/auth";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { serializeElectionAdmin } from "@/src/lib/elections";
+import { notifyElectionStatusChange } from "@/src/lib/notifications/events";
 
 const RESULT_ACTIONS = ["finalize", "publish", "unpublish"] as const;
 
@@ -45,6 +46,11 @@ export const POST = makeRoute({
       }
 
       const updated = await prisma.election.update({ where: { id: pk }, data: updates });
+
+      // Compares persisted previous → new status: only a real transition into
+      // RESULTS_PUBLISHED notifies; finalize, unpublish and retried publishes
+      // stay silent. Runs after the update committed and never throws.
+      await notifyElectionStatusChange(election.status, updated);
 
       await recordAudit({
         actorId: admin.id,
