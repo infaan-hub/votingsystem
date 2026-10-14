@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, LogOut, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { NotificationSettings } from "@/src/components/notification-settings";
 import { RequireRole } from "@/src/components/require-role";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Badge } from "@/src/components/ui/badge";
@@ -99,6 +100,9 @@ function AdminProfileBody() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* ---------------- Device notifications ---------------- */}
+      <NotificationSettings />
 
       {/* ---------------- Push notification testing ---------------- */}
       <PushTestPanel />

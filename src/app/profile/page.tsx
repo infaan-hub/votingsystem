@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { NotificationSettings } from "@/src/components/notification-settings";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -343,6 +344,9 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </section>
+
+      {/* ---------------- Notifications ---------------- */}
+      <NotificationSettings />
 
       {/* ---------------- Activity ---------------- */}
       <section aria-labelledby="activity-heading" className="space-y-3">
