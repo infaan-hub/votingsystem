@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, RefreshCw, ShieldCheck, Trash2, UserPlus } from "lucide-react";
+import { CheckCircle2, MessageCircle, RefreshCw, ShieldCheck, Trash2, UserPlus } from "lucide-react";
 
 import { RequireRole } from "@/src/components/require-role";
 import { Badge } from "@/src/components/ui/badge";
@@ -42,6 +42,7 @@ type Assignment = {
     email: string;
     role: string;
     is_active: boolean;
+    phone_number?: string | null;
   };
   election: { id: number; title: string; slug: string } | null;
   organization: { id: number; name: string } | null;
@@ -55,6 +56,7 @@ type OfficerRow = {
   role: string;
   is_active: boolean;
   joined_at: string | null;
+  phone_number?: string | null;
   assignments: Assignment[];
 };
 
@@ -133,6 +135,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
   const [scope, setScope] = useState("all");
   const [electionId, setElectionId] = useState("");
   const [note, setNote] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<Assignment | null>(null);
@@ -174,6 +177,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
     setScope("all");
     setElectionId("");
     setNote("");
+    setWhatsappPhone("");
     setErrors({});
     setCreated(null);
   }
@@ -185,6 +189,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
 
     const body: Record<string, unknown> = { scope };
     if (note.trim()) body.note = note.trim();
+    if (whatsappPhone.trim()) body.whatsapp_phone = whatsappPhone.trim();
     if (scope === "election") body.election_id = Number(electionId);
     if (mode === "existing") {
       body.user_id = Number(existingUserId);
@@ -358,6 +363,22 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
               />
             </div>
           )}
+
+          <div className="max-w-md space-y-1.5">
+            <Input
+              label="WhatsApp number"
+              type="tel"
+              inputMode="tel"
+              value={whatsappPhone}
+              onChange={(event) => setWhatsappPhone(event.target.value)}
+              placeholder="e.g. +255 712 345 678"
+              error={errors.whatsapp_phone}
+              autoComplete="off"
+            />
+            <p className="text-[12px] text-nv-muted">
+              The WhatsApp number this officer uses to send election links to voters.
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -517,9 +538,15 @@ function OfficersSection({ officers }: { officers: Resource<OfficerRow[]> }) {
                       {officer.is_active ? "Active" : "Disabled"}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-[12.5px] text-nv-muted">
-                    {officer.email}
-                    {officer.joined_at ? ` · joined ${officer.joined_at}` : ""}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[12.5px] text-nv-muted">
+                    <span>{officer.email}</span>
+                    {officer.joined_at ? <span>· joined {officer.joined_at}</span> : null}
+                    {officer.phone_number ? (
+                      <span className="inline-flex items-center gap-1 font-semibold text-nv-ink">
+                        <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                        {officer.phone_number}
+                      </span>
+                    ) : null}
                   </p>
 
                   {officer.assignments.length === 0 ? (

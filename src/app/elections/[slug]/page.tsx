@@ -24,6 +24,7 @@ import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { WhatsAppShareButton } from "@/src/components/whatsapp-share-button";
 
 type PublicElection = {
   id: number;
@@ -173,7 +174,7 @@ function ElectionDetailContent() {
   const slug = params.slug;
   const invite = searchParams.get("invite") ?? "";
 
-  const { token } = useApp();
+  const { token, user } = useApp();
 
   const [data, setData] = useState<PublicDetailResponse | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -373,29 +374,38 @@ function ElectionDetailContent() {
           </>
         }
         actions={
-          votingOpen ? (
-            <LinkButton href={`/vote/${election.slug}`} variant="hero" className="sm:w-auto">
-              <Vote className="h-4 w-4" aria-hidden="true" />
-              Cast your vote
-            </LinkButton>
-          ) : (
-            <div className="flex flex-wrap items-center gap-3">
-              <Button disabled variant="hero" className="sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2">
+            {votingOpen ? (
+              <LinkButton href={`/vote/${election.slug}`} variant="hero" className="sm:w-auto">
                 <Vote className="h-4 w-4" aria-hidden="true" />
-                {election.status === "upcoming" ? "Voting has not opened yet" : "Voting is closed"}
-              </Button>
-              {election.status === "upcoming" && election.voting_start_at ? (
-                <p className="text-[13px] text-white/85">
-                  The ballot opens {formatDate(election.voting_start_at)}.
-                </p>
-              ) : null}
-              {election.status === "ended" && election.voting_end_at ? (
-                <p className="text-[13px] text-white/85">
-                  Voting closed {formatDate(election.voting_end_at)}.
-                </p>
-              ) : null}
-            </div>
-          )
+                Cast your vote
+              </LinkButton>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <Button disabled variant="hero" className="sm:w-auto">
+                  <Vote className="h-4 w-4" aria-hidden="true" />
+                  {election.status === "upcoming" ? "Voting has not opened yet" : "Voting is closed"}
+                </Button>
+                {election.status === "upcoming" && election.voting_start_at ? (
+                  <p className="text-[13px] text-white/85">
+                    The ballot opens {formatDate(election.voting_start_at)}.
+                  </p>
+                ) : null}
+                {election.status === "ended" && election.voting_end_at ? (
+                  <p className="text-[13px] text-white/85">
+                    Voting closed {formatDate(election.voting_end_at)}.
+                  </p>
+                ) : null}
+              </div>
+            )}
+            <WhatsAppShareButton
+              title={election.title}
+              url={`/elections/${election.slug}${inviteUsed ? `?invite=${encodeURIComponent(invite)}` : ""}`}
+              senderPhone={user?.phone_number}
+              variant="hero"
+              className="sm:w-auto"
+            />
+          </div>
         }
       >
         {votingOpen && election.voting_end_at ? (

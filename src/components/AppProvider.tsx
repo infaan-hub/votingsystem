@@ -14,6 +14,7 @@ type UserSummary = {
   role: string;
   auth_provider: string;
   photo_url: string | null;
+  phone_number?: string | null;
 };
 
 type AuthResponse = {

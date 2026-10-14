@@ -118,6 +118,22 @@ export function isValidEmail(value: string): boolean {
   return false;
 }
 
+const PHONE_RE = /^\+?[0-9][0-9\s\-().]{4,24}$/;
+
+/** Human phone numbers (optional +, digits, spaces, dashes, dots, parens). */
+export function isValidPhone(value: string): boolean {
+  const trimmed = value.trim();
+  if (!PHONE_RE.test(trimmed)) return false;
+  // At most one leading +, and 5–15 digits (E.164-ish).
+  const digits = trimmed.replace(/\D/g, "");
+  return digits.length >= 5 && digits.length <= 15;
+}
+
+/** Digits only, for building wa.me / tel: links. */
+export function phoneDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 /** Email field: string field plus the syntax check above. */
 export function emailField(
   c: Collector,

@@ -29,6 +29,7 @@ import {
 } from "@/src/components/ui/table";
 import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
+import { WhatsAppShareButton } from "@/src/components/whatsapp-share-button";
 import {
   ElectionPickerSection,
   ErrorBanner,
@@ -147,7 +148,7 @@ export default function OfficerManagementPage() {
 }
 
 function ManagementBody() {
-  const { token } = useApp();
+  const { token, user } = useApp();
   const { toast } = useToast();
   const { selected: selectedId, select } = useElectionSelection();
 
@@ -883,6 +884,13 @@ function ManagementBody() {
                   <Link2 className="h-4 w-4" aria-hidden="true" />
                   Generate share link
                 </Button>
+                <WhatsAppShareButton
+                  title={selected.title}
+                  url={share ? shareUrl : `/elections/${selected.slug}`}
+                  senderPhone={user?.phone_number}
+                  className="w-auto"
+                  label="Send on WhatsApp"
+                />
                 <LinkButton
                   href={`/elections/${selected.slug}${share ? `?invite=${share.share_token}` : ""}`}
                   variant="outline"
@@ -921,12 +929,15 @@ function ManagementBody() {
                       {copied ? "Copied" : "Copy"}
                     </Button>
                   </div>
-                  <p className="text-[12.5px] text-nv-muted">
-                    {copied ? "Copied to the clipboard. " : ""}
-                    Expires {displayValue(share.expires_at)}. Voters who open this link see the
-                    election page with the rules, candidates and live countdowns, then sign in to
-                    vote.
-                  </p>
+              <p className="text-[12.5px] text-nv-muted">
+                {copied ? "Copied to the clipboard. " : ""}
+                {user?.phone_number
+                  ? `WhatsApp messages for this election send from your saved number ${user.phone_number}. `
+                  : "Add your WhatsApp number in your profile so voters recognise the sender. "}
+                Expires {displayValue(share.expires_at)}. Voters who open this link see the
+                election page with the rules, candidates and live countdowns, then sign in to
+                vote.
+              </p>
                 </div>
               ) : (
                 <p className="text-[13px] text-nv-muted">

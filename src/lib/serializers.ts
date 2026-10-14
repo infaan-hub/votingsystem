@@ -59,6 +59,7 @@ export function serializeUserSummary(user: UserWithRelations) {
     section: serializeSection(user.section),
     registration_number: user.registrationNumber,
     staff_id: user.staffId,
+    phone_number: user.phoneNumber || null,
     auth_provider: user.authProvider,
     // `?v=` is the byte length so a replaced photo busts browser caches.
     photo_url:

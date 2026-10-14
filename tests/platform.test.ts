@@ -259,12 +259,14 @@ describe("platform: officer scope, voters, share links", () => {
           scope: "election",
           election_id: seed.electionId,
           note: "Runs the platform test election.",
+          whatsapp_phone: "+255712345678",
         },
       }),
     );
     expect(assigned.status).toBe(201);
     const promoted = await prisma.user.findUnique({ where: { id: seed.officerId } });
     expect(promoted?.role).toBe("officer");
+    expect(promoted?.phoneNumber).toBe("+255712345678");
 
     const officerElections = await call(
       officerElectionsGET,

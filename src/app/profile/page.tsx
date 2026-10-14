@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronRight,
   LogOut,
+  MessageCircle,
   MessageSquare,
   Pencil,
   Shield,
@@ -19,6 +20,7 @@ import { Avatar } from "@/src/components/ui/avatar";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
+import { Input } from "@/src/components/ui/input";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { useToast } from "@/src/components/ui/toast";
 import { PageHero } from "@/src/components/page-hero";
@@ -43,11 +45,17 @@ export default function ProfilePage() {
   const [favourites, setFavourites] = useState<number[]>([]);
   const [votesCast, setVotesCast] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
+  const [phoneSaving, setPhoneSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFavourites(readFavourites());
   }, []);
+
+  useEffect(() => {
+    setPhoneValue(user?.phone_number ?? "");
+  }, [user?.phone_number]);
 
   const loadActivity = useCallback(async () => {
     if (!token) return;
@@ -144,6 +152,43 @@ export default function ProfilePage() {
       });
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function onSavePhone() {
+    if (!token || phoneSaving) return;
+    setPhoneSaving(true);
+    try {
+      const response = await fetch("/api/users/me/", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phone_number: phoneValue.trim() }),
+      });
+      const data = (await response.json().catch(() => null)) as {
+        phone_number?: string[] | string | null;
+        detail?: string;
+      } | null;
+      if (!response.ok) {
+        const fieldError = data?.phone_number;
+        throw new Error(
+          (Array.isArray(fieldError) ? fieldError[0] : fieldError) ||
+            data?.detail ||
+            "Could not save the number.",
+        );
+      }
+      await refreshUser();
+      toast({ title: "WhatsApp number saved", tone: "success" });
+    } catch (error) {
+      toast({
+        title: "Could not save number",
+        description: error instanceof Error ? error.message : "Please try again.",
+        tone: "error",
+      });
+    } finally {
+      setPhoneSaving(false);
     }
   }
 
@@ -254,6 +299,50 @@ export default function ProfilePage() {
           <ChevronRight className="h-5 w-5 shrink-0 text-nv-muted" aria-hidden="true" />
         </CardContent>
       </Card>
+
+      {/* ---------------- WhatsApp number ---------------- */}
+      <section aria-labelledby="whatsapp-heading" className="space-y-3">
+        <div>
+          <h2 id="whatsapp-heading" className="text-fluid-lg text-nv-ink">
+            WhatsApp number
+          </h2>
+          <p className="mt-1 text-[13px] text-nv-muted">
+            {user.role === "officer"
+              ? "This is the WhatsApp number that sends election links to voters when you share from an election. Save it so voters recognise your messages."
+              : "Your WhatsApp number, if you want organizers to reach you on WhatsApp."}
+          </p>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <label
+                htmlFor="whatsapp-phone"
+                className="block text-[12px] font-bold uppercase tracking-[0.6px] text-nv-muted"
+              >
+                Phone number
+              </label>
+              <Input
+                id="whatsapp-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="e.g. +255 712 345 678"
+                value={phoneValue}
+                onChange={(event) => setPhoneValue(event.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => void onSavePhone()}
+              disabled={phoneSaving || phoneValue.trim() === (user.phone_number ?? "")}
+              className="shrink-0 sm:w-auto"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              {phoneSaving ? "Saving…" : "Save number"}
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* ---------------- Activity ---------------- */}
       <section aria-labelledby="activity-heading" className="space-y-3">

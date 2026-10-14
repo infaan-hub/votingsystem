@@ -26,6 +26,7 @@ import { GET as electionBallotGET } from "@/src/app/api/elections/[pk]/ballot/ro
 import { GET as electionResultsGET } from "@/src/app/api/elections/[pk]/results/route";
 import { GET as electionStatsGET } from "@/src/app/api/elections/[pk]/stats/route";
 import { GET as candidatePhotoGET } from "@/src/app/api/candidates/[pk]/photo/route";
+import { PATCH as meProfilePATCH } from "@/src/app/api/users/me/route";
 import { GET as candidateVideoGET } from "@/src/app/api/candidates/[pk]/campaign-video/route";
 import { POST as votesPOST } from "@/src/app/api/votes/route";
 import { POST as adminVotersPOST } from "@/src/app/api/admin/voters/route";
@@ -388,6 +389,45 @@ describe("VotingApiTests", () => {
     expect(created?.firstName).toBe("Amara");
     expect(created?.lastName).toBe("Njeri");
     expect(created?.email).toBe("amara@example.com");
+  });
+
+  it("lets a signed-in user save their WhatsApp phone number", async () => {
+    const { voter } = await seedApi();
+    const token = await createTokenFor(voter.id);
+
+    const saved = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { phone_number: "+255 712 345 678" },
+      }),
+    );
+    expect(saved.status).toBe(200);
+    expect((await readJson(saved)).phone_number).toBe("+255 712 345 678");
+    const row = await prisma.user.findUnique({ where: { id: voter.id } });
+    expect(row?.phoneNumber).toBe("+255 712 345 678");
+
+    const invalid = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { phone_number: "call-me" },
+      }),
+    );
+    expect(invalid.status).toBe(400);
+
+    const cleared = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { phone_number: "" },
+      }),
+    );
+    expect(cleared.status).toBe(200);
+    expect((await readJson(cleared)).phone_number).toBe(null);
   });
 
   it("creates a voter through Google when the email is new", async () => {

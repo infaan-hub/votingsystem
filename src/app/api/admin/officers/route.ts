@@ -1,6 +1,6 @@
 import { json, makeRoute } from "@/src/lib/api";
 import { fieldErrors } from "@/src/lib/http";
-import { Collector, intField, strField, choiceField } from "@/src/lib/fields";
+import { Collector, intField, strField, choiceField, isValidPhone } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { requireStateAdmin } from "@/src/lib/auth";
@@ -15,7 +15,16 @@ function serializeAssignment(assignment: {
   note: string;
   isActive: boolean;
   createdAt: Date;
-  officer: { id: number; username: string; firstName: string; lastName: string; email: string; role: string; isActive: boolean };
+  officer: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    isActive: boolean;
+    phoneNumber: string;
+  };
   election: { id: number; title: string; slug: string } | null;
   organization: { id: number; name: string } | null;
 }) {
@@ -32,6 +41,7 @@ function serializeAssignment(assignment: {
       email: assignment.officer.email,
       role: assignment.officer.role,
       is_active: assignment.officer.isActive,
+      phone_number: assignment.officer.phoneNumber || null,
     },
     election: assignment.election
       ? { id: assignment.election.id, title: assignment.election.title, slug: assignment.election.slug }
@@ -64,6 +74,7 @@ export const GET = makeRoute({
           role: true,
           isActive: true,
           dateJoined: true,
+          phoneNumber: true,
           officerAssignments: { include: ASSIGNMENT_INCLUDE, orderBy: { createdAt: "desc" } },
         },
         orderBy: { username: "asc" },
@@ -78,6 +89,7 @@ export const GET = makeRoute({
           role: officer.role,
           is_active: officer.isActive,
           joined_at: formatDateTime(officer.dateJoined),
+          phone_number: officer.phoneNumber || null,
           assignments: officer.officerAssignments.map(serializeAssignment),
         })),
       );
@@ -114,11 +126,22 @@ export const POST = makeRoute({
       const note = strField(c, payload, "note", {
         required: false, allowBlank: true, maxLength: 500,
       });
+      const whatsappPhone = strField(c, payload, "whatsapp_phone", {
+        required: false, allowBlank: true, maxLength: 25,
+      });
       const electionId = payload.election_id ? intField(c, payload, "election_id") : null;
       const organizationId = payload.organization_id
         ? intField(c, payload, "organization_id")
         : null;
       c.throwIfAny();
+
+      const phone = (whatsappPhone ?? "").trim();
+      if (phone && !isValidPhone(phone)) {
+        throw fieldErrors({
+          whatsapp_phone:
+            "Enter a valid WhatsApp number (digits, optionally starting with +).",
+        });
+      }
 
       if (scope === "election" && !electionId) {
         throw fieldErrors({ election_id: "Choose the election this officer will manage." });
@@ -181,6 +204,14 @@ export const POST = makeRoute({
         await prisma.user.update({
           where: { id: target.id },
           data: { role: "officer" },
+        });
+      }
+      // The WhatsApp number is the sending identity officers use to share
+      // election links with voters, so it is stored on the account itself.
+      if (phone) {
+        await prisma.user.update({
+          where: { id: target.id },
+          data: { phoneNumber: phone },
         });
       }
 
