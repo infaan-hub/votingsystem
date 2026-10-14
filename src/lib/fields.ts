@@ -151,6 +151,9 @@ export function intField(
     return undefined;
   }
   if (raw === null) {
+    // Optional numeric fields treat an explicit null as "no value"
+    // (e.g. an election sent with max_voters: null means "no cap").
+    if (!required) return undefined;
     c.field(key, "This field may not be null.");
     return undefined;
   }

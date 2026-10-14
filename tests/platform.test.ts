@@ -356,6 +356,7 @@ describe("platform: officer scope, voters, share links", () => {
           voting_start_at: new Date(now + HOUR).toISOString(),
           voting_end_at: new Date(now + 2 * DAY).toISOString(),
           capacity_mode: "restricted",
+          max_voters: null, // form sends explicit null for "no cap" — must not 400
           allowed_voters: ["voter@example.test", "ReturningOfficer", "ghost@example.test"],
         },
       }),
