@@ -356,7 +356,7 @@ function ElectionDetailContent() {
   const inviteUsed = invite.trim().length > 0;
 
   return (
-    <div className="space-y-8 pb-36 lg:pb-8">
+    <div className="space-y-8 pb-8">
       <PageHero
         backHref="/elections"
         backLabel="Back to elections"
@@ -677,23 +677,6 @@ function ElectionDetailContent() {
           </LinkButton>
         </div>
       </Section>
-
-      {votingOpen ? (
-        <div className="fixed inset-x-0 bottom-above-nav z-40 border-t border-nv-line bg-nv-surface/95 px-4 py-3 shadow-panel backdrop-blur lg:bottom-4">
-          <div className="mx-auto flex max-w-3xl flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-bold text-nv-ink">{election.title}</p>
-              {election.voting_end_at ? (
-                <Countdown target={election.voting_end_at} prefix="Closes in" />
-              ) : null}
-            </div>
-            <LinkButton href={`/vote/${election.slug}`} className="sm:w-auto">
-              <Vote className="h-4 w-4" aria-hidden="true" />
-              Vote now
-            </LinkButton>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
