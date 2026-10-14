@@ -61,6 +61,22 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
     }
   }, [token, refresh]);
 
+  // While the app is open, poll the unread count (and list) once a minute when
+  // the tab is visible, so server-side events surface promptly without a manual
+  // refresh. Hides automatically when the tab is backgrounded.
+  useEffect(() => {
+    if (!token) return;
+    const tick = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const id = setInterval(tick, 60_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [token, refresh]);
+
   // Close the panel on outside click or Escape.
   useEffect(() => {
     if (!open) return;

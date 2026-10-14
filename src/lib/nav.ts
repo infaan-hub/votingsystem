@@ -111,7 +111,7 @@ export const ADMIN_NAV: NavGroup[] = [
   },
   {
     label: "Account",
-    items: [{ href: "/profile", label: "Profile", icon: UserRound }],
+    items: [{ href: "/admin/profile", label: "Profile", icon: UserRound }],
   },
 ];
 
@@ -133,7 +133,7 @@ export function bottomNavFor(shell: ShellRole): NavItem[] {
         { href: "/admin/election-requests", label: "Requests", icon: Inbox },
         { href: "/admin/elections", label: "Elections", icon: Vote },
         { href: "/admin/users", label: "Users", icon: Users },
-        { href: "/profile", label: "Profile", icon: UserRound },
+        { href: "/admin/profile", label: "Profile", icon: UserRound },
       ];
     case "officer":
       return [

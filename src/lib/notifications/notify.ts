@@ -33,7 +33,8 @@ export type NotifyOutcome = {
 
 const MAX_TITLE = 180;
 const MAX_BODY = 1000;
-const INLINE_PUSH_LIMIT = 25;
+/** Above this many new notifications, push delivery is deferred to the outbox. */
+export const INLINE_PUSH_LIMIT = 25;
 
 /**
  * Persists one notification per recipient, schedules Web Push delivery from

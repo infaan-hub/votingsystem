@@ -9,6 +9,7 @@ import { useApp } from "@/src/components/AppProvider";
 import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
 import { NotificationBell } from "@/src/components/notification-bell";
+import { NotificationPermissionPrompt } from "@/src/components/notification-permission-prompt";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Button } from "@/src/components/ui/button";
 import tenant, { t } from "@/config/tenant";
@@ -57,13 +58,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const src = user?.photo_url;
     if (!src) return items;
     return items.map((item) =>
-      item.href === "/profile" ? { ...item, avatarSrc: src } : item,
+      item.href === "/profile" || item.href === "/admin/profile"
+        ? { ...item, avatarSrc: src }
+        : item,
     );
   }, [shell, user?.photo_url]);
   const chip = roleLabel(user?.role);
   const isPublic = shell === "public";
   const profileName = user?.full_name || user?.username || "";
   const profileSrc = user?.photo_url ?? null;
+  const profileHref = shell === "admin" ? "/admin/profile" : "/profile";
 
   const publicLinks = useMemo(
     () =>
@@ -276,10 +280,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {!isPublic && user ? (
                 <div className="mb-3 border-b border-sidebar-border pb-3">
                   <Link
-                    href="/profile"
+                    href={profileHref}
                     className={cn(
                       "flex min-h-11 items-center gap-3 rounded-lg px-3 transition-colors duration-200",
-                      isActive({ href: "/profile" })
+                      isActive({ href: profileHref })
                         ? "bg-nv-primary-100 text-nv-primary shadow-[inset_3px_0_0_0_var(--nv-primary)]"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
@@ -364,6 +368,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <BottomNav items={bottomItems} />
+
+      {/* Permission prompt: compact card, only for signed-in users, only ever
+          requesting permission from an explicit click inside the card. */}
+      <NotificationPermissionPrompt />
     </div>
   );
 }
