@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Bookmark,
   Camera,
   ChevronRight,
   LogOut,
   MessageCircle,
-  MessageSquare,
   Pencil,
   Shield,
   Vote,
@@ -27,32 +25,14 @@ import { useToast } from "@/src/components/ui/toast";
 import { PageHero } from "@/src/components/page-hero";
 import tenant, { t } from "@/config/tenant";
 
-const FAVOURITES_KEY = "nexvote-favourites";
-
-function readFavourites(): number[] {
-  try {
-    const raw = window.localStorage.getItem(FAVOURITES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "number") : [];
-  } catch {
-    return [];
-  }
-}
-
 export default function ProfilePage() {
   const { user, token, handleLogout, refreshUser } = useApp();
   const { toast } = useToast();
-  const [favourites, setFavourites] = useState<number[]>([]);
   const [votesCast, setVotesCast] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
   const [phoneSaving, setPhoneSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setFavourites(readFavourites());
-  }, []);
 
   useEffect(() => {
     setPhoneValue(user?.phone_number ?? "");
@@ -202,7 +182,7 @@ export default function ProfilePage() {
           </span>
           <h1 className="text-[18px] font-bold text-nv-ink">Sign in to continue</h1>
           <p className="max-w-sm text-[13px] text-nv-muted">
-            Your profile, favourites, and voting history live behind
+            Your profile and voting history live behind
             authentication.
           </p>
           <Button asChild className="sm:w-52">
@@ -354,17 +334,7 @@ export default function ProfilePage() {
           Your activity
         </h2>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.4px] text-nv-muted">
-                Marked favourites
-              </p>
-              <p className="nums-tabular mt-1 text-[26px] font-extrabold leading-8 text-nv-ink">
-                {favourites.length}
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
           <Card>
             <CardContent className="p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.4px] text-nv-muted">
@@ -382,59 +352,7 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* ---------------- Favourites ---------------- */}
-      <section aria-labelledby="favourites-heading" className="space-y-3">
-        <h2 id="favourites-heading" className="text-[15px] font-bold text-nv-ink">
-          Marked favourites
-        </h2>
-        {favourites.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-              <Bookmark className="h-7 w-7 text-nv-muted" aria-hidden="true" />
-              <p className="text-[13px] text-nv-muted">
-                Tap the bookmark on any candidate to save them here.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <ul className="space-y-2">
-            {favourites.map((id) => (
-              <li key={id}>
-                <Link
-                  href={`/candidates/${id}`}
-                  className="flex items-center gap-3 rounded-nv-md bg-nv-surface p-3 shadow-nv-card"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="nv-grad-profile grid h-10 w-10 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
-                  >
-                    #{id}
-                  </span>
-                  <span className="min-w-0 flex-1 text-[13px] font-semibold text-nv-ink">
-                    Candidate #{id}
-                  </span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-nv-muted" aria-hidden="true" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* ---------------- Opinions by you ---------------- */}
-      <section aria-labelledby="opinions-heading" className="space-y-3">
-        <h2 id="opinions-heading" className="text-[15px] font-bold text-nv-ink">
-          Opinions by you
-        </h2>
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-            <MessageSquare className="h-7 w-7 text-nv-muted" aria-hidden="true" />
-            <p className="text-[13px] text-nv-muted">
-              You have not posted any opinions yet.
-            </p>
-          </CardContent>
-        </Card>
-      </section>
+      {/* ---------------- Session ---------------- */}
 
       {/* ---------------- Session ---------------- */}
       <section className="space-y-2 border-t border-nv-line pt-4">
