@@ -257,6 +257,7 @@ function CampaignsContent() {
             controls
             preload="metadata"
             playsInline
+            poster={active.image_url ?? undefined}
             src={active.video_url}
             className="mb-3 w-full rounded-nv-md bg-black"
           />

@@ -11,6 +11,56 @@ export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // 30 MB
 export const MAX_VIDEO_SECONDS = 30;
 
+/**
+ * Serves a stored video buffer with HTTP byte-range support.
+ *
+ * iOS Safari refuses to play any video that does not answer Range requests
+ * with 206 Partial Content, and Android Chrome commonly fails the same way —
+ * a plain 200 with the whole body is not enough.
+ */
+export function serveVideoBuffer(
+  bytes: Uint8Array,
+  contentType: string,
+  filename: string,
+  req: Request,
+): Response {
+  const safeName = (filename || "video.mp4").replace(/"/g, "");
+  const size = bytes.byteLength;
+  const baseHeaders: Record<string, string> = {
+    "Content-Type": contentType || "video/mp4",
+    "Content-Disposition": `inline; filename="${safeName}"`,
+    "Accept-Ranges": "bytes",
+  };
+
+  const rangeHeader = req.headers.get("range");
+  const match = rangeHeader ? /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim()) : null;
+
+  if (!match || (!match[1] && !match[2])) {
+    return new Response(Buffer.from(bytes), {
+      headers: { ...baseHeaders, "Content-Length": String(size) },
+    });
+  }
+
+  const start = match[1] ? Number(match[1]) : 0;
+  let end = match[2] ? Number(match[2]) : size - 1;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) {
+    return new Response(null, {
+      status: 416,
+      headers: { "Content-Range": `bytes */${size}` },
+    });
+  }
+  end = Math.min(end, size - 1);
+  const chunk = bytes.subarray(start, end + 1);
+  return new Response(Buffer.from(chunk), {
+    status: 206,
+    headers: {
+      ...baseHeaders,
+      "Content-Range": `bytes ${start}-${end}/${size}`,
+      "Content-Length": String(chunk.byteLength),
+    },
+  });
+}
+
 export type MediaProblem = { field: string; message: string };
 
 const TEXT = new TextDecoder("latin1");

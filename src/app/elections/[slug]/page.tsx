@@ -680,14 +680,14 @@ function ElectionDetailContent() {
 
       {votingOpen ? (
         <div className="fixed inset-x-0 bottom-above-nav z-40 border-t border-nv-line bg-nv-surface/95 px-4 py-3 shadow-panel backdrop-blur lg:bottom-4">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+          <div className="mx-auto flex max-w-3xl flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <p className="truncate text-[13.5px] font-bold text-nv-ink">{election.title}</p>
               {election.voting_end_at ? (
                 <Countdown target={election.voting_end_at} prefix="Closes in" />
               ) : null}
             </div>
-            <LinkButton href={`/vote/${election.slug}`} className="shrink-0">
+            <LinkButton href={`/vote/${election.slug}`} className="sm:w-auto">
               <Vote className="h-4 w-4" aria-hidden="true" />
               Vote now
             </LinkButton>

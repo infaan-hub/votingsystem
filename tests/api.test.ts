@@ -1073,6 +1073,18 @@ describe("VotingApiTests", () => {
     );
     expect(videoResponse.status).toBe(200);
     expect(videoResponse.headers.get("Content-Type")).toBe("video/mp4");
+    // iOS/Android only play videos whose endpoints answer Range requests.
+    expect(videoResponse.headers.get("Accept-Ranges")).toBe("bytes");
+    const rangedResponse = await call(
+      candidateVideoGET,
+      jsonRequest(String(payload.campaign_video_url), {
+        headers: { Range: "bytes=0-3" },
+      }),
+      { pk: String(campaignCandidate.id) },
+    );
+    expect(rangedResponse.status).toBe(206);
+    expect(rangedResponse.headers.get("Content-Range")).toMatch(/^bytes 0-3\/\d+$/);
+    expect((await rangedResponse.arrayBuffer()).byteLength).toBe(4);
     const stored = await prisma.candidate.findUnique({
       where: { id: campaignCandidate.id },
     });
