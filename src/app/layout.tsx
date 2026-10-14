@@ -23,8 +23,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   applicationName: tenant.name,
   icons: {
-    icon: [{ url: tenant.logo, type: "image/svg+xml" }],
-    apple: [{ url: tenant.logo, type: "image/svg+xml" }],
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    // iOS ignores SVG apple-touch-icons: the Home Screen icon must be PNG.
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,

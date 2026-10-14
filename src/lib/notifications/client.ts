@@ -79,6 +79,18 @@ export function getNotificationSupport(): NotificationSupport {
       detail: "Notifications require HTTPS (or localhost during development).",
     };
   }
+  // iOS/iPadOS: Web Push exists only inside an installed Home Screen web app,
+  // and outside one the Push API is not exposed at all. This must run BEFORE
+  // the capability test — otherwise iPhone users are told their browser is
+  // unsupported instead of being shown the fix (install, then enable).
+  if (isIos && !isStandalone) {
+    return {
+      ...base,
+      status: "requires-home-screen-install",
+      detail:
+        "On iPhone and iPad, NexVote must be installed to your Home Screen: tap the Share button in Safari, choose “Add to Home Screen”, then open NexVote from its icon and turn notifications on there.",
+    };
+  }
   if (!serviceWorker || !push || !notifications) {
     return {
       ...base,
@@ -86,19 +98,13 @@ export function getNotificationSupport(): NotificationSupport {
       detail: "This browser does not support the Service Worker, Push, or Notification APIs.",
     };
   }
-  if (isIos && !isStandalone) {
-    return {
-      ...base,
-      status: "requires-home-screen-install",
-      detail:
-        "On iPhone and iPad, open the Share menu and choose “Add to Home Screen”, then enable notifications from the installed app.",
-    };
-  }
   if (permission === "denied") {
     return {
       ...base,
       status: "permission-denied",
-      detail: "Notifications are blocked. Allow them in your browser or system settings for this site.",
+      detail: isIos
+        ? "Notifications are blocked for the installed NexVote app. Open Settings > Notifications, allow NexVote, then open the app again."
+        : "Notifications are blocked. Allow them in your browser or system settings for this site.",
     };
   }
   if (permission === "granted") {
@@ -118,7 +124,9 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
   const existing = await navigator.serviceWorker.getRegistration(SW_URL);
   if (existing) return existing;
-  return navigator.serviceWorker.register(SW_URL, { scope: "/" });
+  // updateViaCache: "none" — the SW script itself must bypass the HTTP cache,
+  // otherwise a stale sw.js can keep receiving pushes after a deploy.
+  return navigator.serviceWorker.register(SW_URL, { scope: "/", updateViaCache: "none" });
 }
 
 /** Deliberate, user-gesture-only permission request. Never auto-prompted. */

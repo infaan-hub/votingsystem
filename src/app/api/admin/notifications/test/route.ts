@@ -72,12 +72,16 @@ const HONESTY_NOTE =
   "Queued means a delivery job exists; accepted means the push service accepted the request. " +
   "Neither confirms the device displayed the notification — this platform cannot observe that.";
 
-async function vapidConfigured(): Promise<boolean> {
-  return Boolean(
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() &&
-      process.env.VAPID_PRIVATE_KEY?.trim() &&
-      process.env.VAPID_SUBJECT?.trim(),
-  );
+async function vapidStatus(): Promise<{ configured: boolean; problem: string | null }> {
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
+  const subject = process.env.VAPID_SUBJECT?.trim();
+  if (!publicKey || !privateKey || !subject) return { configured: false, problem: "missing" };
+  // web-push requires mailto: or https: — anything else throws at first send
+  // and the outbox rows would silently stay pending.
+  const validSubject = /^mailto:[^@\s]+@[^@\s]+$/.test(subject) || /^https:\/\/[^\s]+$/.test(subject);
+  if (!validSubject) return { configured: false, problem: "invalid_subject" };
+  return { configured: true, problem: null };
 }
 
 /** Seconds this administrator must still wait before another test run. */
@@ -140,14 +144,15 @@ const route = makeRoute({
             _count: { _all: true },
           }),
           cooldownRemaining(admin.id, new Date()),
-          vapidConfigured(),
+          vapidStatus(),
         ]);
 
       const outboxCounts: Record<string, number> = {};
       for (const row of outbox) outboxCounts[row.status] = row._count._all;
 
       return json({
-        vapid_configured: vapid,
+        vapid_configured: vapid.configured,
+        vapid_problem: vapid.problem,
         audience: {
           eligible_subscriptions: activeSubscriptions,
           subscribed_users: subscribedUsers.length,

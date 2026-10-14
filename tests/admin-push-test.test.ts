@@ -345,6 +345,22 @@ describe("AdminPushTestEndpoint", () => {
     expect(response.status).toBe(200);
     const body = await readJson(response);
     expect(body.vapid_configured).toBe(false);
+    expect(body.vapid_problem).toBe("missing");
+  });
+
+  it("reports a misconfigured VAPID subject honest instead of failing silently", async () => {
+    const admin = await makeUser("admin", "admin");
+    // web-push rejects any subject that is not mailto: or https: at send time.
+    process.env.VAPID_SUBJECT = "nexvote.example.com";
+
+    const response = await call(
+      testGET,
+      jsonRequest("/api/admin/notifications/test", { token: admin.token }),
+    );
+    expect(response.status).toBe(200);
+    const body = await readJson(response);
+    expect(body.vapid_configured).toBe(false);
+    expect(body.vapid_problem).toBe("invalid_subject");
   });
 
   /* ------------------------------------------------------------------ *

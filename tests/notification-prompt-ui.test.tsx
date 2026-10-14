@@ -187,7 +187,12 @@ describe("NotificationPermissionPrompt", () => {
     expect(new Headers(init.headers).get("Authorization")).toBe("Token test-token");
 
     expect(await screen.findByText("Notifications are on")).toBeTruthy();
-    expect(mock.serviceWorker.register).toHaveBeenCalledWith("/sw.js", { scope: "/" });
+    // The SW must register cache-busting options so a stale sw.js cannot keep
+    // handling pushes after a deploy.
+    expect(mock.serviceWorker.register).toHaveBeenCalledWith("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
   });
 
   it("does not re-prompt when permission is already granted", async () => {

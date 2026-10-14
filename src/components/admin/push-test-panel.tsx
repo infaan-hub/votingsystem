@@ -25,6 +25,7 @@ const CONFIRM_ABOVE = 5;
 
 type Readiness = {
   vapid_configured: boolean;
+  vapid_problem?: string | null;
   audience: { eligible_subscriptions: number; subscribed_users: number; active_users: number };
   outbox: { pending: number; queued: number; accepted: number; failed: number; expired: number };
   cooldown: { seconds_remaining: number; last_run_at: string | null };
@@ -211,7 +212,11 @@ export function PushTestPanel() {
                   readiness?.vapid_configured ? "text-emerald-600" : "text-nv-primary",
                 )}
               >
-                {readiness?.vapid_configured ? "Yes" : "No (VAPID missing)"}
+                {readiness?.vapid_configured
+                  ? "Yes"
+                  : readiness?.vapid_problem === "invalid_subject"
+                    ? "No (VAPID_SUBJECT must be mailto: or https:)"
+                    : "No (VAPID missing)"}
               </p>
             )}
           </div>
