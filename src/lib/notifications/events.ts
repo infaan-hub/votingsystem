@@ -573,12 +573,14 @@ export type ReminderRunSummary = {
 /**
  * "Voting ends soon" / "Voting opens soon" reminders.
  *
- * Driven exclusively by an authenticated scheduler (Vercel Cron →
- * /api/cron/reminders). Every run re-reads persisted election state, so an
- * election that already closed, was archived or was rescheduled is skipped,
- * and the idempotency key (built from the actual schedule instant) dedupes
- * repeat runs of the same window. The notification's own createdAt is the
- * real send time — nothing here claims a reminder fired "on schedule".
+ * Callable from any authenticated job (manual trigger, uptime monitor, or a
+ * once-daily platform cron — the hosting plan here only allows daily crons, so
+ * no schedule is configured in vercel.json). Every run re-reads persisted
+ * election state, so an election that already closed, was archived or was
+ * rescheduled is skipped, and the idempotency key (built from the actual
+ * schedule instant) dedupes repeat runs of the same window. The notification's
+ * own createdAt is the real send time — nothing here claims a reminder fired
+ * "on schedule".
  */
 export async function runElectionReminders(now: Date = new Date()): Promise<ReminderRunSummary> {
   const summary: ReminderRunSummary = {

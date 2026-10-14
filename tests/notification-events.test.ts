@@ -27,8 +27,8 @@ import {
   PATCH as officerElectionPATCH,
 } from "@/src/app/api/officer/elections/[pk]/route";
 import { POST as contactPOST } from "@/src/app/api/contact/route";
-import { GET as cronGET } from "@/src/app/api/cron/reminders/route";
 import { transitionElection } from "@/src/lib/elections";
+import { runElectionReminders } from "@/src/lib/notifications/events";
 
 // Valid-format dummy VAPID material (never used: web-push is mocked).
 const DUMMY_PUBLIC_KEY =
@@ -854,10 +854,10 @@ describe("EventDrivenNotificationTests", () => {
   });
 
   /* ------------------------------------------------------------------ *
-   * Scheduled reminders (cron)                                           *
+   * Scheduled reminders (library helper; no platform cron)            *
    * ------------------------------------------------------------------ */
 
-  it("runs reminders only through authenticated cron, deduplicated per schedule revision", async () => {
+  it("sends closing/opening reminders deduplicated per schedule revision", async () => {
     const voter = await makeUser("cron_voter", "voter");
     const now = Date.now();
     const closingElection = await makeElection({
@@ -879,76 +879,40 @@ describe("EventDrivenNotificationTests", () => {
     });
     await makePosition(endedElection.id);
 
-    const previousSecret = process.env.CRON_SECRET;
-    delete process.env.CRON_SECRET;
-    try {
-      // Unconfigured deployment → disabled, never an open fan-out.
-      const disabled = await call(cronGET, jsonRequest("/api/cron/reminders"));
-      expect(disabled.status).toBe(503);
+    const summary = await runElectionReminders(new Date(now));
+    expect(summary.closingChecked).toBe(1);
+    expect(summary.openingChecked).toBe(1);
+    expect(summary.closingNotified).toBe(1);
+    expect(summary.openingNotified).toBe(1);
 
-      process.env.CRON_SECRET = "test-cron-secret";
-      const run = () =>
-        call(
-          cronGET,
-          jsonRequest("/api/cron/reminders", {
-            headers: { Authorization: "Bearer test-cron-secret" },
-          }),
-        );
+    const closingRows = await prisma.notification.findMany({ where: { tag: "election-closing" } });
+    expect(closingRows).toHaveLength(1);
+    expect(closingRows[0].recipientId).toBe(voter.user.id);
+    expect(closingRows[0].idempotencyKey).toBe(
+      `election-${closingElection.id}-closing-${closingElection.votingEndAt.getTime()}:${voter.user.id}`,
+    );
 
-      expect((await call(cronGET, jsonRequest("/api/cron/reminders"))).status).toBe(401);
-      expect(
-        (
-          await call(
-            cronGET,
-            jsonRequest("/api/cron/reminders", {
-              headers: { Authorization: "Bearer wrong-secret" },
-            }),
-          )
-        ).status,
-      ).toBe(401);
+    const openingRows = await prisma.notification.findMany({
+      where: { tag: "election-opening" },
+    });
+    expect(openingRows).toHaveLength(1);
+    expect(openingRows[0].idempotencyKey).toBe(
+      `election-${openingElection.id}-opening-${openingElection.votingStartAt.getTime()}:${voter.user.id}`,
+    );
 
-      const first = await run();
-      expect(first.status).toBe(200);
-      const summary = await readJson(first);
-      expect(summary.closingChecked).toBe(1);
-      expect(summary.openingChecked).toBe(1);
-      expect(summary.closingNotified).toBe(1);
-      expect(summary.openingNotified).toBe(1);
+    // An election whose voting already ended is never reminded.
+    expect(
+      await prisma.notification.count({
+        where: { idempotencyKey: { startsWith: `election-${endedElection.id}-closing` } },
+      }),
+    ).toBe(0);
 
-      const closingRows = await prisma.notification.findMany({ where: { tag: "election-closing" } });
-      expect(closingRows).toHaveLength(1);
-      expect(closingRows[0].recipientId).toBe(voter.user.id);
-      expect(closingRows[0].idempotencyKey).toBe(
-        `election-${closingElection.id}-closing-${closingElection.votingEndAt.getTime()}:${voter.user.id}`,
-      );
-
-      const openingRows = await prisma.notification.findMany({
-        where: { tag: "election-opening" },
-      });
-      expect(openingRows).toHaveLength(1);
-      expect(openingRows[0].idempotencyKey).toBe(
-        `election-${openingElection.id}-opening-${openingElection.votingStartAt.getTime()}:${voter.user.id}`,
-      );
-
-      // An election whose voting already ended is never reminded.
-      expect(
-        await prisma.notification.count({
-          where: { idempotencyKey: { startsWith: `election-${endedElection.id}-closing` } },
-        }),
-      ).toBe(0);
-
-      // Repeat run → fully deduplicated, still re-checking state.
-      const second = await run();
-      expect(second.status).toBe(200);
-      const secondSummary = await readJson(second);
-      expect(secondSummary.closingChecked).toBe(1);
-      expect(secondSummary.closingNotified).toBe(0);
-      expect(secondSummary.openingNotified).toBe(0);
-      expect(await prisma.notification.count({ where: { tag: "election-closing" } })).toBe(1);
-      expect(await prisma.notification.count({ where: { tag: "election-opening" } })).toBe(1);
-    } finally {
-      if (previousSecret === undefined) delete process.env.CRON_SECRET;
-      else process.env.CRON_SECRET = previousSecret;
-    }
+    // Repeat run → fully deduplicated, still re-checking state.
+    const secondSummary = await runElectionReminders(new Date(now));
+    expect(secondSummary.closingChecked).toBe(1);
+    expect(secondSummary.closingNotified).toBe(0);
+    expect(secondSummary.openingNotified).toBe(0);
+    expect(await prisma.notification.count({ where: { tag: "election-closing" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { tag: "election-opening" } })).toBe(1);
   });
 });
