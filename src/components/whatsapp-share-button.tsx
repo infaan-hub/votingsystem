@@ -1,9 +1,13 @@
 "use client";
 
 import { MessageCircle } from "lucide-react";
+import type { VariantProps } from "class-variance-authority";
 
-import { Button } from "@/src/components/ui/button";
+import { buttonVariants, Button } from "@/src/components/ui/button";
 import { phoneDigits } from "@/src/lib/fields";
+
+type ButtonVariant = VariantProps<typeof buttonVariants>["variant"];
+type ButtonSize = VariantProps<typeof buttonVariants>["size"];
 
 /**
  * Opens WhatsApp with the election link pre-filled so the sender (the signed-in
@@ -17,7 +21,8 @@ export function WhatsAppShareButton({
   senderPhone,
   recipientPhone,
   label,
-  variant = "outline",
+  variant,
+  size,
   className,
 }: {
   title: string;
@@ -25,7 +30,8 @@ export function WhatsAppShareButton({
   senderPhone?: string | null;
   recipientPhone?: string | null;
   label?: string;
-  variant?: "primary" | "outline" | "ghost" | "hero";
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   className?: string;
 }) {
   function onShare() {
@@ -47,7 +53,8 @@ export function WhatsAppShareButton({
   return (
     <Button
       type="button"
-      variant={variant ?? "primary"}
+      variant={variant}
+      size={size}
       onClick={onShare}
       className={className}
       aria-label={label ?? "Share on WhatsApp"}

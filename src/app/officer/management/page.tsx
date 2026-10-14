@@ -888,12 +888,13 @@ function ManagementBody() {
                   title={selected.title}
                   url={share ? shareUrl : `/elections/${selected.slug}`}
                   senderPhone={user?.phone_number}
+                  size="dense"
                   className="w-auto"
                   label="Send on WhatsApp"
                 />
                 <LinkButton
                   href={`/elections/${selected.slug}${share ? `?invite=${share.share_token}` : ""}`}
-                  variant="outline"
+                  size="dense"
                   className="w-auto"
                   target="_blank"
                   rel="noopener noreferrer"
