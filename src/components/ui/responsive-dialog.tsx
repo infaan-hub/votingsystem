@@ -31,17 +31,26 @@ export function ResponsiveDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  // Parents pass an inline onOpenChange, so its identity changes on every
+  // re-render (every keystroke in a form dialog). Reading it through a ref
+  // keeps the effects below stable instead of re-running per keystroke.
+  const onOpenChangeRef = useRef(onOpenChange);
+  useEffect(() => {
+    onOpenChangeRef.current = onOpenChange;
+  });
+  const focusPlacedRef = useRef(false);
 
   // Escape closes, and Tab is trapped inside the panel while it is open.
   useEffect(() => {
     if (!open) {
       setDragOffset(0);
+      focusPlacedRef.current = false;
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onOpenChange(false);
+        onOpenChangeRef.current(false);
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
@@ -60,15 +69,31 @@ export function ResponsiveDialog({
       }
     };
     window.addEventListener("keydown", onKeyDown);
-    // Move focus into the panel so screen readers announce the dialog.
-    const id = window.setTimeout(() => {
-      panelRef.current?.querySelector<HTMLElement>("button, input")?.focus();
-    }, 40);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  // Move focus into the panel once per open so screen readers announce the
+  // dialog. Never re-run this on parent re-renders (typing) and never steal
+  // focus from something the user is already interacting with.
+  useEffect(() => {
+    if (!open || focusPlacedRef.current) return;
+    focusPlacedRef.current = true;
+    const id = window.setTimeout(() => {
+      const active = document.activeElement;
+      if (active && panelRef.current?.contains(active)) return;
+      // Prefer the first form field; the close button comes first in the DOM
+      // but focusing it would swallow the user's first keystrokes.
+      const field = panelRef.current?.querySelector<HTMLElement>(
+        "input, select, textarea",
+      );
+      (field ?? panelRef.current?.querySelector<HTMLElement>("button"))?.focus();
+    }, 40);
+    return () => {
       window.clearTimeout(id);
     };
-  }, [open, onOpenChange]);
+  }, [open]);
 
   // Lock background scroll while open.
   useEffect(() => {
@@ -103,44 +128,48 @@ export function ResponsiveDialog({
       aria-modal="true"
       aria-labelledby="dialog-title"
       onClick={(event) => {
-        if (event.target === event.currentTarget) onOpenChange(false);
+        if (event.target === event.currentTarget) onOpenChangeRef.current(false);
       }}
     >
       <div
         ref={panelRef}
         style={dragOffset ? { transform: `translateY(${dragOffset}px)` } : undefined}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
         className={cn(
           "w-full max-w-md rounded-t-2xl border border-nv-line bg-popover text-popover-foreground shadow-float backdrop-blur-xl",
           "max-h-[88dvh] overflow-y-auto pb-safe",
           "transition-transform sm:rounded-xl",
         )}
       >
-        {/* Drag handle — mobile only affordance */}
-        <div className="flex justify-center pt-2 sm:hidden" aria-hidden="true">
-          <span className="h-1.5 w-10 rounded-full bg-muted" />
-        </div>
-
-        <div className="flex items-start justify-between gap-3 p-5">
-          <div>
-            <h2 id="dialog-title" className="text-fluid-lg font-semibold">
-              {title}
-            </h2>
-            {description ? (
-              <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
-            ) : null}
+        {/* Drag-to-dismiss lives on the handle/header only — binding it to the
+            whole panel made scrolling the form dismiss the sheet on phones. */}
+        <div
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className="flex justify-center pt-2 sm:hidden" aria-hidden="true">
+            <span className="h-1.5 w-10 rounded-full bg-muted" />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onOpenChange(false)}
-            aria-label="Close dialog"
-            className="-mr-1 -mt-1"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </Button>
+
+          <div className="flex items-start justify-between gap-3 p-5">
+            <div>
+              <h2 id="dialog-title" className="text-fluid-lg font-semibold">
+                {title}
+              </h2>
+              {description ? (
+                <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
+              ) : null}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChangeRef.current(false)}
+              aria-label="Close dialog"
+              className="-mr-1 -mt-1"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
 
         {children ? <div className="px-5 pb-2">{children}</div> : null}
