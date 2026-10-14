@@ -8,6 +8,7 @@ import { LogIn, LogOut, Menu, Search, UserPlus, Vote, X } from "lucide-react";
 import { useApp } from "@/src/components/AppProvider";
 import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
+import { NotificationBell } from "@/src/components/notification-bell";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Button } from "@/src/components/ui/button";
 import tenant, { t } from "@/config/tenant";
@@ -169,8 +170,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="mx-auto">{brand()}</div>
 
-          {/* Optical balance so the brand stays truly centred. */}
-          <span className="absolute right-4 h-11 w-11" aria-hidden="true" />
+          {/* Optical balance so the brand stays truly centred, with the
+              notification bell pinned right for signed-in users. */}
+          {isPublic || !user ? (
+            <span className="absolute right-4 h-11 w-11" aria-hidden="true" />
+          ) : (
+            <div className="absolute right-4">
+              <NotificationBell compact />
+            </div>
+          )}
         </div>
       </header>
 
@@ -227,6 +235,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <span className="absolute right-4 h-11 w-11" aria-hidden="true" />
           ) : (
             <div className="absolute right-3 flex items-center gap-1">
+              <NotificationBell compact />
               <Button
                 asChild
                 variant="subtle"

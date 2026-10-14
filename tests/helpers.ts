@@ -66,6 +66,9 @@ export function multipartRequest(
 export async function resetDb(): Promise<void> {
   await prisma.$transaction(
     [
+      prisma.pushDelivery.deleteMany(),
+      prisma.notification.deleteMany(),
+      prisma.pushSubscription.deleteMany(),
       prisma.opinionVote.deleteMany(),
       prisma.opinion.deleteMany(),
       prisma.candidateRating.deleteMany(),

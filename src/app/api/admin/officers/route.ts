@@ -6,6 +6,7 @@ import { readPayload } from "@/src/lib/request";
 import { requireStateAdmin } from "@/src/lib/auth";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { formatDateTime } from "@/src/lib/time";
+import { notify } from "@/src/lib/notifications/notify";
 
 const SCOPES = ["all", "election", "organization"] as const;
 
@@ -237,6 +238,28 @@ export const POST = makeRoute({
         detail: { electionId, organizationId, scope },
         ipAddress: clientIp(req),
       });
+
+      // Tell the newly appointed officer (in-app + push to their devices).
+      try {
+        const scopeLabel =
+          scope === "election" && assignment.election
+            ? ` the election “${assignment.election.title}”`
+            : scope === "organization" && assignment.organization
+              ? ` the organization “${assignment.organization.name}”`
+              : " the platform";
+        await notify({
+          recipientIds: [officerId!],
+          title: "You were appointed as an election officer",
+          body: `An administrator gave you officer access for${scopeLabel}.`,
+          targetUrl: "/officer/dashboard",
+          tag: `officer-appointed-${assignment.id}`,
+          category: "officer",
+          idempotencyKey: `officer-appointed-${assignment.id}`,
+          data: { assignmentId: assignment.id, scope },
+        });
+      } catch {
+        // Never fail the assignment because push delivery failed.
+      }
 
       return json(serializeAssignment(assignment), 201);
     },

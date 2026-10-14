@@ -139,8 +139,77 @@ model User {
   auditLogs          AuditLog[]         @relation("AuditActor")
   officerAssignments OfficerAssignment[] @relation("OfficerAssignee")
   campaignsOwned     Campaign[]         @relation("CampaignOwner")
+  notifications      Notification[]     @relation("UserNotifications")
+  pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
 
   @@index([role])
+}
+
+/// In-app notification record for one recipient. The API is the source of
+/// truth for read state; push delivery attempts live in PushDelivery.
+model Notification {
+  id             Int       @id @default(autoincrement())
+  recipientId    Int
+  recipient      User      @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  title          String
+  body           String    @default("")
+  category       String    @default("general")
+  /// Safe same-origin path the notification opens, e.g. /elections/foo.
+  targetUrl      String    @default("")
+  tag            String    @default("")
+  data           Json?
+  /// Stable key per logical event + recipient; retries never duplicate rows.
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
+  readAt         DateTime?
+  expiresAt      DateTime?
+
+  deliveries PushDelivery[]
+
+  @@index([recipientId, readAt])
+  @@index([recipientId, createdAt(sort: Desc)])
+}
+
+/// One browser/device Push API subscription for a user.
+model PushSubscription {
+  id            Int       @id @default(autoincrement())
+  userId        Int
+  user          User      @relation("UserPushSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  userAgent     String    @default("")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastSuccessAt DateTime?
+  lastFailureAt DateTime?
+  disabledAt    DateTime?
+
+  deliveries PushDelivery[]
+
+  @@index([userId])
+}
+
+/// Durable outbox row: one per (notification, subscription). Statuses:
+/// pending | queued | accepted | failed | expired.
+model PushDelivery {
+  id             Int                @id @default(autoincrement())
+  notificationId Int
+  notification   Notification       @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  /// Nullable: an expired/unsubscribed device is deleted, but the delivery
+  /// audit row is kept (SET NULL) so the terminal state stays inspectable.
+  subscriptionId Int?
+  subscription   PushSubscription?  @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  status         String             @default("pending")
+  attemptCount   Int                @default(0)
+  lastAttemptAt  DateTime?
+  nextAttemptAt  DateTime?
+  errorCode      String             @default("")
+  acceptedAt     DateTime?
+  createdAt      DateTime           @default(now())
+
+  @@index([status, nextAttemptAt])
+  @@index([notificationId])
 }
 
 model Token {

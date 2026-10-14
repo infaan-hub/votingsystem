@@ -4,6 +4,8 @@ import { Collector, boolField, choiceField, dateTimeField, strField } from "@/sr
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { serializeAnnouncement } from "@/src/lib/serializers";
+import { notify } from "@/src/lib/notifications/notify";
+import { eligibleUserIdsForPosition } from "@/src/lib/services";
 
 const ANNOUNCEMENT_TYPES = ["notice", "campaign", "result"] as const;
 
@@ -40,6 +42,34 @@ export const POST = makeRoute({
           isPinned,
         },
       });
+
+      // Push + in-app notification to every voter eligible for this election
+      // (union of position eligibility). Idempotent on the announcement id.
+      try {
+        const positions = await prisma.position.findMany({
+          where: { electionId: election.id },
+          include: { department: true, section: { include: { department: true } } },
+        });
+        const eligible = new Set<number>();
+        for (const position of positions) {
+          for (const id of await eligibleUserIdsForPosition(position)) eligible.add(id);
+        }
+        if (eligible.size) {
+          await notify({
+            recipientIds: [...eligible],
+            title: `Announcement: ${title}`,
+            body: message.slice(0, 200),
+            targetUrl: `/elections/${election.slug}`,
+            tag: `announcement-${announcement.id}`,
+            category: "announcement",
+            idempotencyKey: `announcement-${announcement.id}`,
+            data: { electionId: election.id, announcementId: announcement.id },
+          });
+        }
+      } catch {
+        // Notification delivery must never fail the announcement itself.
+      }
+
       return json(serializeAnnouncement(announcement, new Date(), election.timezone), 201);
     },
   },

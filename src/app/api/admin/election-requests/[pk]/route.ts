@@ -12,6 +12,7 @@ import {
   REQUEST_TRANSITIONS,
   type ElectionRequestRow,
 } from "@/src/lib/election-requests";
+import { notify } from "@/src/lib/notifications/notify";
 
 const DECISION_FIELDS = [
   "UNDER_REVIEW",
@@ -162,6 +163,34 @@ export const PATCH = makeRoute({
         detail: { electionId },
         ipAddress: clientIp(req),
       });
+
+      // Notify the requester of the decision (in-app + push to their devices).
+      if (status !== "UNDER_REVIEW") {
+        try {
+          const headline =
+            status === "APPROVED"
+              ? "Your election request was approved"
+              : status === "REJECTED"
+                ? "Your election request was rejected"
+                : "Changes requested on your election request";
+          const detail =
+            status === "APPROVED"
+              ? "A draft election was created from your request. An officer will finish setup before it goes live."
+              : decisionNote?.trim() || "Open the request for details.";
+          await notify({
+            recipientIds: [existing.requesterId],
+            title: headline,
+            body: `${existing.title}: ${detail}`.slice(0, 300),
+            targetUrl: "/dashboard",
+            tag: `election-request-${existing.id}-${status}`,
+            category: "election_request",
+            idempotencyKey: `election-request-${existing.id}-${status}`,
+            data: { electionRequestId: existing.id, status },
+          });
+        } catch {
+          // Delivery failures must never fail the decision itself.
+        }
+      }
 
       return json({
         request: serializeElectionRequest(updated),
