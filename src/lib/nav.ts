@@ -2,7 +2,6 @@ import {
   BarChart3,
   Contact,
   FileClock,
-  FileText,
   Inbox,
   LayoutDashboard,
   Megaphone,
@@ -52,10 +51,7 @@ export const VOTER_NAV: NavGroup[] = [
   },
   {
     label: "Participation",
-    items: [
-      { href: "/request-election", label: "Request an election", icon: FileText },
-      { href: "/contact", label: "Contact us", icon: Contact },
-    ],
+    items: [{ href: "/contact", label: "Contact us", icon: Contact }],
   },
   {
     label: "Account",
@@ -186,10 +182,8 @@ export function roleLabel(role: string | null | undefined): string | null {
       return "Administrator";
     case "officer":
       return "Election officer";
-    case "student":
-      return "Student voter";
-    case "staff":
-      return "Staff voter";
+    case "voter":
+      return "Voter";
     default:
       return null;
   }

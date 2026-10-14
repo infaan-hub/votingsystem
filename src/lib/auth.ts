@@ -19,7 +19,7 @@ export type RequestState = {
   tokenKey: string | null;
 };
 
-export const ROLES = ["student", "staff", "officer", "admin"] as const;
+export const ROLES = ["voter", "officer", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const AUTH_PROVIDERS = ["local", "google"] as const;

@@ -7,10 +7,6 @@ import { call, createTokenFor, jsonRequest, resetDb } from "./helpers";
 import { POST as contactPOST } from "@/src/app/api/contact/route";
 import { PATCH as contactPATCH } from "@/src/app/api/admin/contacts/[pk]/route";
 import { GET as adminContactsGET } from "@/src/app/api/admin/contacts/route";
-import {
-  POST as requestsPOST,
-  GET as requestsGET,
-} from "@/src/app/api/election-requests/route";
 import { PATCH as requestDecisionPATCH } from "@/src/app/api/admin/election-requests/[pk]/route";
 import { GET as auditGET } from "@/src/app/api/admin/audit-logs/route";
 import { POST as assignOfficerPOST } from "@/src/app/api/admin/officers/route";
@@ -65,7 +61,7 @@ async function seedPlatform(): Promise<Seed> {
       email: "officer@example.test",
       firstName: "Olive",
       lastName: "Cer",
-      role: "student",
+      role: "voter",
       password: hashPassword("correct-horse-battery"),
     },
   });
@@ -75,7 +71,7 @@ async function seedPlatform(): Promise<Seed> {
       email: "voter@example.test",
       firstName: "Vee",
       lastName: "oter",
-      role: "student",
+      role: "voter",
       password: hashPassword("correct-horse-battery"),
     },
   });
@@ -177,37 +173,27 @@ describe("platform: contact, requests, audit", () => {
   it("walks an election request from submission to an approved draft election", async () => {
     const seed = await seedPlatform();
     const adminToken = await createTokenFor(seed.adminId);
-    const voterToken = await createTokenFor(seed.voterId);
     const now = Date.now();
 
-    const submitted = await call(
-      requestsPOST,
-      jsonRequest("/api/election-requests", {
-        method: "POST",
-        token: voterToken,
-        body: {
-          title: "Department Council 2026",
-          category_name: "Department",
-          organization: "Engineering",
-          description: "Council election for the engineering department.",
-          purpose: "Elect department representatives.",
-          start_at: new Date(now + DAY).toISOString(),
-          end_at: new Date(now + 2 * DAY).toISOString(),
-          expected_voters: 120,
-          election_type: "restricted",
-          voter_id_method: "student_id",
-          positions_text: "Representative\nSecretary",
-          reason: "Annual departmental elections.",
-          contact_info: "voter@example.test",
-        },
-      }),
-    );
-    expect(submitted.status).toBe(201);
-    const request = await readJson(submitted);
-    expect(request.status).toBe("PENDING");
-
-    const mine = await call(requestsGET, jsonRequest("/api/election-requests", { token: voterToken }));
-    expect(((await mine.json()) as unknown[]).length).toBe(1);
+    const request = await prisma.electionRequest.create({
+      data: {
+        requesterId: seed.voterId,
+        title: "Department Council 2026",
+        categoryName: "Department",
+        organization: "Engineering",
+        description: "Council election for the engineering department.",
+        purpose: "Elect department representatives.",
+        startAt: new Date(now + DAY),
+        endAt: new Date(now + 2 * DAY),
+        expectedVoters: 120,
+        electionType: "restricted",
+        voterIdMethod: "student_id",
+        positionsText: "Representative\nSecretary",
+        reason: "Annual departmental elections.",
+        contactInfo: "voter@example.test",
+        status: "PENDING",
+      },
+    });
 
     const underReview = await call(
       requestDecisionPATCH,
@@ -393,7 +379,7 @@ describe("platform: officer scope, voters, share links", () => {
         email: "stranger@example.test",
         firstName: "S",
         lastName: "Tranger",
-        role: "student",
+        role: "voter",
         password: hashPassword("correct-horse-battery"),
       },
     });

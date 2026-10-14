@@ -4,7 +4,7 @@ import type { Election } from "@/src/generated/prisma/client";
 import type { UserWithRelations } from "@/src/lib/auth";
 
 /** Roles that may ever cast a ballot (admins need `allowAdminsToVote`). */
-export const BALLOT_ROLES = ["student", "staff", "officer"];
+export const BALLOT_ROLES = ["voter", "officer"];
 
 /** Policies that only admit people on the officer's eligibility list. */
 export const LIST_BASED_POLICIES = new Set(["voter_list", "org_members", "invite_only"]);

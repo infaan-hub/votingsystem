@@ -195,7 +195,7 @@ export default function ElectionsPage() {
           description={
             hasFilters
               ? "Try a different search term, or clear the filters to see every published election."
-              : "Published elections will appear here as soon as organizers release them. You can also request one for your organization."
+              : "Published elections will appear here as soon as organizers release them."
           }
           action={
             hasFilters ? (
@@ -209,11 +209,7 @@ export default function ElectionsPage() {
               >
                 Clear filters
               </Button>
-            ) : (
-              <Button asChild>
-                <Link href="/request-election">Request an election</Link>
-              </Button>
-            )
+            ) : undefined
           }
         />
       ) : null}
@@ -223,40 +219,56 @@ export default function ElectionsPage() {
           {filtered.map((election) => (
             <article
               key={election.id}
-              className="flex h-full flex-col rounded-nv-md border border-nv-line bg-nv-surface p-5 shadow-nv-card transition-shadow hover:shadow-panel"
+              className="flex h-full flex-col overflow-hidden rounded-nv-md border border-nv-line bg-nv-surface shadow-nv-card transition-shadow hover:shadow-panel"
             >
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-fluid-lg text-nv-ink">
-                  <Link
-                    href={`/elections/${election.slug}`}
-                    className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
-                  >
-                    {election.title}
-                  </Link>
-                </h2>
-                <StatusBadge status={election.lifecycle_status} className="shrink-0" />
+              {election.image_url ? (
+                <div className="relative h-36 w-full overflow-hidden bg-nv-bg">
+                  <img
+                    src={election.image_url}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="nv-grad-candidate nv-dots grid h-36 w-full place-items-center">
+                  <Vote className="h-8 w-8 text-white/80" aria-hidden="true" />
+                </div>
+              )}
+              <div className="flex flex-1 flex-col p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-fluid-lg text-nv-ink">
+                    <Link
+                      href={`/elections/${election.slug}`}
+                      className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
+                    >
+                      {election.title}
+                    </Link>
+                  </h2>
+                  <StatusBadge status={election.lifecycle_status} className="shrink-0" />
+                </div>
+                {election.description ? (
+                  <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-nv-muted">
+                    {election.description}
+                  </p>
+                ) : null}
+                <div className="nums-tabular mt-4 space-y-1 text-[12.5px] text-nv-muted">
+                  <p>Opens {formatDate(election.voting_start_at)}</p>
+                  <p>Closes {formatDate(election.voting_end_at)}</p>
+                </div>
+                {election.status === "active" && election.voting_end_at ? (
+                  <Countdown target={election.voting_end_at} prefix="Closes in" className="mt-3" />
+                ) : null}
+                {election.status === "upcoming" && election.voting_start_at ? (
+                  <Countdown target={election.voting_start_at} prefix="Opens in" className="mt-3" />
+                ) : null}
+                <Link
+                  href={`/elections/${election.slug}`}
+                  className="mt-auto pt-4 text-[13px] font-bold text-nv-primary hover:underline"
+                >
+                  View details
+                </Link>
               </div>
-              {election.description ? (
-                <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-nv-muted">
-                  {election.description}
-                </p>
-              ) : null}
-              <div className="nums-tabular mt-4 space-y-1 text-[12.5px] text-nv-muted">
-                <p>Opens {formatDate(election.voting_start_at)}</p>
-                <p>Closes {formatDate(election.voting_end_at)}</p>
-              </div>
-              {election.status === "active" && election.voting_end_at ? (
-                <Countdown target={election.voting_end_at} prefix="Closes in" className="mt-3" />
-              ) : null}
-              {election.status === "upcoming" && election.voting_start_at ? (
-                <Countdown target={election.voting_start_at} prefix="Opens in" className="mt-3" />
-              ) : null}
-              <Link
-                href={`/elections/${election.slug}`}
-                className="mt-4 text-[13px] font-bold text-nv-primary hover:underline"
-              >
-                View details
-              </Link>
             </article>
           ))}
         </div>

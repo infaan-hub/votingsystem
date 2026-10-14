@@ -6,7 +6,7 @@ export const POST = makeRoute({
   handlers: {
     POST: async (req) => {
       const payload = await readPayload(req);
-      const { userId } = await runRegistration(payload, "student");
+      const { userId } = await runRegistration(payload, "voter");
       const { token, user } = await respondWithToken(userId);
       return json({ token, user }, 201);
     },

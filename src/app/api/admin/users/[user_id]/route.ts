@@ -13,7 +13,7 @@ import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { emailTakenIexact, usernameTakenIexact } from "@/src/lib/queries";
 import { USER_INCLUDE } from "@/src/lib/auth";
 
-const MANAGE_ROLES = ["student", "staff", "officer", "admin"] as const;
+const MANAGE_ROLES = ["voter", "officer", "admin"] as const;
 
 async function findTargetUser(userId: number) {
   const user = await prisma.user.findFirst({

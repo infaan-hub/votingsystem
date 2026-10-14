@@ -107,8 +107,8 @@ model User {
   isStaff            Boolean   @default(false)
   isActive           Boolean   @default(true)
   dateJoined         DateTime  @default(now())
-  /// Platform role: student / staff / officer / admin (legacy-compatible).
-  role               String    @default("student")
+  /// Platform role: voter / officer / admin.
+  role               String    @default("voter")
   departmentId       Int?
   sectionId          Int?
   registrationNumber String    @default("")

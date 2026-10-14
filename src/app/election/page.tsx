@@ -200,18 +200,14 @@ export default function ElectionHubPage() {
           description={
             query
               ? "Try a different title or clear the search to see every published election."
-              : "Published elections will appear here as soon as organizers release them. You can request one for your organization in the meantime."
+              : "Published elections will appear here as soon as organizers release them."
           }
           action={
             query ? (
               <Button variant="outline" onClick={() => setQuery("")}>
                 Clear search
               </Button>
-            ) : (
-              <Button asChild>
-                <Link href="/request-election">Request an election</Link>
-              </Button>
-            )
+            ) : undefined
           }
         />
       ) : null}

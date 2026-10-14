@@ -378,7 +378,6 @@ function PublicFooter() {
               { href: "/elections", label: "Elections" },
               { href: "/compaigns", label: "Campaigns" },
               { href: "/results", label: "Results" },
-              { href: "/request-election", label: "Request an election" },
             ].map((item) => (
               <li key={item.href}>
                 <Link

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Clapperboard, Inbox, RotateCw, Vote } from "lucide-react";
+import { Clapperboard, RotateCw, Vote } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
 import { RequireRole } from "@/src/components/require-role";
@@ -24,15 +24,6 @@ type PublicElection = {
   status: "upcoming" | "active" | "ended";
   voting_start_at: string | null;
   voting_end_at: string | null;
-};
-
-type ElectionRequest = {
-  id: number;
-  title: string;
-  status: string;
-  decision_note: string | null;
-  election_id: number | null;
-  created_at: string | null;
 };
 
 type Campaign = {
@@ -70,12 +61,10 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
 }
 
 function DashboardContent() {
-  const { token, user } = useApp();
+  const { user } = useApp();
 
   const [elections, setElections] = useState<PublicElection[] | null>(null);
   const [electionsError, setElectionsError] = useState("");
-  const [requests, setRequests] = useState<ElectionRequest[] | null>(null);
-  const [requestsError, setRequestsError] = useState("");
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [campaignsError, setCampaignsError] = useState("");
 
@@ -95,26 +84,6 @@ function DashboardContent() {
       );
     }
   }, []);
-
-  const loadRequests = useCallback(async () => {
-    if (!token) return;
-    setRequests(null);
-    setRequestsError("");
-    try {
-      const response = await fetch("/api/election-requests", {
-        headers: { Authorization: `Token ${token}` },
-      });
-      if (!response.ok) throw new Error("We could not load your requests. Please try again.");
-      const data = (await response.json()) as ElectionRequest[];
-      setRequests(Array.isArray(data) ? data : []);
-    } catch (requestError) {
-      setRequestsError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not load your requests. Please try again.",
-      );
-    }
-  }, [token]);
 
   const loadCampaigns = useCallback(async () => {
     setCampaigns(null);
@@ -138,10 +107,6 @@ function DashboardContent() {
     void loadCampaigns();
   }, [loadElections, loadCampaigns]);
 
-  useEffect(() => {
-    void loadRequests();
-  }, [loadRequests]);
-
   const openNow = useMemo(
     () => (elections ?? []).filter((election) => election.status === "active"),
     [elections],
@@ -156,19 +121,13 @@ function DashboardContent() {
     [elections],
   );
 
-  const pendingCount = useMemo(
-    () => (requests ?? []).filter((request) => request.status === "PENDING").length,
-    [requests],
-  );
-
-  const latestRequest = requests?.[0] ?? null;
   const latestCampaigns = (campaigns ?? []).slice(0, 3);
 
   return (
     <div className="space-y-6">
       <PageHero
         title={`Welcome back, ${user?.full_name ?? user?.username ?? "voter"}`}
-        description="Everything you can vote in right now, what opens next, and the status of your requests."
+        description="Everything you can vote in right now and what opens next."
       />
 
       <Section
@@ -268,70 +227,6 @@ function DashboardContent() {
               </li>
             ))}
           </ul>
-        )}
-      </Section>
-
-      <Section
-        title="Your requests"
-        description="Elections you have asked an administrator to create."
-        actions={
-          <LinkButton href="/request-election" variant="ghost" className="sm:w-auto">
-            Request an election
-          </LinkButton>
-        }
-      >
-        {requestsError ? (
-          <ErrorBanner message={requestsError} onRetry={() => void loadRequests()} />
-        ) : requests === null ? (
-          <div className="space-y-3" aria-busy="true">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : requests.length === 0 ? (
-          <EmptyState
-            icon={<Inbox className="h-6 w-6" aria-hidden="true" />}
-            title="You have not requested an election"
-            description="If your organization needs a vote — a committee election, a referendum, a survey — submit a request and an administrator will review it."
-            action={
-              <Button asChild>
-                <Link href="/request-election">Request an election</Link>
-              </Button>
-            }
-          />
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3 rounded-nv-md bg-nv-bg px-4 py-3">
-              <span className="nums-tabular text-[22px] font-extrabold text-nv-ink">
-                {pendingCount}
-              </span>
-              <span className="text-[13px] text-nv-muted">
-                request{pendingCount === 1 ? "" : "s"} awaiting administrator review
-              </span>
-            </div>
-            {latestRequest ? (
-              <div className="rounded-nv-md border border-nv-line bg-nv-surface p-4 shadow-nv-card">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="min-w-0 truncate text-[14.5px] font-bold text-nv-ink">
-                    {latestRequest.title}
-                  </p>
-                  <StatusBadge status={latestRequest.status} />
-                </div>
-                <p className="nums-tabular mt-1 text-[12px] text-nv-muted">
-                  Submitted {formatDate(latestRequest.created_at)}
-                </p>
-                {latestRequest.decision_note ? (
-                  <p className="mt-2 rounded-nv-md bg-nv-bg px-3 py-2 text-[13px] text-nv-text">
-                    {latestRequest.decision_note}
-                  </p>
-                ) : null}
-                {latestRequest.election_id ? (
-                  <p className="mt-2 text-[12.5px] font-semibold text-nv-primary">
-                    An election was created from this request.
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
         )}
       </Section>
 

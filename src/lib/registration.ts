@@ -9,7 +9,7 @@ import { USER_INCLUDE } from "@/src/lib/auth";
 import { serializeUserSummary } from "@/src/lib/serializers";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 
-export type RegistrationRole = "admin" | "student";
+export type RegistrationRole = "admin" | "voter";
 
 const USERNAME_CHARSET_RE = /^[\w.@+-]+$/u;
 
@@ -50,7 +50,7 @@ export async function runRegistration(
   payload: Payload,
   role: RegistrationRole,
 ): Promise<{ userId: number }> {
-  const isVoter = role === "student";
+  const isVoter = role === "voter";
   const c = new Collector();
 
   const username = await modelUsernameField(c, payload);

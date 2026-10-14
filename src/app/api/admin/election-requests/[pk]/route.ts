@@ -11,7 +11,7 @@ import {
   REQUESTER_INCLUDE,
   REQUEST_TRANSITIONS,
   type ElectionRequestRow,
-} from "@/src/app/api/election-requests/route";
+} from "@/src/lib/election-requests";
 
 const DECISION_FIELDS = [
   "UNDER_REVIEW",

@@ -127,7 +127,7 @@ export const POST = makeRoute({
             await validateUser({
               username,
               email: "",
-              role: "student",
+              role: "voter",
               departmentId: position.departmentId,
               sectionId: position.sectionId,
               sectionDepartmentId: null,
@@ -141,7 +141,7 @@ export const POST = makeRoute({
             data: {
               username,
               password: unusablePassword(),
-              role: "student",
+              role: "voter",
               firstName,
               lastName,
               departmentId: position.departmentId,

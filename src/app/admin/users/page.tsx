@@ -43,16 +43,14 @@ type UserRow = {
 };
 
 const ROLE_OPTIONS = [
-  { value: "student", label: "Student" },
-  { value: "staff", label: "Staff" },
+  { value: "voter", label: "Voter" },
   { value: "officer", label: "Election officer" },
 ];
 
 const ROLE_FILTER_OPTIONS = [
   { value: "admin", label: "Admin" },
   { value: "officer", label: "Election officer" },
-  { value: "student", label: "Student" },
-  { value: "staff", label: "Staff" },
+  { value: "voter", label: "Voter" },
 ];
 
 const OWN_ROLE_API =
@@ -67,7 +65,7 @@ export default function AdminUsersPage() {
       <PageHero
         eyebrow="Administration"
         title="Users"
-        description="Search student, staff and officer accounts, change roles, activate or deactivate accounts, and delete them permanently."
+        description="Search voter and election officer accounts, change roles, activate or deactivate accounts, and delete them permanently."
       />
       <RequireRole role="admin">
         <UsersBody />

@@ -147,10 +147,7 @@ export const POST = makeRoute({
             });
           }
 
-          const role =
-            position.voterGroup === "staff" || position.voterGroup === "staff_and_officer"
-              ? "staff"
-              : "student";
+          const role = "voter";
 
           try {
             await validateUser({

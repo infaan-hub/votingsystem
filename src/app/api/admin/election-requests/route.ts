@@ -3,7 +3,7 @@ import { prisma } from "@/src/lib/db";
 import {
   serializeElectionRequest,
   REQUESTER_INCLUDE,
-} from "@/src/app/api/election-requests/route";
+} from "@/src/lib/election-requests";
 
 /** GET: every election request, newest first. Optional `?status=` filter. */
 export const GET = makeRoute({

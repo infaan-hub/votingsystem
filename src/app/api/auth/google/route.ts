@@ -177,7 +177,7 @@ export const POST = makeRoute({
             password: unusablePassword(),
             firstName,
             lastName,
-            role: "student",
+            role: "voter",
             googleId,
             authProvider: "google",
             isSuperuser: false,

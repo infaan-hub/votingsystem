@@ -13,7 +13,7 @@ import type {
   User,
 } from "@/src/generated/prisma/client";
 
-export const VOTING_ROLES = ["student", "staff", "officer"];
+export const VOTING_ROLES = ["voter", "officer"];
 
 type PositionRow = Position & {
   department: Department | null;
@@ -26,12 +26,12 @@ function eligibleUsersWhere(position: PositionRow) {
     role: { in: VOTING_ROLES },
   };
 
-  if (position.voterGroup === "student") {
-    where.role = "student";
-  } else if (position.voterGroup === "staff") {
-    where.role = "staff";
-  } else if (position.voterGroup === "staff_and_officer") {
-    where.role = { in: ["staff", "officer"] };
+  // Stored voterGroup values are legacy ("student"/"staff") but every
+  // non-admin voter now shares the single "voter" role.
+  if (position.voterGroup === "staff_and_officer") {
+    where.role = { in: ["voter", "officer"] };
+  } else if (position.voterGroup === "student" || position.voterGroup === "staff") {
+    where.role = "voter";
   }
 
   if (position.departmentId) where.departmentId = position.departmentId;
@@ -51,12 +51,13 @@ export async function eligibleUserIdsForPosition(position: PositionRow): Promise
 export function isUserEligible(position: PositionRow, user: UserWithRelations | User): boolean {
   if (!user || !("isActive" in user) || !user.isActive) return false;
   if (user.role === "admin") return false;
-  if (position.voterGroup === "student" && user.role !== "student") return false;
-  if (position.voterGroup === "staff" && user.role !== "staff") return false;
   if (
-    position.voterGroup === "staff_and_officer" &&
-    !["staff", "officer"].includes(user.role)
+    (position.voterGroup === "student" || position.voterGroup === "staff") &&
+    user.role !== "voter"
   ) {
+    return false;
+  }
+  if (position.voterGroup === "staff_and_officer" && !["voter", "officer"].includes(user.role)) {
     return false;
   }
   if (position.departmentId && user.departmentId !== position.departmentId) return false;

@@ -135,7 +135,7 @@ async function seedApi() {
       password: hashPassword("Pass1234!"),
       firstName: "Asha",
       lastName: "Noor",
-      role: "student",
+      role: "voter",
       departmentId: department.id,
       sectionId: section.id,
     },
@@ -146,7 +146,7 @@ async function seedApi() {
       password: hashPassword("Pass1234!"),
       firstName: "Juma",
       lastName: "Ali",
-      role: "student",
+      role: "voter",
       departmentId: department.id,
       sectionId: section.id,
     },
@@ -168,7 +168,7 @@ async function seedApi() {
       password: hashPassword("Pass1234!"),
       firstName: "Sami",
       lastName: "Omar",
-      role: "student",
+      role: "voter",
     },
   });
   const hiddenCandidate = await prisma.candidate.create({
@@ -364,7 +364,7 @@ describe("VotingApiTests", () => {
     expect(response.status).toBe(201);
     const payload = await readJson(response);
     const user = payload.user as Record<string, unknown>;
-    expect(user.role).toBe("student");
+    expect(user.role).toBe("voter");
     expect(payload.token).toBeTruthy();
   });
 
@@ -410,7 +410,7 @@ describe("VotingApiTests", () => {
     expect(response.status).toBe(200);
     const user = (await readJson(response)).user as Record<string, unknown>;
     expect(user.email).toBe("googlevoter@example.com");
-    expect(user.role).toBe("student");
+    expect(user.role).toBe("voter");
     expect(user.auth_provider).toBe("google");
   });
 
@@ -573,7 +573,7 @@ describe("VotingApiTests", () => {
           last_name: "Voter",
           password: "VotePass123!",
           confirm_password: "VotePass123!",
-          role: "student",
+          role: "voter",
         },
       }),
     );
@@ -812,7 +812,7 @@ describe("VotingApiTests", () => {
           last_name: "User",
           password: "VotePass123!",
           confirm_password: "VotePass123!",
-          role: "student",
+          role: "voter",
         },
       }),
     );
@@ -873,7 +873,7 @@ describe("VotingApiTests", () => {
           email: "student.updated@example.com",
           first_name: "Asha",
           last_name: "Updated",
-          role: "staff",
+          role: "officer",
         },
       }),
       { user_id: String(voter.id) },
@@ -881,7 +881,7 @@ describe("VotingApiTests", () => {
     expect(updateResponse.status).toBe(200);
     const updated = await prisma.user.findUnique({ where: { id: voter.id } });
     expect(updated?.username).toBe("student_a_updated");
-    expect(updated?.role).toBe("staff");
+    expect(updated?.role).toBe("officer");
 
     const deleteResponse = await call(
       adminUserDELETE,
@@ -1025,7 +1025,7 @@ describe("VotingApiTests", () => {
         password: hashPassword("Pass1234!"),
         firstName: "Campaign",
         lastName: "Owner",
-        role: "student",
+        role: "voter",
         departmentId: department.id,
         sectionId: section.id,
       },

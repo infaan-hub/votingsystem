@@ -70,7 +70,7 @@ describe("CategoryApiTests", () => {
 
   it("rejects category creation from a non-admin", async () => {
     const voter = await prisma.user.create({
-      data: { username: "not_admin", password: hashPassword("Pass1234!"), role: "student" },
+      data: { username: "not_admin", password: hashPassword("Pass1234!"), role: "voter" },
     });
     const token = await createTokenFor(voter.id);
     const response = await call(
@@ -186,7 +186,7 @@ describe("ConcurrentVoteTests", () => {
     const candUsers = await Promise.all(
       ["cand_one", "cand_two"].map((username, index) =>
         prisma.user.create({
-          data: { username, password: hashPassword("Pass1234!"), role: "student" },
+          data: { username, password: hashPassword("Pass1234!"), role: "voter" },
         }).then((user) =>
           prisma.candidate.create({
             data: {
@@ -201,7 +201,7 @@ describe("ConcurrentVoteTests", () => {
       ),
     );
     const voter = await prisma.user.create({
-      data: { username: "racer", password: hashPassword("Pass1234!"), role: "student" },
+      data: { username: "racer", password: hashPassword("Pass1234!"), role: "voter" },
     });
     const voterWithRelations = (await prisma.user.findUniqueOrThrow({
       where: { id: voter.id },

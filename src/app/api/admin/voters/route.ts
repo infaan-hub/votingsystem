@@ -1,6 +1,6 @@
 import { json, makeRoute } from "@/src/lib/api";
 import { ApiError, fieldErrors } from "@/src/lib/http";
-import { Collector, choiceField, emailField, strField } from "@/src/lib/fields";
+import { Collector, emailField, strField } from "@/src/lib/fields";
 import { modelUsernameField } from "@/src/lib/registration";
 import { prisma } from "@/src/lib/db";
 import { hashPassword } from "@/src/lib/password";
@@ -9,8 +9,6 @@ import { ValidationError, validationErrorBody, validateUser } from "@/src/lib/va
 import { serializeUserSummary } from "@/src/lib/serializers";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { USER_INCLUDE } from "@/src/lib/auth";
-
-const VOTER_ROLES = ["student", "staff", "officer"] as const;
 
 export const POST = makeRoute({
   permission: "admin",
@@ -25,7 +23,6 @@ export const POST = makeRoute({
       const lastName = strField(c, payload, "last_name", { maxLength: 150 });
       const password = strField(c, payload, "password", { minLength: 8 });
       const confirmPassword = strField(c, payload, "confirm_password", { minLength: 8 });
-      const role = choiceField(c, payload, "role", VOTER_ROLES, { defaultValue: "student" })!;
       c.throwIfAny();
 
       if (password !== confirmPassword) {
@@ -37,7 +34,7 @@ export const POST = makeRoute({
           {
             username,
             email,
-            role,
+            role: "voter",
             googleId: null,
             departmentId: null,
             sectionId: null,
@@ -67,7 +64,7 @@ export const POST = makeRoute({
             username,
             email,
             password: hashPassword(password),
-            role,
+            role: "voter",
             firstName,
             lastName,
             isSuperuser: false,
