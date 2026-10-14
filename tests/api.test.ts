@@ -368,6 +368,28 @@ describe("VotingApiTests", () => {
     expect(payload.token).toBeTruthy();
   });
 
+  it("registers a new voter from a single full name", async () => {
+    await seedApi();
+    const response = await call(
+      registerVoterPOST,
+      jsonRequest("/api/auth/register/voter/", {
+        method: "POST",
+        body: {
+          full_name: "Amara Njeri",
+          username: "amara_n",
+          email: "amara@example.com",
+          password: "VotePass123!",
+          confirm_password: "VotePass123!",
+        },
+      }),
+    );
+    expect(response.status).toBe(201);
+    const created = await prisma.user.findUnique({ where: { username: "amara_n" } });
+    expect(created?.firstName).toBe("Amara");
+    expect(created?.lastName).toBe("Njeri");
+    expect(created?.email).toBe("amara@example.com");
+  });
+
   it("creates a voter through Google when the email is new", async () => {
     await seedApi();
     process.env.GOOGLE_OAUTH_CLIENT_ID = "google-client-id";

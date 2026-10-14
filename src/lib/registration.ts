@@ -57,11 +57,9 @@ export async function runRegistration(
   const email = emailField(c, payload, "email", { required: false, maxLength: 254 });
   const password = strField(c, payload, "password", { minLength: 8 });
   const confirmPassword = strField(c, payload, "confirm_password", { minLength: 8 });
-
-  let fullName = "";
-  if (!isVoter) {
-    fullName = strField(c, payload, "full_name", { required: false, allowBlank: true });
-  }
+  // A single "full name" is accepted for every role; when first/last are not
+  // sent separately it is split below (first word = first name, rest = last).
+  const fullName = strField(c, payload, "full_name", { required: false, allowBlank: true });
 
   let firstName = "";
   let lastName = "";

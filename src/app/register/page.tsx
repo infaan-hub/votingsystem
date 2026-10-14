@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, AtSign, KeyRound, Phone, ShieldCheck } from "lucide-react";
+import { ArrowLeft, AtSign, KeyRound, Phone, ShieldCheck, User } from "lucide-react";
 
 import { AuthCard, AuthShell } from "@/src/components/auth-shell";
 import { BackButton } from "@/src/components/back-button";
@@ -34,6 +34,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const { handleRegistration } = useApp();
   const [step, setStep] = useState<Step>("form");
+  const [fullName, setFullName] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -58,11 +59,11 @@ export default function RegisterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: identifier,
-          email: email || `${identifier}@example.invalid`,
+          full_name: fullName.trim(),
+          username: identifier.trim(),
+          email: email.trim(),
           password,
-          first_name: "",
-          last_name: "",
+          confirm_password: confirm,
         }),
       });
       const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
@@ -123,7 +124,7 @@ export default function RegisterPage() {
             Create your account
           </h1>
           <p className="mt-2 text-[14px] leading-5 text-nv-muted">
-            You need a {t.idLabel.toLowerCase()} and a password to register.
+            Your full name, a username, an email and a password are all you need.
           </p>
         </header>
 
@@ -138,6 +139,16 @@ export default function RegisterPage() {
           ) : null}
 
           <Input
+            label="Full name"
+            placeholder="e.g. Amara Njeri"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            icon={<User className="h-4 w-4" aria-hidden="true" />}
+            autoComplete="name"
+            required
+          />
+
+          <Input
             label={t.idLabel}
             placeholder={t.idPlaceholder}
             value={identifier}
@@ -145,6 +156,7 @@ export default function RegisterPage() {
             icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}
             autoCapitalize="none"
             autoCorrect="off"
+            autoComplete="username"
             required
           />
 
@@ -155,6 +167,8 @@ export default function RegisterPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             icon={<AtSign className="h-4 w-4" aria-hidden="true" />}
+            autoComplete="email"
+            required
           />
 
           {tenant.features.phoneVerification ? (
