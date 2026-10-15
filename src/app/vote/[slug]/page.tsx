@@ -376,7 +376,7 @@ function Ballot({
             <p className="max-w-sm text-[13px] text-nv-muted">
               You need an authenticated account to receive a ballot.
             </p>
-            <Button asChild className="sm:w-52">
+            <Button asChild size="default" className="sm:w-52">
               <Link href={`/login?next=${encodeURIComponent(`/vote/${slug}`)}`}>Sign in</Link>
             </Button>
           </CardContent>

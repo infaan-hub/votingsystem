@@ -62,10 +62,10 @@ export default function OnboardingPage() {
           <LinkButton href="/welcome" className="sm:w-auto">
             Get started
           </LinkButton>
-          <Button asChild variant="ghost" className="sm:w-auto">
+          <Button asChild variant="ghost" size="default" className="sm:w-auto">
             <Link href="/login">Sign in</Link>
           </Button>
-          <LinkButton href="/register" variant="subtle" className="sm:w-auto">
+          <LinkButton href="/register" variant="subtle" size="default" className="sm:w-auto">
             Create account
           </LinkButton>
         </footer>

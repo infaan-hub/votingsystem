@@ -114,12 +114,12 @@ export default function OfficerCampaignPage() {
         eyebrow="Officer dashboard"
         title="Campaigns"
         description="Publish short candidate stories, cover images and videos that appear on the campaign feed for your election."
-        actions={
-          <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
-            All elections
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+          All elections
+        </LinkButton>
+      </div>
       <RequireRole role="officer">
         <Suspense fallback={<div className="mt-6"><ListSkeleton /></div>}>
           <CampaignBody />

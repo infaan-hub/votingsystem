@@ -132,12 +132,12 @@ export default function OfficerManagementPage() {
         eyebrow="Officer dashboard"
         title="Election management"
         description="Full details of one election you administer: schedule, rules, ballot, eligible voters, capacity and a shareable voter link."
-        actions={
-          <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
-            All elections
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+          All elections
+        </LinkButton>
+      </div>
       <RequireRole role="officer">
         <Suspense fallback={<div className="mt-6"><ListSkeleton /></div>}>
           <ManagementBody />

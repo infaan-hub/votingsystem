@@ -88,17 +88,15 @@ export default function OfficerElectionPage() {
         eyebrow="Officer dashboard"
         title="Run my election"
         description="Overview, lifecycle, ballot and share link for one of the elections you administer."
-        actions={
-          <>
-            <LinkButton href="/officer/election/new" variant="hero" className="w-auto">
-              Add election
-            </LinkButton>
-            <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
-              All elections
-            </LinkButton>
-          </>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/officer/election/new" className="w-auto">
+          Add election
+        </LinkButton>
+        <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+          All elections
+        </LinkButton>
+      </div>
       <RequireRole role="officer">
         <Suspense fallback={<div className="mt-6"><ListSkeleton /></div>}>
           <ElectionBody />

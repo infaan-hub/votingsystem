@@ -34,18 +34,18 @@ export default function OfficerDashboardPage() {
         title={user ? `Welcome, ${user.full_name}` : "Officer dashboard"}
         description="Your managed elections at a glance: lifecycle status, ballot counts, published campaigns and direct links into each workspace."
         actions={
-          <>
-            <LinkButton href="/officer/election/new" variant="hero" className="w-auto">
-              Add election
-            </LinkButton>
-            <Badge variant="hero" className="gap-1.5 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.6px]">
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-              Election officer
-            </Badge>
-          </>
+          <Badge variant="hero" className="gap-1.5 px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.6px]">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            Election officer
+          </Badge>
         }
       />
       <RequireRole role="officer">
+        <div className="mt-4 flex flex-wrap gap-2">
+          <LinkButton href="/officer/election/new" className="w-auto">
+            Add election
+          </LinkButton>
+        </div>
         <DashboardBody />
       </RequireRole>
     </>

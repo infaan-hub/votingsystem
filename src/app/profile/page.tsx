@@ -185,7 +185,7 @@ export default function ProfilePage() {
             Your profile and voting history live behind
             authentication.
           </p>
-          <Button asChild className="sm:w-52">
+          <Button asChild size="default" className="sm:w-52">
             <Link href="/login">Sign in</Link>
           </Button>
         </CardContent>
@@ -244,21 +244,21 @@ export default function ProfilePage() {
         }
         title={user.full_name || user.username}
         meta={`${t.idLabel}: ${user.username}`}
-        actions={
-          <button
-            type="button"
-            onClick={onEditRequest}
-            aria-label="Edit profile"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/20 text-white transition-colors hover:bg-white/30"
-          >
-            <Pencil className="h-5 w-5" aria-hidden="true" />
-          </button>
-        }
         stats={[
           { label: "Role", value: user.role },
           { label: "Sign-in", value: user.auth_provider },
         ]}
       />
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={onEditRequest}
+          aria-label="Edit profile"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-nv-line bg-nv-surface text-nv-muted transition-colors hover:bg-nv-primary-100 hover:text-nv-primary"
+        >
+          <Pencil className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
 
       {/* ---------------- Constituency card ---------------- */}
       <Card>

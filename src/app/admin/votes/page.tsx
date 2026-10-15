@@ -72,12 +72,12 @@ export default function AdminVotesPage() {
         eyebrow="Administration"
         title="Votes"
         description="Aggregate ballot counts only. This report never shows who voted or how any individual voted, so secret ballots stay secret."
-        actions={
-          <LinkButton href="/admin/results" variant="heroGhost" className="w-auto">
-            View results
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/admin/results" variant="outline" className="w-auto">
+          View results
+        </LinkButton>
+      </div>
       <RequireRole role="admin">
         <VotesBody />
       </RequireRole>

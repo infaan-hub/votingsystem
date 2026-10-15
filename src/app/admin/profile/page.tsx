@@ -52,21 +52,19 @@ function AdminProfileBody() {
             <Badge variant="hero">{user.auth_provider === "google" ? "Google sign-in" : "Password sign-in"}</Badge>
           </>
         }
-        actions={
-          <>
-            <Button asChild variant="hero" size="dense">
-              <Link href="/profile">
-                <UserRound className="h-4 w-4" aria-hidden="true" />
-                Manage account
-              </Link>
-            </Button>
-            <Button type="button" variant="heroGhost" size="dense" onClick={() => void handleLogout()}>
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              Sign out
-            </Button>
-          </>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button asChild className="w-auto">
+          <Link href="/profile">
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+            Manage account
+          </Link>
+        </Button>
+        <Button type="button" variant="outline" className="w-auto" onClick={() => void handleLogout()}>
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Sign out
+        </Button>
+      </div>
 
       {/* ---------------- Account summary ---------------- */}
       <Card aria-labelledby="admin-account-heading">

@@ -1,17 +1,19 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Megaphone, RefreshCw, Trash2 } from "lucide-react";
+import { Megaphone, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { RequireRole } from "@/src/components/require-role";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { AlertDialog, Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
+import { Input } from "@/src/components/ui/input";
 import { FilterSelect, FiltersToolbar, SearchInput } from "@/src/components/ui/filters";
 import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
+import { Select } from "@/src/components/ui/select";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
@@ -94,12 +96,12 @@ export default function AdminCampaignsPage() {
         eyebrow="Administration"
         title="Campaigns"
         description="Moderate candidate campaign posts: publish the ones that follow the rules, hide or reject the rest with a note for the record."
-        actions={
-          <LinkButton href="/compaigns" variant="heroGhost" className="w-auto">
-            Public view
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/compaigns" variant="outline" className="w-auto">
+          Public view
+        </LinkButton>
+      </div>
       <RequireRole role="admin">
         <CampaignsBody />
       </RequireRole>
@@ -125,6 +127,44 @@ function CampaignsBody() {
   const [pending, setPending] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CampaignRow | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
+
+  // Establish a campaign: an administrator (or the officer) picks the
+  // election, one of its candidates, a topic and a status.
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createElectionId, setCreateElectionId] = useState("");
+  const [createCandidateId, setCreateCandidateId] = useState("");
+  const [createTopic, setCreateTopic] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createStatus, setCreateStatus] = useState<"DRAFT" | "PUBLISHED">("DRAFT");
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createError, setCreateError] = useState("");
+
+  const createElections = useResource<{ id: number; title: string; slug: string; status: string }[]>(
+    (authToken) =>
+      apiRequest<{ id: number; title: string; slug: string; status: string }[]>(authToken, "/api/admin/elections"),
+    [],
+  );
+  const createElection =
+    createElections.data?.find((row) => String(row.id) === createElectionId) ?? null;
+  const ballot = useResource<{
+    positions: {
+      id: number;
+      name: string;
+      candidates: { id: number; user: { full_name: string } }[];
+    }[];
+  } | null>(
+    (authToken) =>
+      createElection
+        ? apiRequest<{
+            positions: {
+              id: number;
+              name: string;
+              candidates: { id: number; user: { full_name: string } }[];
+            }[];
+          }>(authToken, `/api/elections/public/${createElection.slug}`)
+        : Promise.resolve(null),
+    [createElection?.slug],
+  );
 
   const campaigns = data ?? [];
 
@@ -203,6 +243,44 @@ function CampaignsBody() {
     }
   }
 
+  function openCreate() {
+    setCreateOpen(true);
+    setCreateElectionId("");
+    setCreateCandidateId("");
+    setCreateTopic("");
+    setCreateDescription("");
+    setCreateStatus("DRAFT");
+    setCreateError("");
+  }
+
+  async function submitCreate() {
+    if (!createElectionId || !createCandidateId || !createTopic.trim()) {
+      setCreateError("Choose an election and a candidate, and give the campaign a topic.");
+      return;
+    }
+    setCreateSaving(true);
+    setCreateError("");
+    try {
+      await apiRequest(token, "/api/officer/campaigns", {
+        method: "POST",
+        body: JSON.stringify({
+          election_id: Number(createElectionId),
+          candidate_id: Number(createCandidateId),
+          topic: createTopic.trim(),
+          description: createDescription,
+          status: createStatus,
+        }),
+      });
+      toast({ title: "Campaign created", tone: "success" });
+      setCreateOpen(false);
+      await reload();
+    } catch (cause) {
+      setCreateError(cause instanceof Error ? cause.message : "The request failed.");
+    } finally {
+      setCreateSaving(false);
+    }
+  }
+
   if (loading && !data) {
     return (
       <div className="mt-6 space-y-3">
@@ -238,6 +316,12 @@ function CampaignsBody() {
       <Section
         title="All campaigns"
         description="Hiding or rejecting a campaign requires a moderation note; the API rejects the change without one."
+        actions={
+          <Button className="w-auto" onClick={openCreate}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New campaign
+          </Button>
+        }
       >
         <div className="space-y-4">
           <FiltersToolbar
@@ -364,6 +448,103 @@ function CampaignsBody() {
           )}
         </div>
       </Section>
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          if (!open && !createSaving) setCreateOpen(false);
+        }}
+        title="New campaign"
+        description="Establish a campaign for one candidate on one election. Drafts stay private to officers and admins; published campaigns appear on the public feed immediately."
+      >
+        <div className="space-y-4 pb-2">
+          {createError ? (
+            <div
+              role="alert"
+              className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 p-3 text-[13px] text-nv-danger"
+            >
+              {createError}
+            </div>
+          ) : null}
+          <Select
+            label="Election"
+            value={createElectionId}
+            onChange={(event) => {
+              setCreateElectionId(event.target.value);
+              setCreateCandidateId("");
+              setCreateError("");
+            }}
+            options={(createElections.data ?? []).map((row) => ({
+              value: String(row.id),
+              label: `${row.title} (${row.status ?? ""})`,
+            }))}
+            placeholder="Choose an election"
+          />
+          <Select
+            label="Candidate"
+            value={createCandidateId}
+            onChange={(event) => {
+              setCreateCandidateId(event.target.value);
+              setCreateError("");
+            }}
+            options={(ballot.data?.positions ?? []).flatMap((position) =>
+              position.candidates.map((candidate) => ({
+                value: String(candidate.id),
+                label: `${candidate.user.full_name} — ${position.name}`,
+              })),
+            )}
+            placeholder={createElectionId ? "Choose a candidate" : "Choose an election first"}
+            disabled={!createElectionId}
+            error={ballot.error || undefined}
+            hint="Candidates come from the election's ballot."
+          />
+          <Input
+            label="Topic"
+            value={createTopic}
+            onChange={(event) => {
+              setCreateTopic(event.target.value);
+              setCreateError("");
+            }}
+            placeholder="Why this candidate deserves your vote"
+            maxLength={200}
+          />
+          <Textarea
+            label="Description"
+            value={createDescription}
+            onChange={(event) => setCreateDescription(event.target.value)}
+            placeholder="Optional longer story shown under the topic."
+            maxLength={4000}
+          />
+          <Select
+            label="Status"
+            value={createStatus}
+            onChange={(event) => setCreateStatus(event.target.value as "DRAFT" | "PUBLISHED")}
+            options={[
+              { value: "DRAFT", label: "Draft — keep private" },
+              { value: "PUBLISHED", label: "Published — visible to voters" },
+            ]}
+          />
+        </div>
+        footer={
+          <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+            <Button
+              variant="outline"
+              className="w-auto"
+              disabled={createSaving}
+              onClick={() => setCreateOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="w-auto"
+              disabled={createSaving || !createTopic.trim()}
+              onClick={() => void submitCreate()}
+            >
+              {createSaving ? "Creating…" : "Create campaign"}
+            </Button>
+          </div>
+        }
+      </Dialog>
 
       <Dialog
         open={detail !== null}

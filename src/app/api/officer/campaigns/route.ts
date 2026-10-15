@@ -1,5 +1,5 @@
 import { json, makeRoute } from "@/src/lib/api";
-import { fieldErrors } from "@/src/lib/http";
+import { fieldErrors, forbidden } from "@/src/lib/http";
 import {
   Collector,
   choiceField,
@@ -11,7 +11,7 @@ import {
 } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
 import { readPayload, type Payload } from "@/src/lib/request";
-import { requireStateOfficer } from "@/src/lib/auth";
+import { isOfficerRole, requireStateUser } from "@/src/lib/auth";
 import { requireManagedElection, managedElectionIds } from "@/src/lib/officer";
 import { MAX_IMAGE_BYTES, validateCampaignVideo } from "@/src/lib/media";
 import { recordAudit, clientIp } from "@/src/lib/audit";
@@ -105,11 +105,16 @@ export async function collectCampaignFiles(
 }
 
 const route = makeRoute({
-  permission: "officer",
+  // Officers and administrators may establish campaigns; every other signed-in
+  // role is refused inside the handlers.
+  permission: "authenticated",
   handlers: {
     GET: async (_req, _params, state) => {
-      const officer = requireStateOfficer(state);
-      const ids = await managedElectionIds(officer);
+      const actor = requireStateUser(state);
+      if (actor.role !== "admin" && !isOfficerRole(actor.role)) throw forbidden();
+      // null = unrestricted for an administrator; the officer's own scope
+      // (managed + self-established elections) otherwise.
+      const ids = await managedElectionIds(actor);
       const campaigns = await prisma.campaign.findMany({
         where: ids === null ? {} : { electionId: { in: ids } },
         include: CAMPAIGN_INCLUDE,
@@ -118,7 +123,8 @@ const route = makeRoute({
       return json(campaigns.map((campaign) => serializeCampaign(campaign, { moderation: true })));
     },
     POST: async (req, _params, state) => {
-      const officer = requireStateOfficer(state);
+      const actor = requireStateUser(state);
+      if (actor.role !== "admin" && !isOfficerRole(actor.role)) throw forbidden();
       const payload = await readPayload(req);
 
       const c = new Collector();
@@ -138,7 +144,7 @@ const route = makeRoute({
       const files = await collectCampaignFiles(c, payload);
       c.throwIfAny();
 
-      const election = await requireManagedElection(electionId, officer);
+      const election = await requireManagedElection(electionId, actor);
       const candidate = await prisma.candidate.findFirst({
         where: { id: candidateId, electionId: election.id },
         select: { id: true },
@@ -154,7 +160,7 @@ const route = makeRoute({
         data: {
           electionId: election.id,
           candidateId,
-          ownerId: officer.id,
+          ownerId: actor.id,
           topic,
           description: description ?? "",
           startAt: startAt ?? null,
@@ -184,8 +190,8 @@ const route = makeRoute({
       }
 
       await recordAudit({
-        actorId: officer.id,
-        action: "officer.campaign.create",
+        actorId: actor.id,
+        action: "campaign.create",
         entityType: "Campaign",
         entityId: created.id,
         summary: `Campaign "${created.topic}" created`,

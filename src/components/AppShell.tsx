@@ -116,10 +116,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const drawerFooter = isPublic ? (
     <div className="space-y-2">
-      <Button asChild variant="outline" className="w-full">
+      <Button asChild variant="outline" size="default" className="w-full">
         <Link href="/login">Sign in</Link>
       </Button>
-      <Button asChild className="w-full">
+      <Button asChild size="default" className="w-full">
         <Link href="/register">Create account</Link>
       </Button>
     </div>

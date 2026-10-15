@@ -78,12 +78,12 @@ export default function AddElectionOfficerPage() {
         eyebrow="Administration"
         title="Election officers"
         description="Register an officer account here — no election is chosen at registration. An officer operates exactly one election: one they establish themselves, or one you assign while establishing or editing an election. Officers never see every election."
-        actions={
-          <LinkButton href="/admin/users" variant="heroGhost" className="w-auto">
-            View users
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/admin/users" variant="outline" className="w-auto">
+          View users
+        </LinkButton>
+      </div>
       <RequireRole role="admin">
         <OfficerManager />
       </RequireRole>

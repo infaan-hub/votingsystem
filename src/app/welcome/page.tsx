@@ -71,8 +71,8 @@ export default function WelcomePage() {
             </>
           ) : (
             <>
-              <LinkButton href="/login">Sign in</LinkButton>
-              <Button asChild variant="ghost" className="sm:w-auto">
+              <LinkButton href="/login" size="default">Sign in</LinkButton>
+              <Button asChild variant="ghost" size="default" className="sm:w-auto">
                 <Link href="/register">Create account</Link>
               </Button>
             </>

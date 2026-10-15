@@ -100,12 +100,12 @@ export default function AdminResultsPage() {
         eyebrow="Administration"
         title="Results"
         description="Turnout, per-position rankings and published winners for any election, plus the admin controls to finalize, publish or unpublish a tally."
-        actions={
-          <LinkButton href="/elections" variant="heroGhost" className="w-auto">
-            Public elections
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/elections" variant="outline" className="w-auto">
+          Public elections
+        </LinkButton>
+      </div>
       <RequireRole role="admin">
         <ResultsBody />
       </RequireRole>

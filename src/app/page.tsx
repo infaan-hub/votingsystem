@@ -65,18 +65,16 @@ export default async function HomePage() {
         title={t.name}
         description={tenant.tagline}
         align="center"
-        actions={
-          <>
-            <Button asChild variant="hero" className="sm:w-auto">
-              <Link href="/elections">Browse elections</Link>
-            </Button>
-            <Button asChild variant="heroGhost" className="sm:w-auto">
-              <Link href="/results">View results</Link>
-            </Button>
-          </>
-        }
         className="-mt-6"
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button asChild className="w-auto">
+          <Link href="/elections">Browse elections</Link>
+        </Button>
+        <Button asChild variant="outline" className="w-auto">
+          <Link href="/results">View results</Link>
+        </Button>
+      </div>
 
       {!election ? (
         <Card>

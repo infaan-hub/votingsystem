@@ -132,12 +132,12 @@ export default function AdminElectionsPage() {
         eyebrow="Administration"
         title="Elections"
         description="View, edit and delete any election, establish a new one and select the single officer who operates it, and move elections through the legal status transitions."
-        actions={
-          <LinkButton href="/admin/results" variant="heroGhost" className="w-auto">
-            View results
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/admin/results" variant="outline" className="w-auto">
+          View results
+        </LinkButton>
+      </div>
       <RequireRole role="admin">
         <ElectionsBody />
       </RequireRole>

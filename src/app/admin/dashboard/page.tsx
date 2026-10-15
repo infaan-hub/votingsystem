@@ -70,13 +70,13 @@ export default function AdminDashboardPage() {
         eyebrow="Administration"
         title="Platform dashboard"
         description="Everything that needs an administrator today: election lifecycle, recent activity and platform totals."
-        actions={
-          <LinkButton href="/admin/elections" variant="heroGhost" className="w-auto">
-            <Vote className="h-4 w-4" aria-hidden="true" />
-            Elections
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/admin/elections" variant="outline" className="w-auto">
+          <Vote className="h-4 w-4" aria-hidden="true" />
+          Elections
+        </LinkButton>
+      </div>
       <RequireRole role="admin">
         <DashboardBody />
       </RequireRole>

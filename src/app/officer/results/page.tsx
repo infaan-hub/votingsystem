@@ -97,12 +97,12 @@ export default function OfficerResultsPage() {
         eyebrow="Officer dashboard"
         title="Results"
         description="Ballot totals, turnout, winners and per-position bars for one of your elections."
-        actions={
-          <LinkButton href="/officer/dashboard" variant="heroGhost" className="w-auto">
-            All elections
-          </LinkButton>
-        }
       />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/officer/dashboard" variant="outline" className="w-auto">
+          All elections
+        </LinkButton>
+      </div>
       <RequireRole role="officer">
         <Suspense fallback={<div className="mt-6"><ListSkeleton /></div>}>
           <ResultsBody />

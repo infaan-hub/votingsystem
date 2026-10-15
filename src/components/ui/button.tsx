@@ -3,14 +3,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/src/lib/utils";
 
 /**
- * NexVote button. 48px tall, full width by default, 6–8px radius, uppercase
- * 13px/700 with .5px tracking. Darkens 8% when pressed, drops to 40% opacity
- * when disabled.
+ * NexVote button. Dense (36px) and auto-width by default — the canonical
+ * action style seen on "Create the first campaign" — so every button shares
+ * one size and weight across the product. Pass `size` to override, or
+ * `w-full` in the className for full-width call-to-actions. 6–8px radius,
+ * uppercase 13px/700 with .5px tracking (normal-case in the dense size).
+ * Darkens 8% when pressed, drops to 40% opacity when disabled.
  */
 const buttonVariants = cva(
   [
     "relative inline-flex select-none items-center justify-center gap-2 overflow-hidden",
-    "h-12 w-full whitespace-nowrap rounded-lg",
+    "h-12 w-auto whitespace-nowrap rounded-lg",
     "text-[13px] font-bold uppercase tracking-[0.5px]",
     "transition-[transform,background-color,box-shadow,opacity] duration-200 ease-out",
     "active:scale-[0.985]",
@@ -50,7 +53,7 @@ const buttonVariants = cva(
     },
     defaultVariants: {
       variant: "primary",
-      size: "default",
+      size: "dense",
     },
   },
 );
