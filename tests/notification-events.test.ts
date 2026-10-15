@@ -328,8 +328,9 @@ describe("EventDrivenNotificationTests", () => {
     const admin = await makeUser("review_admin", "admin");
     const election = await makeElection({ status: "NOMINATIONS" });
     const position = await makePosition(election.id);
+    // Officers are scoped to a single election — never "all".
     await prisma.officerAssignment.create({
-      data: { officerId: officer.user.id, scope: "all" },
+      data: { officerId: officer.user.id, scope: "election", electionId: election.id },
     });
     const candidate = await prisma.candidate.create({
       data: {
@@ -569,8 +570,9 @@ describe("EventDrivenNotificationTests", () => {
   it("revokes officer access once and stays silent on a repeated delete", async () => {
     const officer = await makeUser("revoked_officer", "officer");
     const admin = await makeUser("revoked_admin", "admin");
+    const election = await makeElection({});
     const assignment = await prisma.officerAssignment.create({
-      data: { officerId: officer.user.id, scope: "all" },
+      data: { officerId: officer.user.id, scope: "election", electionId: election.id },
     });
 
     const remove = () =>

@@ -15,7 +15,6 @@ import { RadioGroup } from "@/src/components/ui/radio-group";
 import { Section } from "@/src/components/ui/section";
 import { Select } from "@/src/components/ui/select";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
 import { apiRequest, useResource, useToken, type Resource } from "../_shared";
 
@@ -26,8 +25,6 @@ type UserOption = {
   email: string;
   role: string;
 };
-
-type ElectionOption = { id: number; title: string; status: string };
 
 type Assignment = {
   id: number;
@@ -62,24 +59,17 @@ type OfficerRow = {
 
 type Mode = "existing" | "new";
 
-const SCOPE_OPTIONS = [
-  {
-    value: "all",
-    label: "All elections",
-    description: "The officer can manage every election in the system.",
-  },
-  {
-    value: "election",
-    label: "One election",
-    description: "The officer only manages the election you choose below.",
-  },
-  {
-    value: "organization",
-    label: "One organization",
-    description: "Unavailable: this API has no organization list, so an organization id cannot be chosen here.",
-    disabled: true,
-  },
-];
+/** The registration response: an officer ACCOUNT — scope comes later, at
+ * election establishment, when the operator is selected. */
+type RegisteredOfficer = {
+  id: number;
+  username: string;
+  full_name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  phone_number: string | null;
+};
 
 export default function AddElectionOfficerPage() {
   return (
@@ -87,7 +77,7 @@ export default function AddElectionOfficerPage() {
       <PageHero
         eyebrow="Administration"
         title="Election officers"
-        description="Grant officer access, or create a fresh officer account with an invitation-only password. Officers also manage any election they created themselves."
+        description="Register an officer account here — no election is chosen at registration. An officer operates exactly one election: one they establish themselves, or one you assign while establishing or editing an election. Officers never see every election."
         actions={
           <LinkButton href="/admin/users" variant="heroGhost" className="w-auto">
             View users
@@ -122,34 +112,20 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
     (authToken) => apiRequest<{ users: UserOption[] }>(authToken, "/api/admin/users"),
     [],
   );
-  const elections = useResource<ElectionOption[]>(
-    (authToken) => apiRequest<ElectionOption[]>(authToken, "/api/admin/elections"),
-    [],
-  );
-
   const [mode, setMode] = useState<Mode>("existing");
   const [existingUserId, setExistingUserId] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [scope, setScope] = useState("all");
-  const [electionId, setElectionId] = useState("");
-  const [note, setNote] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [created, setCreated] = useState<Assignment | null>(null);
+  const [created, setCreated] = useState<RegisteredOfficer | null>(null);
 
   const userRows = users.data?.users ?? [];
-  const electionRows = elections.data ?? [];
 
-  const listLoading = (users.loading && !users.data) || (elections.loading && !elections.data);
-  const listError =
-    users.error && !users.data
-      ? users.error
-      : elections.error && !elections.data
-        ? elections.error
-        : "";
+  const listLoading = users.loading && !users.data;
+  const listError = users.error && !users.data ? users.error : "";
 
   function validate(): Record<string, string> {
     const next: Record<string, string> = {};
@@ -162,9 +138,6 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
       else if (!email.includes("@") || !email.includes("."))
         next.email = "Enter a valid email address.";
     }
-    if (scope === "election" && !electionId) {
-      next.electionId = "Choose the election this officer will manage.";
-    }
     return next;
   }
 
@@ -174,9 +147,6 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
     setUsername("");
     setEmail("");
     setFullName("");
-    setScope("all");
-    setElectionId("");
-    setNote("");
     setWhatsappPhone("");
     setErrors({});
     setCreated(null);
@@ -187,10 +157,11 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
     setErrors(next);
     if (Object.keys(next).length) return;
 
-    const body: Record<string, unknown> = { scope };
-    if (note.trim()) body.note = note.trim();
+    // Registration creates the account only — no election scope. The officer
+    // is scoped to exactly one election later, when an election is
+    // established (or edited) and its operator is selected there.
+    const body: Record<string, unknown> = {};
     if (whatsappPhone.trim()) body.whatsapp_phone = whatsappPhone.trim();
-    if (scope === "election") body.election_id = Number(electionId);
     if (mode === "existing") {
       body.user_id = Number(existingUserId);
     } else {
@@ -201,17 +172,17 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
 
     setSubmitting(true);
     try {
-      const assignment = await apiRequest<Assignment>(token, "/api/admin/officers", {
+      const officer = await apiRequest<RegisteredOfficer>(token, "/api/admin/officers", {
         method: "POST",
         body: JSON.stringify(body),
       });
-      setCreated(assignment);
+      setCreated(officer);
       onCreated?.();
-      toast({ title: "Officer assignment created", tone: "success" });
+      toast({ title: "Officer account registered", tone: "success" });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "The request failed.";
       setErrors({ form: message });
-      toast({ title: "Could not add officer", description: message, tone: "error" });
+      toast({ title: "Could not register officer", description: message, tone: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -221,7 +192,6 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
     return (
       <div className="mt-6 space-y-3">
         <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
@@ -229,20 +199,13 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
   if (listError) {
     return (
       <div className="mt-6 space-y-4">
-        <ErrorBanner message={listError} onRetry={() => { users.reload(); elections.reload(); }} />
+        <ErrorBanner message={listError} onRetry={() => users.reload()} />
         <EmptyState
           icon={<UserPlus className="h-5 w-5" aria-hidden="true" />}
           title="Form data could not be loaded"
-          description="The officer form needs the user and election lists before it can accept a submission."
+          description="The officer form needs the user list before it can accept a submission."
           action={
-            <Button
-              size="dense"
-              className="w-auto"
-              onClick={() => {
-                users.reload();
-                elections.reload();
-              }}
-            >
+            <Button size="dense" className="w-auto" onClick={() => users.reload()}>
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
               Retry
             </Button>
@@ -255,30 +218,34 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
   if (created) {
     return (
       <div className="mt-6">
-        <Section title="Assignment created" description="The officer now has access with this scope.">
+        <Section
+          title="Officer registered"
+          description="The account is ready. Its election scope comes next — establish an election and select this officer as its operator."
+        >
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-nv-md border border-success/30 bg-success/15 p-4">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
               <div className="min-w-0 space-y-1">
                 <p className="text-[14px] font-semibold text-nv-ink">
-                  {created.officer.full_name || created.officer.username} is now an officer
+                  {created.full_name || created.username} is now an officer
                 </p>
                 <p className="text-[13px] text-nv-text">
-                  Scope: {scopeLabel(created.scope)}
-                  {created.election ? ` · ${created.election.title}` : ""}
-                  {created.organization ? ` · ${created.organization.name}` : ""}
+                  Role: {created.role} · no election scope yet
                 </p>
                 <p className="text-[12.5px] text-nv-muted">
-                  Account {created.officer.username} · {created.officer.email} · created{" "}
-                  {created.created_at ?? "just now"}
+                  Account {created.username} · {created.email}
+                  {created.phone_number ? ` · ${created.phone_number}` : ""}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Button size="dense" className="w-auto" onClick={resetForm}>
-                Add another officer
+                Register another officer
               </Button>
+              <LinkButton href="/admin/elections" variant="outline" className="w-auto h-9 px-3">
+                Establish an election
+              </LinkButton>
               <LinkButton href="/admin/users" variant="outline" className="w-auto h-9 px-3">
                 View users
               </LinkButton>
@@ -382,53 +349,6 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
         </div>
       </Section>
 
-      <Section
-        title="Scope"
-        description="Scope decides which elections the officer can manage."
-      >
-        <div className="space-y-4">
-          <RadioGroup
-            label="Assignment scope"
-            name="officer-scope"
-            variant="card"
-            value={scope}
-            onChange={(value) => {
-              setScope(value);
-              setErrors({});
-            }}
-            options={SCOPE_OPTIONS}
-            error={errors.scope}
-            hint="Organization scope is disabled because this API exposes no way to list organizations."
-          />
-
-          {scope === "election" ? (
-            <div className="max-w-md">
-              <Select
-                label="Election"
-                value={electionId}
-                onChange={(event) => setElectionId(event.target.value)}
-                options={electionRows.map((row) => ({
-                  value: String(row.id),
-                  label: `${row.title} (${row.status})`,
-                }))}
-                placeholder="Choose an election"
-                error={errors.electionId}
-              />
-            </div>
-          ) : null}
-
-          <div className="max-w-2xl">
-            <Textarea
-              label="Note"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Optional context stored with the assignment"
-              hint="Stored on the assignment and visible to administrators."
-            />
-          </div>
-        </div>
-      </Section>
-
       <div className="flex flex-wrap gap-2">
         <Button
           size="dense"
@@ -437,7 +357,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
           onClick={() => void submit()}
         >
           <UserPlus className="h-4 w-4" aria-hidden="true" />
-          {submitting ? "Adding…" : "Add officer"}
+          {submitting ? "Registering…" : "Register officer"}
         </Button>
         <Button variant="outline" size="dense" className="w-auto" disabled={submitting} onClick={resetForm}>
           Reset
@@ -505,7 +425,7 @@ function OfficersSection({ officers }: { officers: Resource<OfficerRow[]> }) {
       <div className="mt-6">
         <Section
           title="Current officers"
-          description="Every officer account and its scoped assignments. Revoking an assignment removes that scope; the account itself stays active."
+          description="Every officer account and the election each one operates. Officers are scoped to exactly one election — revoke an assignment to take away access without deleting the account."
           actions={
             <Button variant="outline" size="dense" className="w-auto" onClick={() => officers.reload()}>
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
@@ -517,7 +437,7 @@ function OfficersSection({ officers }: { officers: Resource<OfficerRow[]> }) {
             <EmptyState
               icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
               title="No officer accounts yet"
-              description="Officers appear here once an account is granted officer access above."
+              description="Register an officer above; they appear here with the election they operate once one is established or assigned."
             />
           ) : (
             <ul className="space-y-3">
@@ -551,7 +471,7 @@ function OfficersSection({ officers }: { officers: Resource<OfficerRow[]> }) {
 
                   {officer.assignments.length === 0 ? (
                     <p className="mt-3 text-[12.5px] text-nv-muted">
-                      No scoped assignments — manages only elections they created themselves.
+                      No election yet — they will manage the first election they establish, or one assigned on the election&apos;s Edit screen.
                     </p>
                   ) : (
                     <ul className="mt-3 space-y-2">

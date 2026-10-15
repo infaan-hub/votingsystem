@@ -10,6 +10,7 @@ import { GET as adminContactsGET } from "@/src/app/api/admin/contacts/route";
 import { PATCH as requestDecisionPATCH } from "@/src/app/api/admin/election-requests/[pk]/route";
 import { GET as auditGET } from "@/src/app/api/admin/audit-logs/route";
 import { POST as assignOfficerPOST } from "@/src/app/api/admin/officers/route";
+import { PATCH as adminElectionPATCH } from "@/src/app/api/admin/elections/[pk]/route";
 import {
   GET as officerElectionsGET,
   POST as officerElectionsPOST,
@@ -248,6 +249,7 @@ describe("platform: officer scope, voters, share links", () => {
     const officerToken = await createTokenFor(seed.officerId);
     const strangerToken = await createTokenFor(seed.voterId);
 
+    // Registration creates the account only — no election is chosen.
     const assigned = await call(
       assignOfficerPOST,
       jsonRequest("/api/admin/officers", {
@@ -256,9 +258,6 @@ describe("platform: officer scope, voters, share links", () => {
         body: {
           username: "ReturningOfficer",
           email: "officer@example.test",
-          scope: "election",
-          election_id: seed.electionId,
-          note: "Runs the platform test election.",
           whatsapp_phone: "+255712345678",
         },
       }),
@@ -267,6 +266,19 @@ describe("platform: officer scope, voters, share links", () => {
     const promoted = await prisma.user.findUnique({ where: { id: seed.officerId } });
     expect(promoted?.role).toBe("officer");
     expect(promoted?.phoneNumber).toBe("+255712345678");
+
+    // Scope comes from election administration: the admin selects the officer
+    // as the operator, and the officer then sees exactly that election.
+    const scoped = await call(
+      adminElectionPATCH,
+      jsonRequest(`/api/admin/elections/${seed.electionId}`, {
+        method: "PATCH",
+        token: adminToken,
+        body: { officer_id: seed.officerId },
+      }),
+      { pk: String(seed.electionId) },
+    );
+    expect(scoped.status).toBe(200);
 
     const officerElections = await call(
       officerElectionsGET,
@@ -322,12 +334,7 @@ describe("platform: officer scope, voters, share links", () => {
       jsonRequest("/api/admin/officers", {
         method: "POST",
         token: adminToken,
-        body: {
-          username: "ReturningOfficer",
-          email: "officer@example.test",
-          scope: "all",
-          note: "Creates elections directly.",
-        },
+        body: { username: "ReturningOfficer", email: "officer@example.test" },
       }),
     );
     expect(assigned.status).toBe(201);
@@ -402,8 +409,20 @@ describe("platform: officer scope, voters, share links", () => {
       jsonRequest("/api/admin/officers", {
         method: "POST",
         token: adminToken,
-        body: { username: "ReturningOfficer", email: "officer@example.test", scope: "all" },
+        body: { username: "ReturningOfficer", email: "officer@example.test" },
       }),
+    );
+
+    // The admin scopes the officer by selecting them as the operator of the
+    // seed election — registration itself carries no election.
+    await call(
+      adminElectionPATCH,
+      jsonRequest(`/api/admin/elections/${seed.electionId}`, {
+        method: "PATCH",
+        token: adminToken,
+        body: { officer_id: seed.officerId },
+      }),
+      { pk: String(seed.electionId) },
     );
 
     const added = await call(
@@ -444,8 +463,20 @@ describe("platform: officer scope, voters, share links", () => {
       jsonRequest("/api/admin/officers", {
         method: "POST",
         token: adminToken,
-        body: { username: "ReturningOfficer", email: "officer@example.test", scope: "all" },
+        body: { username: "ReturningOfficer", email: "officer@example.test" },
       }),
+    );
+
+    // The admin scopes the officer by selecting them as the operator of the
+    // seed election — registration itself carries no election.
+    await call(
+      adminElectionPATCH,
+      jsonRequest(`/api/admin/elections/${seed.electionId}`, {
+        method: "PATCH",
+        token: adminToken,
+        body: { officer_id: seed.officerId },
+      }),
+      { pk: String(seed.electionId) },
     );
 
     await prisma.election.update({
@@ -500,8 +531,20 @@ describe("platform: campaigns and results", () => {
       jsonRequest("/api/admin/officers", {
         method: "POST",
         token: adminToken,
-        body: { username: "ReturningOfficer", email: "officer@example.test", scope: "all" },
+        body: { username: "ReturningOfficer", email: "officer@example.test" },
       }),
+    );
+
+    // The admin scopes the officer by selecting them as the operator of the
+    // seed election — registration itself carries no election.
+    await call(
+      adminElectionPATCH,
+      jsonRequest(`/api/admin/elections/${seed.electionId}`, {
+        method: "PATCH",
+        token: adminToken,
+        body: { officer_id: seed.officerId },
+      }),
+      { pk: String(seed.electionId) },
     );
 
     const created = await call(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Info, ListChecks, RefreshCw } from "lucide-react";
+import { Info, ListChecks, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { RequireRole } from "@/src/components/require-role";
 import { StatusBadge } from "@/src/components/status-badge";
@@ -15,6 +15,7 @@ import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { Select } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
 import {
@@ -64,6 +65,20 @@ type AdminElection = {
 };
 
 type CategoryRow = { id: number; name: string };
+
+type OfficerOption = {
+  id: number;
+  username: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  assignments: Array<{
+    id: number;
+    scope: string;
+    is_active: boolean;
+    election: { id: number; title: string } | null;
+  }>;
+};
 
 const LEGAL_TRANSITIONS: Record<string, string[]> = {
   DRAFT: ["PUBLISHED", "ARCHIVED"],
@@ -116,7 +131,7 @@ export default function AdminElectionsPage() {
       <PageHero
         eyebrow="Administration"
         title="Elections"
-        description="Inspect every election, review its lifecycle detail, and move it through the legal status transitions."
+        description="View, edit and delete any election, establish a new one and select the single officer who operates it, and move elections through the legal status transitions."
         actions={
           <LinkButton href="/admin/results" variant="heroGhost" className="w-auto">
             View results
@@ -141,6 +156,10 @@ function ElectionsBody() {
     (authToken) => apiRequest<CategoryRow[]>(authToken, "/api/categories"),
     [],
   );
+  const officers = useResource<OfficerOption[]>(
+    (authToken) => apiRequest<OfficerOption[]>(authToken, "/api/admin/officers"),
+    [],
+  );
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -153,8 +172,26 @@ function ElectionsBody() {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editPublished, setEditPublished] = useState(false);
+  const [editOfficerId, setEditOfficerId] = useState("");
+  const [editOriginalOperator, setEditOriginalOperator] = useState<number | null>(null);
   const [editError, setEditError] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+
+  // Establish (create) dialog state.
+  const [establishOpen, setEstablishOpen] = useState(false);
+  const [estTitle, setEstTitle] = useState("");
+  const [estDescription, setEstDescription] = useState("");
+  const [estCampaignStart, setEstCampaignStart] = useState("");
+  const [estCampaignEnd, setEstCampaignEnd] = useState("");
+  const [estVotingStart, setEstVotingStart] = useState("");
+  const [estVotingEnd, setEstVotingEnd] = useState("");
+  const [estOfficerId, setEstOfficerId] = useState("");
+  const [estError, setEstError] = useState("");
+  const [estSaving, setEstSaving] = useState(false);
+
+  // Delete dialog state.
+  const [deleting, setDeleting] = useState<AdminElection | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const rows = elections.data ?? [];
   const categoryNames = useMemo(() => {
@@ -162,6 +199,27 @@ function ElectionsBody() {
     for (const category of categories.data ?? []) map.set(category.id, category.name);
     return map;
   }, [categories.data]);
+
+  const officerOptions = useMemo(
+    () => (officers.data ?? []).filter((row) => row.role === "officer"),
+    [officers.data],
+  );
+
+  /** The officer currently scoped to `electionId` via an active assignment. */
+  function currentOperatorId(electionId: number): number | null {
+    for (const officer of officers.data ?? []) {
+      for (const assignment of officer.assignments) {
+        if (
+          assignment.is_active &&
+          assignment.scope === "election" &&
+          assignment.election?.id === electionId
+        ) {
+          return officer.id;
+        }
+      }
+    }
+    return null;
+  }
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -186,10 +244,13 @@ function ElectionsBody() {
 
   function openEdit(row: AdminElection) {
     setDetail(null);
+    const operator = currentOperatorId(row.id);
     setEdit(row);
     setEditTitle(row.title);
     setEditDescription(row.description ?? "");
     setEditPublished(row.is_published === true);
+    setEditOfficerId(operator !== null ? String(operator) : "");
+    setEditOriginalOperator(operator);
     setEditError("");
   }
 
@@ -201,17 +262,23 @@ function ElectionsBody() {
     }
     setEditSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        title: editTitle.trim(),
+        description: editDescription,
+        is_published: editPublished,
+      };
+      // Only send the operator when it actually changed: null clears the
+      // assignment, an id assigns (or reassigns) the operator.
+      const nextOperator = editOfficerId ? Number(editOfficerId) : null;
+      if (nextOperator !== editOriginalOperator) body.officer_id = nextOperator;
       await apiRequest(token, `/api/admin/elections/${edit.id}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          title: editTitle.trim(),
-          description: editDescription,
-          is_published: editPublished,
-        }),
+        body: JSON.stringify(body),
       });
       toast({ title: "Election updated", tone: "success" });
       setEdit(null);
       await elections.reload();
+      officers.reload();
     } catch (cause) {
       setEditError(cause instanceof Error ? cause.message : "The request failed.");
     } finally {
@@ -241,6 +308,100 @@ function ElectionsBody() {
       });
     } finally {
       setPending(false);
+    }
+  }
+
+  function openEstablish() {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const local = (ms: number) => {
+      const d = new Date(ms);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    setEstTitle("");
+    setEstDescription("");
+    setEstCampaignStart(local(now - 7 * day));
+    setEstCampaignEnd(local(now + day));
+    setEstVotingStart(local(now + 2 * day));
+    setEstVotingEnd(local(now + 9 * day));
+    setEstOfficerId("");
+    setEstError("");
+    setEstablishOpen(true);
+  }
+
+  async function submitEstablish() {
+    if (!estTitle.trim()) {
+      setEstError("A title is required.");
+      return;
+    }
+    const cs = new Date(estCampaignStart);
+    const ce = new Date(estCampaignEnd);
+    const vs = new Date(estVotingStart);
+    const ve = new Date(estVotingEnd);
+    if ([cs, ce, vs, ve].some((value) => Number.isNaN(value.getTime()))) {
+      setEstError("Set the campaign and voting windows.");
+      return;
+    }
+    if (ce <= cs) {
+      setEstError("Campaign end must be after campaign start.");
+      return;
+    }
+    if (ve <= vs) {
+      setEstError("Voting end must be after voting start.");
+      return;
+    }
+    if (vs < ce) {
+      setEstError("Voting must start after the campaign ends.");
+      return;
+    }
+    setEstSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        title: estTitle.trim(),
+        description: estDescription,
+        campaign_start_at: cs.toISOString(),
+        campaign_end_at: ce.toISOString(),
+        voting_start_at: vs.toISOString(),
+        voting_end_at: ve.toISOString(),
+      };
+      if (estOfficerId) body.officer_id = Number(estOfficerId);
+      await apiRequest(token, "/api/admin/elections", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      toast({
+        title: estOfficerId ? "Election established with its operator" : "Election established",
+        tone: "success",
+      });
+      setEstablishOpen(false);
+      await elections.reload();
+      officers.reload();
+    } catch (cause) {
+      setEstError(cause instanceof Error ? cause.message : "The request failed.");
+    } finally {
+      setEstSaving(false);
+    }
+  }
+
+  async function runDelete() {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    try {
+      await apiRequest(token, `/api/admin/elections/${deleting.id}`, {
+        method: "DELETE",
+      });
+      toast({ title: `“${deleting.title}” deleted`, tone: "success" });
+      setDeleting(null);
+      await elections.reload();
+    } catch (cause) {
+      toast({
+        title: "Delete refused",
+        description: cause instanceof Error ? cause.message : undefined,
+        tone: "error",
+      });
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -279,6 +440,12 @@ function ElectionsBody() {
       <Section
         title="All elections"
         description="Status is the lifecycle state used by the transition API, not the schedule-based upcoming/active/ended label."
+        actions={
+          <Button size="dense" className="w-auto" onClick={openEstablish}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Establish election
+          </Button>
+        }
       >
         <div className="space-y-4">
           <FiltersToolbar
@@ -379,6 +546,15 @@ function ElectionsBody() {
                               onClick={() => openEdit(row)}
                             >
                               Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="dense"
+                              className="w-auto border-nv-danger/40 text-nv-danger hover:bg-nv-danger/10"
+                              onClick={() => setDeleting(row)}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              Delete
                             </Button>
                             {targets.slice(0, 2).map((target) => (
                               <Button
@@ -556,6 +732,17 @@ function ElectionsBody() {
               checked={editPublished}
               onChange={(event) => setEditPublished(event.target.checked)}
             />
+            <Select
+              label="Operated by"
+              value={editOfficerId}
+              onChange={(event) => setEditOfficerId(event.target.value)}
+              options={officerOptions.map((row) => ({
+                value: String(row.id),
+                label: `${row.full_name || row.username} (@${row.username})`,
+              }))}
+              placeholder="No officer — admin-managed"
+              hint="The single officer scoped to this election. Choosing another officer revokes the previous assignment; clearing the field revokes access."
+            />
           </div>
         ) : null}
         footer={
@@ -580,6 +767,117 @@ function ElectionsBody() {
           </div>
         }
       </Dialog>
+
+      <Dialog
+        open={establishOpen}
+        onOpenChange={(open) => {
+          if (!open && !estSaving) setEstablishOpen(false);
+        }}
+        title="Establish an election"
+        description="Creates the election as a draft and optionally selects the single officer who will operate it."
+      >
+        <div className="space-y-4 pb-2">
+          {estError ? (
+            <div
+              role="alert"
+              className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 p-3 text-[13px] text-nv-danger"
+            >
+              {estError}
+            </div>
+          ) : null}
+          <Input
+            label="Title"
+            value={estTitle}
+            onChange={(event) => {
+              setEstTitle(event.target.value);
+              setEstError("");
+            }}
+            placeholder="e.g. Student Council Election 2027"
+          />
+          <Textarea
+            label="Description"
+            value={estDescription}
+            onChange={(event) => setEstDescription(event.target.value)}
+            placeholder="What is this election about?"
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Campaign starts"
+              type="datetime-local"
+              value={estCampaignStart}
+              onChange={(event) => setEstCampaignStart(event.target.value)}
+            />
+            <Input
+              label="Campaign ends"
+              type="datetime-local"
+              value={estCampaignEnd}
+              onChange={(event) => setEstCampaignEnd(event.target.value)}
+            />
+            <Input
+              label="Voting starts"
+              type="datetime-local"
+              value={estVotingStart}
+              onChange={(event) => setEstVotingStart(event.target.value)}
+            />
+            <Input
+              label="Voting ends"
+              type="datetime-local"
+              value={estVotingEnd}
+              onChange={(event) => setEstVotingEnd(event.target.value)}
+            />
+          </div>
+          <Select
+            label="Operated by (optional)"
+            value={estOfficerId}
+            onChange={(event) => setEstOfficerId(event.target.value)}
+            options={officerOptions
+              .filter(
+                (row) => !row.assignments.some((a) => a.is_active && a.scope === "election"),
+              )
+              .map((row) => ({
+                value: String(row.id),
+                label: `${row.full_name || row.username} (@${row.username})`,
+              }))}
+            placeholder="None — assign later from Edit"
+            hint="An officer operates only one election, so officers already operating another election are hidden here."
+          />
+        </div>
+        footer={
+          <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+            <Button
+              variant="outline"
+              size="dense"
+              className="w-auto"
+              disabled={estSaving}
+              onClick={() => setEstablishOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="dense"
+              className="w-auto"
+              disabled={estSaving || !estTitle.trim()}
+              onClick={() => void submitEstablish()}
+            >
+              {estSaving ? "Establishing…" : "Establish election"}
+            </Button>
+          </div>
+        }
+      </Dialog>
+
+      <AlertDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) setDeleting(null);
+        }}
+        title={deleting ? `Delete “${deleting.title}” permanently?` : "Confirm deletion"}
+        description="This removes the election together with its positions, candidates and announcements. An election with cast votes cannot be deleted — archive it instead."
+        confirmLabel="Delete election"
+        cancelLabel="Keep it"
+        tone="destructive"
+        loading={deleteBusy}
+        onConfirm={() => void runDelete()}
+      />
 
       <AlertDialog
         open={transition !== null}

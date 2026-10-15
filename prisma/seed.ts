@@ -34,7 +34,17 @@ async function upsertUser(
   },
 ) {
   const existing = await prisma.user.findUnique({ where: { username } });
-  if (existing) return existing;
+  if (existing) {
+    // Enforce the seed password on re-runs so a re-seeded environment always
+    // has the documented demo credentials (e.g. admin / admin123).
+    if (data.password) {
+      return prisma.user.update({
+        where: { id: existing.id },
+        data: { password: hashPassword(data.password) },
+      });
+    }
+    return existing;
+  }
   const password = data.password ? hashPassword(data.password) : "!";
   return prisma.user.create({
     data: {
@@ -135,7 +145,7 @@ async function main() {
     }));
 
   await upsertUser("admin", {
-    password: "Admin123!",
+    password: "admin123",
     firstName: "System",
     lastName: "Admin",
     email: "admin@campus.local",

@@ -1,14 +1,12 @@
 import { json, makeRoute } from "@/src/lib/api";
 import { fieldErrors } from "@/src/lib/http";
-import { Collector, intField, strField, choiceField, isValidPhone } from "@/src/lib/fields";
+import { Collector, intField, strField, isValidPhone } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { requireStateAdmin } from "@/src/lib/auth";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { formatDateTime } from "@/src/lib/time";
 import { notify } from "@/src/lib/notifications/notify";
-
-const SCOPES = ["all", "election", "organization"] as const;
 
 function serializeAssignment(assignment: {
   id: number;
@@ -99,11 +97,14 @@ export const GET = makeRoute({
 });
 
 /**
- * POST: grant or scope election-officer access.
+ * POST: register or promote an election-officer ACCOUNT.
  * - `user_id` may reference an existing account (role is promoted to
  *   `officer` when it is a normal user) or be omitted when `username` and
  *   `email` are supplied, in which case an officer account is created with an
  *   unusable password so it can only be activated via invite/reset.
+ * - Registration carries NO election scope. An officer is scoped to exactly
+ *   one election later — when an election is established (or edited) and its
+ *   operator is selected there — never to every election.
  */
 export const POST = makeRoute({
   permission: "admin",
@@ -111,6 +112,21 @@ export const POST = makeRoute({
     POST: async (req, _params, state) => {
       const admin = requireStateAdmin(state);
       const payload = await readPayload(req);
+
+      // Scope belongs to election establishment, not account registration.
+      // Reject the old fields outright so no client can (re)introduce
+      // platform-wide "all" assignments through this endpoint.
+      if (
+        payload.scope !== undefined ||
+        payload.election_id !== undefined ||
+        payload.organization_id !== undefined
+      ) {
+        throw fieldErrors({
+          scope:
+            "Officers are not scoped at registration — establish or edit an election and select its operator there.",
+        });
+      }
+
       const c = new Collector();
 
       const userId = payload.user_id ? intField(c, payload, "user_id") : null;
@@ -123,17 +139,9 @@ export const POST = makeRoute({
       const fullName = strField(c, payload, "full_name", {
         required: false, allowBlank: true, maxLength: 150,
       });
-      const scope = choiceField(c, payload, "scope", SCOPES, { defaultValue: "all" })!;
-      const note = strField(c, payload, "note", {
-        required: false, allowBlank: true, maxLength: 500,
-      });
       const whatsappPhone = strField(c, payload, "whatsapp_phone", {
         required: false, allowBlank: true, maxLength: 25,
       });
-      const electionId = payload.election_id ? intField(c, payload, "election_id") : null;
-      const organizationId = payload.organization_id
-        ? intField(c, payload, "organization_id")
-        : null;
       c.throwIfAny();
 
       const phone = (whatsappPhone ?? "").trim();
@@ -142,29 +150,6 @@ export const POST = makeRoute({
           whatsapp_phone:
             "Enter a valid WhatsApp number (digits, optionally starting with +).",
         });
-      }
-
-      if (scope === "election" && !electionId) {
-        throw fieldErrors({ election_id: "Choose the election this officer will manage." });
-      }
-      if (scope === "organization" && !organizationId) {
-        throw fieldErrors({ organization_id: "Choose the organization this officer will manage." });
-      }
-      if (electionId) {
-        const election = await prisma.election.findUnique({
-          where: { id: electionId },
-          select: { id: true },
-        });
-        if (!election) throw fieldErrors({ election_id: "That election does not exist." });
-      }
-      if (organizationId) {
-        const organization = await prisma.organization.findUnique({
-          where: { id: organizationId },
-          select: { id: true },
-        });
-        if (!organization) {
-          throw fieldErrors({ organization_id: "That organization does not exist." });
-        }
       }
 
       let officerId = userId ?? null;
@@ -197,7 +182,10 @@ export const POST = makeRoute({
 
       const target = await prisma.user.findUnique({
         where: { id: officerId },
-        select: { id: true, role: true },
+        select: {
+          id: true, username: true, firstName: true, lastName: true,
+          email: true, role: true, isActive: true, phoneNumber: true,
+        },
       });
       if (!target) throw fieldErrors({ user_id: "That account does not exist." });
       // Promote normal users; an administrator keeps the admin role.
@@ -216,52 +204,46 @@ export const POST = makeRoute({
         });
       }
 
-      const assignment = await prisma.officerAssignment.create({
-        data: {
-          officerId: officerId!,
-          scope,
-          electionId: scope === "election" ? electionId : null,
-          organizationId: scope === "organization" ? organizationId : null,
-          assignedBy: admin.id,
-          isActive: true,
-          note,
-        },
-        include: ASSIGNMENT_INCLUDE,
-      });
-
       await recordAudit({
         actorId: admin.id,
-        action: "admin.officer.assign",
-        entityType: "OfficerAssignment",
-        entityId: assignment.id,
-        summary: `Officer ${assignment.officer.username} assigned (${scope})`,
-        detail: { electionId, organizationId, scope },
+        action: "admin.officer.register",
+        entityType: "User",
+        entityId: target.id,
+        summary: `Officer ${target.username} registered`,
+        detail: { phone: phone || null },
         ipAddress: clientIp(req),
       });
 
-      // Tell the newly appointed officer (in-app + push to their devices).
+      // Tell the new officer (in-app + push to their devices). Repeated
+      // registrations of the same account reuse one idempotency key, so they
+      // never re-notify.
       try {
-        const scopeLabel =
-          scope === "election" && assignment.election
-            ? ` the election “${assignment.election.title}”`
-            : scope === "organization" && assignment.organization
-              ? ` the organization “${assignment.organization.name}”`
-              : " the platform";
         await notify({
-          recipientIds: [officerId!],
-          title: "You were appointed as an election officer",
-          body: `An administrator gave you officer access for${scopeLabel}.`,
+          recipientIds: [target.id],
+          title: "You are now an election officer",
+          body: "An administrator registered your officer account. Sign in and establish your election — you will operate it yourself.",
           targetUrl: "/officer/dashboard",
-          tag: `officer-appointed-${assignment.id}`,
+          tag: `officer-registered-${target.id}`,
           category: "officer",
-          idempotencyKey: `officer-appointed-${assignment.id}`,
-          data: { assignmentId: assignment.id, scope },
+          idempotencyKey: `officer-registered-${target.id}`,
+          data: { officerId: target.id },
         });
       } catch {
-        // Never fail the assignment because push delivery failed.
+        // Never fail registration because push delivery failed.
       }
 
-      return json(serializeAssignment(assignment), 201);
+      return json(
+        {
+          id: target.id,
+          username: target.username,
+          full_name: `${target.firstName} ${target.lastName}`.trim(),
+          email: target.email,
+          role: target.role === "admin" ? "admin" : "officer",
+          is_active: target.isActive,
+          phone_number: phone || target.phoneNumber || null,
+        },
+        201,
+      );
     },
   },
 });

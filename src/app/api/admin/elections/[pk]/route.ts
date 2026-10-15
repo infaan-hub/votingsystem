@@ -1,8 +1,12 @@
 import { json, makeRoute } from "@/src/lib/api";
-import { fieldErrors, notFoundModel } from "@/src/lib/http";
+import { ApiError, fieldErrors, notFoundModel } from "@/src/lib/http";
 import { Collector, strField, boolField, dateTimeField, choiceField } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
 import { readPayload, type Payload } from "@/src/lib/request";
+import { requireStateAdmin } from "@/src/lib/auth";
+import { recordAudit, clientIp } from "@/src/lib/audit";
+import { notify } from "@/src/lib/notifications/notify";
+import { notifyOfficerRevoked } from "@/src/lib/notifications/events";
 import { serializeElectionAdmin } from "@/src/app/api/admin/elections/route";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { slugify } from "@/src/lib/slug";
@@ -37,7 +41,8 @@ const route = makeRoute({
       if (!election) throw notFoundModel("Election");
       return json(serializeElectionAdmin(election));
     },
-    PATCH: async (req, params) => {
+    PATCH: async (req, params, state) => {
+      const admin = requireStateAdmin(state);
       const pk = Number(params.pk);
       const existing = await prisma.election.findUnique({ where: { id: pk } });
       if (!existing) throw notFoundModel("Election");
@@ -66,6 +71,44 @@ const route = makeRoute({
 
       if (title !== undefined && !title) throw fieldErrors({ title: "This field may not be blank." });
 
+      // Optional operator selection: which single officer operates this
+      // election. `null` clears the current operator; an omitted key leaves it
+      // untouched. Every officer is scoped to exactly one election, so an
+      // officer already operating a different election is refused here.
+      const officerIdProvided = has("officer_id");
+      const officerId = !officerIdProvided
+        ? undefined
+        : payload.officer_id === null || payload.officer_id === undefined
+          ? null
+          : Number(payload.officer_id);
+
+      let newOperator: { id: number; username: string } | null = null;
+      if (officerIdProvided && officerId != null) {
+        if (!Number.isInteger(officerId)) {
+          throw fieldErrors({ officer_id: "Choose an existing election officer account." });
+        }
+        const account = await prisma.user.findUnique({
+          where: { id: officerId },
+          select: { id: true, username: true, role: true },
+        });
+        if (!account || account.role !== "officer") {
+          throw fieldErrors({ officer_id: "Choose an existing election officer account." });
+        }
+        // One election per officer: reject a officer who already operates a
+        // different election until that assignment is revoked.
+        const active = await prisma.officerAssignment.findMany({
+          where: { officerId, isActive: true, scope: "election", NOT: { electionId: null } },
+          include: { election: { select: { title: true } } },
+        });
+        const conflict = active.find((row) => row.electionId !== pk);
+        if (conflict) {
+          throw fieldErrors({
+            officer_id: `That officer already operates ${conflict.election ? `“${conflict.election.title}”` : "another election"}. Revoke that assignment first.`,
+          });
+        }
+        newOperator = account;
+      }
+
       const updates: Record<string, unknown> = {};
       if (title !== undefined) {
         updates.title = title;
@@ -87,14 +130,24 @@ const route = makeRoute({
       if (allowAdminsToVote !== undefined) updates.allowAdminsToVote = allowAdminsToVote;
       if (isPublished !== undefined) updates.isPublished = isPublished;
 
-      // Validate time ordering if any time fields changed.
-      const finalCS = (updates.campaignStartAt as Date) ?? existing.campaignStartAt;
-      const finalCE = (updates.campaignEndAt as Date) ?? existing.campaignEndAt;
-      const finalVS = (updates.votingStartAt as Date) ?? existing.votingStartAt;
-      const finalVE = (updates.votingEndAt as Date) ?? existing.votingEndAt;
-      if (finalCE <= finalCS) throw fieldErrors({ campaign_end_at: "Campaign end must be after campaign start." });
-      if (finalVE <= finalVS) throw fieldErrors({ voting_end_at: "Voting end must be after voting start." });
-      if (finalVS < finalCE) throw fieldErrors({ voting_start_at: "Voting must start after the campaign ends." });
+      // Validate time ordering only when the PATCH actually changes a time
+      // field: legacy or seeded elections can legitimately overlap the
+      // campaign and voting windows, and a title, flag or operator edit
+      // must not be refused for a violation this request didn't create.
+      const timesChanged =
+        campaignStart !== undefined ||
+        campaignEnd !== undefined ||
+        votingStart !== undefined ||
+        votingEnd !== undefined;
+      if (timesChanged) {
+        const finalCS = (updates.campaignStartAt as Date) ?? existing.campaignStartAt;
+        const finalCE = (updates.campaignEndAt as Date) ?? existing.campaignEndAt;
+        const finalVS = (updates.votingStartAt as Date) ?? existing.votingStartAt;
+        const finalVE = (updates.votingEndAt as Date) ?? existing.votingEndAt;
+        if (finalCE <= finalCS) throw fieldErrors({ campaign_end_at: "Campaign end must be after campaign start." });
+        if (finalVE <= finalVS) throw fieldErrors({ voting_end_at: "Voting end must be after voting start." });
+        if (finalVS < finalCE) throw fieldErrors({ voting_start_at: "Voting must start after the campaign ends." });
+      }
 
       try {
         const updated = await prisma.election.update({
@@ -102,6 +155,70 @@ const route = makeRoute({
           data: updates,
           include: { category: true, organization: true },
         });
+
+        // Operator swap: only when the requested operator differs from the
+        // current one. Assignments are deactivated, never hard deleted — the
+        // audit trail depends on them remaining queryable.
+        if (officerIdProvided) {
+          const current = await prisma.officerAssignment.findFirst({
+            where: { electionId: pk, isActive: true, scope: "election" },
+            select: { id: true, officerId: true },
+          });
+          const targetId = newOperator?.id ?? null;
+          if ((current?.officerId ?? null) !== targetId) {
+            if (current) {
+              await prisma.officerAssignment.update({
+                where: { id: current.id },
+                data: { isActive: false },
+              });
+              await notifyOfficerRevoked({ id: current.id, officerId: current.officerId });
+              await recordAudit({
+                actorId: admin.id,
+                action: "admin.officer.revoke",
+                entityType: "OfficerAssignment",
+                entityId: current.id,
+                summary: `Officer assignment #${current.id} revoked (operator of “${updated.title}” changed)`,
+                ipAddress: clientIp(req),
+              });
+            }
+            if (newOperator) {
+              const assignment = await prisma.officerAssignment.create({
+                data: {
+                  officerId: newOperator.id,
+                  scope: "election",
+                  electionId: pk,
+                  assignedBy: admin.id,
+                  isActive: true,
+                  note: `Operator of “${updated.title}”.`,
+                },
+              });
+              await recordAudit({
+                actorId: admin.id,
+                action: "admin.officer.assign",
+                entityType: "OfficerAssignment",
+                entityId: assignment.id,
+                summary: `Officer ${newOperator.username} selected to operate “${updated.title}”`,
+                detail: { electionId: pk },
+                ipAddress: clientIp(req),
+              });
+              try {
+                await notify({
+                  recipientIds: [newOperator.id],
+                  title: "You were appointed as an election officer",
+                  body: `An administrator selected you to operate the election “${updated.title}”.`,
+                  targetUrl: "/officer/dashboard",
+                  tag: `officer-appointed-${assignment.id}`,
+                  category: "officer",
+                  idempotencyKey: `officer-appointed-${assignment.id}`,
+                  data: { assignmentId: assignment.id, scope: "election" },
+                });
+              } catch {
+                // Never fail the assignment because push delivery failed.
+              }
+            }
+          }
+        }
+
         return json(serializeElectionAdmin(updated));
       } catch (error) {
         if (isUniqueConstraintViolation(error)) {
@@ -110,8 +227,56 @@ const route = makeRoute({
         throw error;
       }
     },
+
+    /**
+     * DELETE: permanently remove an election (admin only, audited).
+     *
+     * Ballot integrity comes first: `Vote.election` is ON DELETE CASCADE, so
+     * an election with recorded ballots is refused with guidance to archive
+     * it instead — cast ballots must never disappear silently.
+     */
+    DELETE: async (req, params, state) => {
+      const admin = requireStateAdmin(state);
+      const pk = Number(params.pk);
+      const existing = await prisma.election.findUnique({ where: { id: pk } });
+      if (!existing) throw notFoundModel("Election");
+
+      const votes = await prisma.vote.count({ where: { electionId: pk } });
+      if (votes > 0) {
+        throw new ApiError(409, {
+          detail: `This election has ${votes} cast vote${votes === 1 ? "" : "s"} and cannot be deleted — archive it instead to keep the ballots intact.`,
+        });
+      }
+
+      try {
+        await prisma.election.delete({ where: { id: pk } });
+      } catch (error) {
+        // P2003 (foreign key) / P2014 (required relation): something still
+        // references the election. Refuse with the same guidance, not a 500.
+        const code = (error as { code?: unknown } | null)?.code;
+        if (code === "P2003" || code === "P2014") {
+          throw new ApiError(409, {
+            detail: "This election still has dependent records and cannot be deleted — archive it instead.",
+          });
+        }
+        throw error;
+      }
+
+      await recordAudit({
+        actorId: admin.id,
+        action: "admin.election.delete",
+        entityType: "Election",
+        entityId: pk,
+        summary: `Election “${existing.title}” deleted`,
+        detail: { slug: existing.slug, status: existing.status },
+        ipAddress: clientIp(req),
+      });
+
+      return json({ deleted: true, id: pk });
+    },
   },
 });
 
 export const GET = route;
 export const PATCH = route;
+export const DELETE = route;

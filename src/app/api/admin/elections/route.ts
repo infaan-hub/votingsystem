@@ -3,6 +3,9 @@ import { fieldErrors } from "@/src/lib/http";
 import { Collector, strField, boolField, dateTimeField, choiceField } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
 import { readPayload, type Payload } from "@/src/lib/request";
+import { requireStateAdmin } from "@/src/lib/auth";
+import { recordAudit, clientIp } from "@/src/lib/audit";
+import { notify } from "@/src/lib/notifications/notify";
 import { serializeElectionList } from "@/src/lib/serializers";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { slugify } from "@/src/lib/slug";
@@ -55,7 +58,8 @@ const route = makeRoute({
       });
       return json(elections.map((e) => serializeElectionAdmin(e)));
     },
-    POST: async (req) => {
+    POST: async (req, _params, state) => {
+      const admin = requireStateAdmin(state);
       const payload: Payload = await readPayload(req);
       const c = new Collector();
       const title = strField(c, payload, "title", { maxLength: 200 });
@@ -77,6 +81,40 @@ const route = makeRoute({
       c.throwIfAny();
 
       if (!title) throw fieldErrors({ title: "This field is required." });
+
+      // Establishing an election optionally selects the single officer who
+      // will operate it — that assignment is the officer's entire scope.
+      const officerId =
+        payload.officer_id !== undefined && payload.officer_id !== null
+          ? Number(payload.officer_id)
+          : null;
+
+      let operator: { id: number; username: string } | null = null;
+      if (officerId !== null) {
+        if (!Number.isInteger(officerId)) {
+          throw fieldErrors({ officer_id: "Choose an existing election officer account." });
+        }
+        const account = await prisma.user.findUnique({
+          where: { id: officerId },
+          select: { id: true, username: true, role: true },
+        });
+        if (!account || account.role !== "officer") {
+          throw fieldErrors({ officer_id: "Choose an existing election officer account." });
+        }
+        // One election per officer: reject an officer who already operates a
+        // different election until that assignment is revoked.
+        const active = await prisma.officerAssignment.findMany({
+          where: { officerId, isActive: true, scope: "election", NOT: { electionId: null } },
+          include: { election: { select: { title: true } } },
+        });
+        if (active.length) {
+          const busy = active[0];
+          throw fieldErrors({
+            officer_id: `That officer already operates ${busy.election ? `“${busy.election.title}”` : "another election"}. Revoke that assignment first.`,
+          });
+        }
+        operator = account;
+      }
 
       const now = new Date();
       const cs = campaignStart ?? new Date(now.getTime() - 7 * 86400000);
@@ -121,6 +159,44 @@ const route = makeRoute({
         }
         throw error;
       }
+
+      // Bind the selected officer as the election's single operator.
+      if (operator) {
+        const assignment = await prisma.officerAssignment.create({
+          data: {
+            officerId: operator.id,
+            scope: "election",
+            electionId: created.id,
+            assignedBy: admin.id,
+            isActive: true,
+            note: `Selected when the admin established “${created.title}”.`,
+          },
+        });
+        await recordAudit({
+          actorId: admin.id,
+          action: "admin.officer.assign",
+          entityType: "OfficerAssignment",
+          entityId: assignment.id,
+          summary: `Officer ${operator.username} selected to operate “${created.title}”`,
+          detail: { electionId: created.id },
+          ipAddress: clientIp(req),
+        });
+        try {
+          await notify({
+            recipientIds: [operator.id],
+            title: "You were appointed as an election officer",
+            body: `An administrator selected you to operate the election “${created.title}”.`,
+            targetUrl: "/officer/dashboard",
+            tag: `officer-appointed-${assignment.id}`,
+            category: "officer",
+            idempotencyKey: `officer-appointed-${assignment.id}`,
+            data: { assignmentId: assignment.id, scope: "election" },
+          });
+        } catch {
+          // Never fail the assignment because push delivery failed.
+        }
+      }
+
       return json(serializeElectionAdmin(created), 201);
     },
   },
