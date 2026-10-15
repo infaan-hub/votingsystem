@@ -141,6 +141,7 @@ model User {
   campaignsOwned     Campaign[]         @relation("CampaignOwner")
   notifications      Notification[]     @relation("UserNotifications")
   pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
+  otpChallenges      OtpChallenge[]     @relation("UserOtpChallenges")
 
   @@index([role])
 }
@@ -217,6 +218,28 @@ model Token {
   created   DateTime @default(now())
   userId    Int      @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// One-time login code, delivered as a push notification to the user's
+/// subscribed devices. The code itself is never stored (SHA-256 only), and
+/// expiry/send/attempt limits live here so they are durable across
+/// serverless invocations.
+model OtpChallenge {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  user       User      @relation("UserOtpChallenges", fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the 6-digit code.
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  /// Wrong-code guesses so far; at the attempt cap the challenge is dead.
+  attempts   Int       @default(0)
+  /// Codes issued on this challenge (resend counter).
+  sendCount  Int       @default(1)
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // ---------------------------------------------------------------------------

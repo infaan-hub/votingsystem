@@ -22,12 +22,19 @@ type AuthResponse = {
   user: UserSummary;
 };
 
+/** Login either signs in directly, or hands the user an OTP challenge. */
+type LoginResult =
+  | { status: "authenticated"; user: UserSummary }
+  | { status: "otp_required"; challengeId: number; expiresAt: string };
+
 type AppContextType = {
   token: string;
   user: UserSummary | null;
   elections: unknown[];
   appError: string;
-  handleLogin: (credentials: { username: string; password: string }) => Promise<UserSummary>;
+  handleLogin: (credentials: { username: string; password: string }) => Promise<LoginResult>;
+  /** Stores the token after the OTP code was verified on /otp-verification. */
+  completeOtpLogin: (authResponse: AuthResponse) => Promise<UserSummary>;
   handleRegistration: (authResponse: AuthResponse) => Promise<UserSummary>;
   handleGoogleLogin: (payload: { credential: string }) => Promise<UserSummary>;
   handleLogout: () => Promise<void>;
@@ -90,12 +97,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => { ignore = true; };
   }, [token]);
 
-  const handleLogin = useCallback(async (credentials: { username: string; password: string }) => {
-    const response = await login(credentials);
-    window.localStorage.setItem(TOKEN_KEY, response.token);
-    setToken(response.token);
-    setUser(response.user);
-    return response.user;
+  const handleLogin = useCallback(
+    async (credentials: { username: string; password: string }): Promise<LoginResult> => {
+      const response = await login(credentials);
+      if (response.otp_required) {
+        return {
+          status: "otp_required",
+          challengeId: response.challenge_id,
+          expiresAt: response.expires_at,
+        };
+      }
+      window.localStorage.setItem(TOKEN_KEY, response.token);
+      setToken(response.token);
+      setUser(response.user);
+      return { status: "authenticated", user: response.user };
+    },
+    [],
+  );
+
+  const completeOtpLogin = useCallback(async (authResponse: AuthResponse) => {
+    window.localStorage.setItem(TOKEN_KEY, authResponse.token);
+    setToken(authResponse.token);
+    setUser(authResponse.user);
+    return authResponse.user;
   }, []);
 
   const handleRegistration = useCallback(async (authResponse: AuthResponse) => {
@@ -134,8 +158,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const value = useMemo(
-    () => ({ token, user, elections, appError, handleLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser }),
-    [token, user, elections, appError, handleLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser],
+    () => ({ token, user, elections, appError, handleLogin, completeOtpLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser }),
+    [token, user, elections, appError, handleLogin, completeOtpLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

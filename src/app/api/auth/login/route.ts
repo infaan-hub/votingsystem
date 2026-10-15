@@ -2,6 +2,11 @@ import { json, makeRoute } from "@/src/lib/api";
 import { badRequest, serviceUnavailable } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
 import { verifyPassword } from "@/src/lib/password";
+import {
+  hasActivePushSubscription,
+  issueLoginOtp,
+  pushDeliveryConfigured,
+} from "@/src/lib/otp";
 import { readPayload } from "@/src/lib/request";
 import { serializeUserSummary } from "@/src/lib/serializers";
 import { getOrCreateToken } from "@/src/lib/tokens";
@@ -54,8 +59,35 @@ export const POST = makeRoute({
         throw badRequest({ detail: "Invalid username or password." });
       }
 
+      // Step-up verification: a 6-digit login code is required only when it
+      // can actually reach the user — VAPID configured AND at least one
+      // subscribed device. Otherwise the password alone still signs them in,
+      // so nobody can be locked out by a missing channel.
+      if (pushDeliveryConfigured() && (await hasActivePushSubscription(user.id))) {
+        const issued = await issueLoginOtp(user.id);
+        if (!issued.ok) {
+          throw serviceUnavailable(
+            "Too many sign-in codes requested. Please wait a few minutes and try again.",
+          );
+        }
+        return json({
+          otp_required: true,
+          challenge_id: issued.challengeId,
+          expires_at: issued.expiresAt.toISOString(),
+          expires_in: Math.max(
+            0,
+            Math.floor((issued.expiresAt.getTime() - Date.now()) / 1000),
+          ),
+          message: "We sent a login code to your notification devices.",
+        });
+      }
+
       const token = await getOrCreateToken(user.id);
-      return json({ token: token.key, user: serializeUserSummary(user) });
+      return json({
+        otp_required: false,
+        token: token.key,
+        user: serializeUserSummary(user),
+      });
     },
   },
 });

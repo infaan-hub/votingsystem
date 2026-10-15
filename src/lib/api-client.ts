@@ -17,6 +17,26 @@ export type AuthResponse = {
   user: SessionUser;
 };
 
+/** Returned by POST /auth/login when a 6-digit code was sent instead. */
+export type OtpChallengeResponse = {
+  otp_required: true;
+  challenge_id: number;
+  expires_at: string;
+  expires_in: number;
+  message?: string;
+};
+
+export type LoginResponse = AuthResponse & { otp_required?: false };
+
+export type LoginOutcome = LoginResponse | OtpChallengeResponse;
+
+export type OtpResendResponse = {
+  challenge_id: number;
+  expires_at: string;
+  send_count: number;
+  message?: string;
+};
+
 export type ApiRequestError = Error & {
   status?: number;
   data?: unknown;
@@ -122,8 +142,18 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 export const fetchElections = () => request<unknown[]>("/elections/");
 export const login = (credentials: { username: string; password: string }) =>
-  request<AuthResponse>("/auth/login/", { method: "POST", body: credentials });
+  request<LoginOutcome>("/auth/login/", { method: "POST", body: credentials });
 export const loginWithGoogle = (payload: { credential: string }) =>
   request<AuthResponse>("/auth/google/", { method: "POST", body: payload });
+export const verifyLoginOtp = (challengeId: number, code: string) =>
+  request<AuthResponse>("/auth/otp/verify/", {
+    method: "POST",
+    body: { challenge_id: challengeId, code },
+  });
+export const resendLoginOtp = (challengeId: number) =>
+  request<OtpResendResponse>("/auth/otp/resend/", {
+    method: "POST",
+    body: { challenge_id: challengeId },
+  });
 export const logout = (token: string) => request<null>("/auth/logout/", { method: "POST", token });
 export const fetchCurrentUser = (token: string) => request<SessionUser>("/auth/me/", { token });

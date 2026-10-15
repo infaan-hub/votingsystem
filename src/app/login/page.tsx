@@ -10,15 +10,12 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useApp } from "@/src/components/AppProvider";
 import { useToast } from "@/src/components/ui/toast";
+import {
+  dashboardPathFor,
+  safeNextPath,
+  storeOtpChallenge,
+} from "@/src/lib/auth-flow";
 import { t } from "@/config/tenant";
-
-/** Sends each role to its own dashboard (or back to the guarded page). */
-function dashboardPathFor(role: string, next?: string | null): string {
-  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  if (role === "admin") return "/admin";
-  if (role === "officer") return "/officer";
-  return "/dashboard";
-}
 
 function LoginForm() {
   const router = useRouter();
@@ -35,12 +32,23 @@ function LoginForm() {
     setError("");
     setLoading(true);
     try {
-      const user = await handleLogin({ username: identifier, password });
+      const result = await handleLogin({ username: identifier, password });
+      if (result.status === "otp_required") {
+        // Password accepted; a 6-digit code is waiting on the user's
+        // notification devices. Hand the challenge to the verification step.
+        storeOtpChallenge({
+          challengeId: result.challengeId,
+          expiresAt: result.expiresAt,
+        });
+        const next = safeNextPath(searchParams.get("next"));
+        router.push(next ? `/otp-verification?next=${encodeURIComponent(next)}` : "/otp-verification");
+        return;
+      }
       toast({
-        title: `Welcome back, ${user.full_name || user.username}`,
+        title: `Welcome back, ${result.user.full_name || result.user.username}`,
         tone: "success",
       });
-      router.push(dashboardPathFor(user.role, searchParams.get("next")));
+      router.push(dashboardPathFor(result.user.role, searchParams.get("next")));
     } catch {
       setError("Invalid credentials. Please check and try again.");
     } finally {

@@ -12,6 +12,7 @@ const SAFE_PREFIXES = [
   "/officer/",
   "/admin/",
   "/notifications",
+  "/otp-verification",
 ];
 
 function isSafeUrl(raw) {
