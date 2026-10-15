@@ -20,9 +20,11 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Sheet } from "@/src/components/ui/sheet";
 import { Card, CardContent } from "@/src/components/ui/card";
+import { CodeInput } from "@/src/components/ui/code-input";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatusBadge } from "@/src/components/status-badge";
 import { cn } from "@/src/lib/utils";
+import { OTP_LENGTH, OTP_RESEND_COOLDOWN_MS } from "@/src/lib/otp-constants";
 
 type BallotPosition = {
   id: number;
@@ -49,6 +51,23 @@ type Receipt = {
   code: string;
   castAt: string;
 };
+
+/** Live confirmation challenge for (voter, election). */
+type CodeChallenge = { challengeId: number; expiresAt: string; codeLength: number };
+/**
+ * "loading"  = asking the server which confirmation step applies;
+ * "code"     = voter verifies with the notification code (required when the
+ *              pipeline can reach them);
+ * "legacy"   = password/biometric step for voters with no delivery channel.
+ */
+type ConfirmMode = "loading" | "legacy" | "code";
+type IssueOutcome = "ok" | "forbidden" | "error";
+
+function formatClock(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 
 export default function VotePage({ params }: { params: Promise<{ slug: string }> }) {
   const router = useRouter();
@@ -81,6 +100,11 @@ function Ballot({
   const [selected, setSelected] = useState<Record<number, number[]>>({});
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmMode, setConfirmMode] = useState<ConfirmMode>("legacy");
+  const [challenge, setChallenge] = useState<CodeChallenge | null>(null);
+  const [issueError, setIssueError] = useState("");
+  const [issuing, setIssuing] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -130,7 +154,140 @@ function Ballot({
   const totalCount = ballot?.positions.length ?? 0;
   const complete = totalCount > 0 && answeredCount === totalCount;
 
-  async function submit(password: string) {
+  /** Asks the server which confirmation step applies and fetches the code. */
+  async function requestCode(): Promise<IssueOutcome> {
+    if (!ballot) return "error";
+    setIssuing(true);
+    setIssueError("");
+    try {
+      const response = await fetch(`/api/elections/${ballot.election.id}/vote/code/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        detail?: string;
+        requires_code?: boolean;
+        code_length?: number;
+        challenge_id?: number;
+        expires_at?: string;
+      };
+      if (!response.ok) {
+        if (response.status === 403) {
+          // Not allowed to vote in this election — never open the dialog.
+          setError(data.detail ?? "You are not allowed to vote in this election.");
+          toast({ title: "Cannot vote", description: data.detail, tone: "error" });
+          return "forbidden";
+        }
+        throw new Error(
+          data.detail ?? "Could not start verification. Check your connection and try again.",
+        );
+      }
+      if (data.requires_code && data.challenge_id && data.expires_at) {
+        setChallenge({
+          challengeId: data.challenge_id,
+          expiresAt: data.expires_at,
+          codeLength: data.code_length ?? OTP_LENGTH,
+        });
+        setConfirmMode("code");
+      } else {
+        setChallenge(null);
+        setConfirmMode("legacy");
+      }
+      return "ok";
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : "Could not start verification. Check your connection and try again.";
+      setIssueError(message);
+      return "error";
+    } finally {
+      setIssuing(false);
+    }
+  }
+
+  /** "Cast vote": decide the confirmation step, then open the dialog. */
+  async function startConfirmation() {
+    if (!ballot) return;
+    setError("");
+    setVerifyError("");
+    setIssueError("");
+    setChallenge(null);
+    setConfirming(true);
+    setConfirmMode("loading");
+    const outcome = await requestCode();
+    if (outcome === "forbidden") {
+      setConfirming(false);
+      setConfirmMode("legacy");
+    } else if (outcome === "error") {
+      // Show the retry card instead of an endless spinner.
+      setConfirmMode("code");
+    }
+  }
+
+  /** Rotates the code; terminal states (expired/used) fall back to a fresh challenge. */
+  async function resendCode() {
+    if (!ballot || !challenge) return;
+    setVerifyError("");
+    try {
+      const response = await fetch(`/api/elections/${ballot.election.id}/vote/code/resend/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify({ challenge_id: challenge.challengeId }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        detail?: string;
+        retry_after_seconds?: number;
+        needs_new_code?: boolean;
+        challenge_id?: number;
+        expires_at?: string;
+      };
+      if (response.ok && data.challenge_id && data.expires_at) {
+        setChallenge({
+          challengeId: data.challenge_id,
+          expiresAt: data.expires_at,
+          codeLength: challenge.codeLength,
+        });
+        toast({ title: "New code sent", description: "Check your notifications for it.", tone: "success" });
+        return;
+      }
+      if (response.status === 429) {
+        toast({
+          title: "Please wait",
+          description: data.retry_after_seconds
+            ? `Request another code in ${data.retry_after_seconds}s.`
+            : "Request another code shortly.",
+          tone: "info",
+        });
+        return;
+      }
+      if (data.needs_new_code) {
+        const outcome = await requestCode();
+        if (outcome === "forbidden") {
+          setConfirming(false);
+          setConfirmMode("legacy");
+        } else if (outcome === "ok") {
+          toast({ title: "New code sent", description: "Check your notifications for it.", tone: "success" });
+        }
+        return;
+      }
+      throw new Error(data.detail ?? "Could not send a new code.");
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error ? requestError.message : "Could not send a new code.";
+      setIssueError(message);
+      toast({ title: "Could not send a code", description: message, tone: "error" });
+    }
+  }
+
+  async function submitBallot(extraBody: Record<string, unknown>) {
     if (!ballot) return;
     setSubmitting(true);
     try {
@@ -148,7 +305,7 @@ function Ballot({
             position_id: Number(positionId),
             candidate_ids: candidateIds,
           })),
-          reauth: password ? { password } : { biometric: true },
+          ...extraBody,
         }),
       });
 
@@ -156,10 +313,14 @@ function Ballot({
         receipt_code?: string;
         cast_at?: string;
         detail?: string;
+        attempts_remaining?: number;
+        needs_new_code?: boolean;
       };
 
       if (!response.ok) {
-        throw new Error(data.detail ?? "Your vote could not be recorded.");
+        const failure = new Error(data.detail ?? "Your vote could not be recorded.");
+        (failure as Error & { data?: typeof data }).data = data;
+        throw failure;
       }
 
       setConfirming(false);
@@ -172,13 +333,36 @@ function Ballot({
         submitError instanceof Error
           ? submitError.message
           : "Your vote could not be recorded. Please try again.";
-      setError(message);
-      setConfirming(false);
-      toast({ title: "Vote not recorded", description: message, tone: "error" });
+      const failureData = (submitError as { data?: { attempts_remaining?: number } }).data;
+
+      if (confirmMode === "code") {
+        // Keep the dialog open so the voter can correct the code or request
+        // a fresh one — closing would throw away their typed ballot state.
+        const remaining = failureData?.attempts_remaining;
+        setVerifyError(
+          typeof remaining === "number" && remaining > 0
+            ? `${message} (${remaining} attempt${remaining === 1 ? "" : "s"} left)`
+            : message,
+        );
+      } else {
+        setError(message);
+        setConfirming(false);
+        toast({ title: "Vote not recorded", description: message, tone: "error" });
+      }
     } finally {
       setSubmitting(false);
     }
   }
+
+  /** Legacy confirmation step: password (or a client-side biometric gate). */
+  const submit = (password: string) =>
+    submitBallot({ reauth: password ? { password } : { biometric: true } });
+
+  /** Code confirmation step: the challenge is consumed server-side. */
+  const submitWithCode = (code: string) => {
+    if (!challenge) return;
+    return submitBallot({ confirm_code: { challenge_id: challenge.challengeId, code } });
+  };
 
   if (!token) {
     return (
@@ -349,7 +533,7 @@ function Ballot({
                 </p>
               ) : null}
               <Button
-                onClick={() => setConfirming(true)}
+                onClick={() => void startConfirmation()}
                 disabled={!complete}
                 aria-describedby="cast-help"
               >
@@ -370,6 +554,14 @@ function Ballot({
         onOpenChange={setConfirming}
         positionNames={ballot.positions.map((position) => position.name)}
         submitting={submitting}
+        mode={confirmMode}
+        challenge={challenge}
+        issueError={issueError}
+        issuing={issuing}
+        verifyError={verifyError}
+        onRequestCode={() => void requestCode()}
+        onResend={() => void resendCode()}
+        onVerify={submitWithCode}
         onConfirm={submit}
       />
     </div>
@@ -381,26 +573,75 @@ function ConfirmSheet({
   onOpenChange,
   positionNames,
   submitting,
+  mode,
+  challenge,
+  issueError,
+  issuing,
+  verifyError,
+  onRequestCode,
+  onResend,
+  onVerify,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   positionNames: string[];
   submitting: boolean;
+  mode: ConfirmMode;
+  challenge: CodeChallenge | null;
+  issueError: string;
+  issuing: boolean;
+  verifyError: string;
+  onRequestCode: () => void;
+  onResend: () => void;
+  onVerify: (code: string) => void;
   onConfirm: (password: string) => void;
 }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [digits, setDigits] = useState<string[]>(() => Array(OTP_LENGTH).fill(""));
+  const [now, setNow] = useState(() => Date.now());
+  const [resendCooldownUntil, setResendCooldownUntil] = useState(0);
 
   useEffect(() => {
     if (open) {
       setPassword("");
       setError("");
+      setDigits(Array(OTP_LENGTH).fill(""));
+      // Mirrors the server cooldown that started when the code was issued.
+      setResendCooldownUntil(Date.now() + OTP_RESEND_COOLDOWN_MS);
     }
   }, [open]);
 
+  // A freshly issued challenge (resend / retry) also empties the boxes —
+  // CodeInput re-focuses box one when they go from filled to empty.
+  const challengeId = challenge?.challengeId ?? 0;
+  useEffect(() => {
+    setDigits(Array(OTP_LENGTH).fill(""));
+  }, [challengeId]);
+
+  // Wrong-code failures clear the boxes for the retry.
+  useEffect(() => {
+    if (verifyError) setDigits(Array(OTP_LENGTH).fill(""));
+  }, [verifyError]);
+
+  // One clock drives the expiry countdown and the resend cooldown.
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const secondsLeft = challenge
+    ? Math.max(0, Math.floor((new Date(challenge.expiresAt).getTime() - now) / 1000))
+    : 0;
+  const expired = mode === "code" && challenge !== null && secondsLeft <= 0;
+  const resendIn = Math.max(0, Math.ceil((resendCooldownUntil - now) / 1000));
+  const codeLength = challenge?.codeLength ?? OTP_LENGTH;
+  const complete = digits.length === codeLength && digits.every((digit) => digit !== "");
+
   // WebAuthn is offered when the platform supports it; otherwise the password
-  // path remains available so the step is never a dead end.
+  // path remains available so the step is never a dead end. (Legacy voters
+  // only — notification-enabled voters verify with their code instead.)
   const supportsBiometrics =
     typeof window !== "undefined" && "PublicKeyCredential" in window;
 
@@ -419,6 +660,13 @@ function ConfirmSheet({
     }
   }
 
+  const positionsLine = (
+    <p className="text-[13px] text-nv-muted">
+      You are voting on {positionNames.length} question
+      {positionNames.length === 1 ? "" : "s"}: {positionNames.join(", ")}.
+    </p>
+  );
+
   return (
     <Sheet
       open={open}
@@ -426,46 +674,155 @@ function ConfirmSheet({
       title="Confirm your vote"
       description="Your ballot is final once submitted."
       footer={
-        <Button onClick={() => onConfirm(password)} disabled={submitting}>
-          {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Submitting…
-            </>
-          ) : (
-            "Confirm"
-          )}
-        </Button>
+        mode === "loading" ? (
+          <Button disabled>
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Preparing…
+          </Button>
+        ) : mode === "code" ? (
+          <Button
+            onClick={() => onVerify(digits.join(""))}
+            disabled={submitting || issuing || !challenge || expired || !complete}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Submitting…
+              </>
+            ) : (
+              "Confirm vote"
+            )}
+          </Button>
+        ) : (
+          <Button onClick={() => onConfirm(password)} disabled={submitting}>
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Submitting…
+              </>
+            ) : (
+              "Confirm"
+            )}
+          </Button>
+        )
       }
     >
-      <div className="space-y-4">
-        <p className="text-[13px] text-nv-muted">
-          You are voting on {positionNames.length} question
-          {positionNames.length === 1 ? "" : "s"}: {positionNames.join(", ")}.
-        </p>
+      {mode === "loading" ? (
+        <div className="space-y-4">
+          {positionsLine}
+          <div className="flex flex-col items-center gap-3 py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-nv-primary" aria-hidden="true" />
+            <p className="text-[13px] text-nv-muted">Preparing secure verification…</p>
+          </div>
+        </div>
+      ) : mode === "code" ? (
+        <div className="space-y-4">
+          {positionsLine}
 
-        {supportsBiometrics ? (
-          <Button variant="dark" onClick={onBiometric} disabled={submitting}>
-            <Fingerprint className="h-4 w-4" aria-hidden="true" />
-            Use biometrics
-          </Button>
-        ) : null}
-
-        <Input
-          label="Confirm with your password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-        />
-
-        {error ? (
-          <p role="alert" className="text-[12px] text-nv-danger">
-            {error}
+          <p className="text-[13px] text-nv-ink">
+            Enter the {codeLength}-digit code we sent to your notifications to
+            verify it&apos;s you casting this vote — instead of a password.
+            Check the notification banner or your bell for it.
           </p>
-        ) : null}
-      </div>
+
+          {issueError ? (
+            <div className="space-y-2">
+              <p
+                role="alert"
+                className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 px-3 py-2.5 text-[12px] text-nv-danger"
+              >
+                {issueError}
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="dense"
+                onClick={onRequestCode}
+                disabled={issuing}
+              >
+                {issuing ? "Trying…" : "Try again"}
+              </Button>
+            </div>
+          ) : null}
+
+          {challenge ? (
+            <>
+              <CodeInput
+                digits={digits}
+                onDigitsChange={setDigits}
+                length={codeLength}
+                disabled={submitting}
+                autoFocusFirst={open}
+                label="vote code"
+              />
+
+              <p className="text-center text-[12px] text-nv-muted" aria-live="polite">
+                {expired ? (
+                  <span className="font-bold text-nv-danger">
+                    This code has expired — send a new one.
+                  </span>
+                ) : (
+                  <>
+                    Code expires in{" "}
+                    <span className="nums-tabular font-bold text-nv-ink">
+                      {formatClock(secondsLeft)}
+                    </span>
+                  </>
+                )}
+              </p>
+
+              {verifyError ? (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 px-3 py-2.5 text-[12px] text-nv-danger"
+                >
+                  {verifyError}
+                </p>
+              ) : null}
+
+              <div className="flex items-center justify-between gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="dense"
+                  onClick={onResend}
+                  disabled={submitting || resendIn > 0}
+                >
+                  {resendIn > 0 ? `Send new code in ${resendIn}s` : "Send a new code"}
+                </Button>
+              </div>
+            </>
+          ) : !issueError ? (
+            <p className="text-[13px] text-nv-muted">Preparing secure verification…</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {positionsLine}
+
+          {supportsBiometrics ? (
+            <Button variant="dark" onClick={onBiometric} disabled={submitting}>
+              <Fingerprint className="h-4 w-4" aria-hidden="true" />
+              Use biometrics
+            </Button>
+          ) : null}
+
+          <Input
+            label="Confirm with your password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+          />
+
+          {error ? (
+            <p role="alert" className="text-[12px] text-nv-danger">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      )}
     </Sheet>
   );
 }

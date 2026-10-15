@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 
 import { AuthCard, AuthShell } from "@/src/components/auth-shell";
 import { Button } from "@/src/components/ui/button";
+import { CodeInput } from "@/src/components/ui/code-input";
 import { useApp } from "@/src/components/AppProvider";
 import { useToast } from "@/src/components/ui/toast";
 import { resendLoginOtp, verifyLoginOtp } from "@/src/lib/api-client";
@@ -41,7 +42,6 @@ function OtpVerificationForm() {
   const [loading, setLoading] = useState(false);
   const [resendCooldownUntil, setResendCooldownUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   // The login page hands the challenge over through sessionStorage. Without
   // one there is nothing to verify — send the user back to sign in.
@@ -54,7 +54,6 @@ function OtpVerificationForm() {
     setChallenge(stored);
     setResendCooldownUntil(Date.now() + OTP_RESEND_COOLDOWN_MS);
     setLoaded(true);
-    inputsRef.current[0]?.focus();
   }, [router]);
 
   // One ticking clock drives both the expiry countdown and the resend
@@ -70,34 +69,6 @@ function OtpVerificationForm() {
   const expired = loaded && challenge !== null && secondsLeft <= 0;
   const resendIn = Math.max(0, Math.ceil((resendCooldownUntil - now) / 1000));
   const code = digits.join("");
-
-  function setDigit(index: number, rawValue: string) {
-    const digit = rawValue.replace(/\D/g, "").slice(-1);
-    setDigits((previous) => {
-      const next = [...previous];
-      next[index] = digit;
-      return next;
-    });
-    if (digit && index < OTP_LENGTH - 1) inputsRef.current[index + 1]?.focus();
-  }
-
-  function handleKeyDown(index: number, event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Backspace" && !digits[index] && index > 0) {
-      inputsRef.current[index - 1]?.focus();
-    }
-  }
-
-  function handlePaste(event: React.ClipboardEvent<HTMLInputElement>) {
-    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
-    if (!pasted) return;
-    event.preventDefault();
-    const next = Array(OTP_LENGTH).fill("");
-    pasted.split("").forEach((character, index) => {
-      next[index] = character;
-    });
-    setDigits(next);
-    inputsRef.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
-  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -124,8 +95,8 @@ function OtpVerificationForm() {
       setAttemptsLeft(
         typeof data?.attempts_remaining === "number" ? data.attempts_remaining : null,
       );
+      // Clearing the boxes re-focuses the first one (CodeInput).
       setDigits(Array(OTP_LENGTH).fill(""));
-      inputsRef.current[0]?.focus();
     } finally {
       setLoading(false);
     }
@@ -146,7 +117,6 @@ function OtpVerificationForm() {
       setResendCooldownUntil(Date.now() + OTP_RESEND_COOLDOWN_MS);
       setDigits(Array(OTP_LENGTH).fill(""));
       toast({ title: "A new code was sent to your devices.", tone: "success" });
-      inputsRef.current[0]?.focus();
     } catch (requestError) {
       const data = (requestError as { data?: ErrorPayload }).data;
       setError(data?.detail ?? "Could not resend the code. Please try again.");
@@ -196,30 +166,14 @@ function OtpVerificationForm() {
           </p>
         ) : null}
 
-        <div
-          className="flex justify-between gap-2"
-          onPaste={handlePaste}
-          role="group"
-          aria-label={`Enter the ${OTP_LENGTH}-digit code`}
-        >
-          {digits.map((digit, index) => (
-            <input
-              key={index}
-              ref={(element) => {
-                inputsRef.current[index] = element;
-              }}
-              value={digit}
-              onChange={(event) => setDigit(index, event.target.value)}
-              onKeyDown={(event) => handleKeyDown(index, event)}
-              inputMode="numeric"
-              autoComplete={index === 0 ? "one-time-code" : "off"}
-              maxLength={1}
-              aria-label={`Digit ${index + 1}`}
-              disabled={loading || expired}
-              className="h-12 w-11 rounded-lg border border-nv-primary/20 bg-white text-center text-lg font-bold text-nv-ink focus:border-nv-primary focus:outline-none focus:ring-2 focus:ring-nv-primary/30 disabled:opacity-50 sm:h-14 sm:w-12"
-            />
-          ))}
-        </div>
+        <CodeInput
+          digits={digits}
+          onDigitsChange={setDigits}
+          length={OTP_LENGTH}
+          disabled={loading || expired}
+          autoFocusFirst={loaded}
+          label="login code"
+        />
 
         <p className="text-center text-[13px] text-nv-muted" aria-live="polite">
           {expired ? (

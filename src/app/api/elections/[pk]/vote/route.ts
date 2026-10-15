@@ -1,20 +1,39 @@
 import { json, makeRoute } from "@/src/lib/api";
-import { fieldErrors, notFoundModel } from "@/src/lib/http";
+import { badRequest, fieldErrors, notFoundModel } from "@/src/lib/http";
 import { Collector, intField } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { requireStateUser } from "@/src/lib/auth";
+import { checkElectionEligibility } from "@/src/lib/eligibility";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { serializeElectionList } from "@/src/lib/serializers";
+import {
+  consumeVoteCode,
+  voteCodeRequired,
+  type VoteCodeVerifyFailure,
+} from "@/src/lib/vote-confirm";
 import crypto from "node:crypto";
+
+const CODE_DETAIL: Record<VoteCodeVerifyFailure, string> = {
+  unknown_challenge: "This verification code is not valid. Please try again.",
+  already_used: "This code was already used. Please confirm your vote with a new code.",
+  expired: "This code has expired. Please confirm your vote with a new code.",
+  locked: "Too many incorrect attempts. Please confirm your vote with a new code.",
+  wrong_code: "That code is not correct.",
+};
 
 /**
  * Casts a ballot for the authenticated voter.
  *
- * Body: `{ selections: [{ position_id, candidate_ids: number[] }], reauth: {...} }`
+ * Body: `{ selections: [{ position_id, candidate_ids: number[] }],
+ *          confirm_code?: { challenge_id, code }, reauth?: {...} }`
  *
  * Integrity rules enforced here:
  *  - the election must exist, be published, and be open for voting;
+ *  - when the voter can be notified (VAPID + subscribed device), a valid
+ *    `confirm_code` — issued to this voter for THIS election, unexpired and
+ *    single-use — is mandatory; the legacy `reauth` field only travels the
+ *    fallback path for voters with no delivery channel;
  *  - every candidate must belong to the election and the question it is
  *    submitted for (cross-election / cross-question selections are rejected);
  *  - the number of selections cannot exceed the question's limit;
@@ -129,6 +148,40 @@ export const POST = makeRoute({
       });
       if (alreadyVoted.length > 0) {
         throw fieldErrors({ __all__: "You have already voted for this position in this election." });
+      }
+
+      // Vote confirmation code — required exactly when the notification
+      // pipeline can reach this voter (the same predicate that gates
+      // issuance), so notification-enabled voters verify with the code from
+      // their devices instead of password/biometrics, while everyone else
+      // keeps the legacy `reauth` path untouched. Checked LAST so a rejected
+      // ballot never burns a valid code.
+      if (await voteCodeRequired(user.id)) {
+        const confirm = (payload.confirm_code ?? {}) as Record<string, unknown>;
+        const challengeId = Number(confirm.challenge_id);
+        const code = typeof confirm.code === "string" ? confirm.code.trim() : "";
+        if (!Number.isInteger(challengeId) || challengeId <= 0 || !code) {
+          throw badRequest({
+            detail: "Enter the verification code from your notifications to confirm your vote.",
+            code_required: true,
+          });
+        }
+
+        // Allowed-to-vote is re-checked at consumption, not only at issuance.
+        const eligibility = await checkElectionEligibility(election, user, null);
+        if (!eligibility.eligible && !eligibility.requiresIdentifier) {
+          throw badRequest({ detail: eligibility.reason });
+        }
+
+        const verification = await consumeVoteCode(challengeId, code, user.id, election.id);
+        if (!verification.ok) {
+          throw badRequest({
+            detail: CODE_DETAIL[verification.reason],
+            attempts_remaining:
+              verification.reason === "wrong_code" ? verification.attemptsRemaining : 0,
+            needs_new_code: verification.reason !== "wrong_code",
+          });
+        }
       }
 
       const receiptCode = crypto.randomBytes(12).toString("hex").toUpperCase();

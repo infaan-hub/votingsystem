@@ -142,6 +142,7 @@ model User {
   notifications      Notification[]     @relation("UserNotifications")
   pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
   otpChallenges      OtpChallenge[]     @relation("UserOtpChallenges")
+  voteConfirmCodes   VoteConfirmCode[]  @relation("UserVoteConfirmCodes")
 
   @@index([role])
 }
@@ -242,6 +243,31 @@ model OtpChallenge {
   @@index([userId, createdAt])
 }
 
+/// Election-scoped vote confirmation code: issued when the voter taps
+/// "Confirm your vote", delivered as a push + in-app notification, and
+/// consumed atomically when the ballot is submitted — the voter proves
+/// possession of their registered device instead of password/biometrics.
+/// Codes are hashed at rest; expiry/send/attempt limits are durable.
+model VoteConfirmCode {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  electionId Int
+  user       User      @relation("UserVoteConfirmCodes", fields: [userId], references: [id], onDelete: Cascade)
+  election   Election  @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the 6-digit code.
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  /// Wrong-code guesses so far; at the cap the challenge is dead.
+  attempts   Int       @default(0)
+  /// Codes issued on this challenge (resend counter).
+  sendCount  Int       @default(1)
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime  @default(now())
+
+  @@index([userId, electionId, createdAt])
+}
+
 // ---------------------------------------------------------------------------
 // Elections
 // ---------------------------------------------------------------------------
@@ -325,6 +351,7 @@ model Election {
   campaigns      Campaign[]
   electionVoters ElectionVoter[]
   officerAssignments OfficerAssignment[]
+  voteConfirmCodes VoteConfirmCode[]
 
   @@index([categoryId])
   @@index([organizationId])
