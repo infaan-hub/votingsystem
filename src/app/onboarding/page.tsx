@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Eye, ShieldCheck, Smartphone, Vote } from "lucide-react";
+import { Eye, ShieldCheck, Smartphone } from "lucide-react";
 
+import { BrandLogo } from "@/src/components/brand-logo";
 import { LinkButton } from "@/src/components/ui/page-header";
 import { Button } from "@/src/components/ui/button";
 import tenant from "@/config/tenant";
@@ -30,9 +31,7 @@ export default function OnboardingPage() {
 
       <div className="relative mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-6 py-10 sm:px-8">
         <header className="flex items-center gap-2.5">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-nv-primary text-white shadow-nv-card">
-            <Vote className="h-5 w-5" aria-hidden="true" />
-          </span>
+          <BrandLogo className="h-10 w-auto shrink-0" />
           <span className="text-[18px] font-extrabold tracking-tight text-nv-ink">{tenant.name}</span>
         </header>
 

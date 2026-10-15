@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogIn, LogOut, Menu, Search, UserPlus, Vote, X } from "lucide-react";
+import { LogIn, LogOut, Menu, Search, UserPlus, X } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { BrandLogo } from "@/src/components/brand-logo";
 import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
 import { NotificationBell } from "@/src/components/notification-bell";
@@ -102,12 +103,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       className="flex min-w-0 max-w-[55vw] items-center gap-2 sm:max-w-none"
       aria-label={`${t.name} home`}
     >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-nv-primary text-white">
-        <Vote className="h-4 w-4" aria-hidden="true" />
-      </span>
-      <span className="truncate text-[15px] font-extrabold tracking-tight text-nv-ink">
-        {t.name}
-      </span>
+      {/* The real NexVote logo (badge + wordmark) is the brand — centred in
+          the header as a lock-up, not as an app-icon tile. */}
+      <BrandLogo className="h-10 w-auto shrink-0 sm:h-11" />
     </Link>
   );
 
@@ -382,7 +380,9 @@ function PublicFooter() {
     <footer className="hidden border-t border-nv-line bg-nv-surface pt-8 lg:block">
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <p className="text-[15px] font-extrabold tracking-tight text-nv-ink">{t.name}</p>
+          <p className="flex items-center">
+            <BrandLogo className="h-8 w-auto" />
+          </p>
           <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-nv-muted">
             Secure, transparent elections for {tenant.authority.name}. Secret ballots, auditable
             results, and accessible voting on any device.

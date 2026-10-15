@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ChevronRight, Vote } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import { prisma } from "@/src/lib/db";
 import { isVotingOpen, serializeElectionList } from "@/src/lib/serializers";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Tile, type TileData } from "@/src/components/ui/tile";
+import { BrandLogo } from "@/src/components/brand-logo";
 import { PageHero } from "@/src/components/page-hero";
 import { FirstVisitOnboarding } from "@/src/components/first-visit";
 import tenant, { t } from "@/config/tenant";
@@ -56,8 +57,9 @@ export default async function HomePage() {
       {/* ---------------- Hero ---------------- */}
       <PageHero
         avatar={
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/20 text-white shadow-float">
-            <Vote className="h-8 w-8" aria-hidden="true" />
+          // White tile so the red logo artwork separates from the red hero.
+          <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-float">
+            <BrandLogo className="h-full w-full" />
           </span>
         }
         title={t.name}

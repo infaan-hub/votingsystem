@@ -102,7 +102,7 @@ const tenant: TenantConfig = {
   name: "NexVote",
   shortName: "NexVote",
   tagline: "Secure voting for every organisation",
-  logo: "/logo.svg",
+  logo: "/nexvote_logo.jpeg",
   ballotMark: "/ballot-mark.svg",
   colors: {
     primary: "#BB182E",

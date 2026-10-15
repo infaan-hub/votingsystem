@@ -1,5 +1,4 @@
-import { Vote } from "lucide-react";
-
+import { BrandLogo } from "@/src/components/brand-logo";
 import { cn } from "@/src/lib/utils";
 import tenant, { t } from "@/config/tenant";
 
@@ -16,16 +15,13 @@ export function AuthBrandHeader() {
         background: "linear-gradient(135deg, #FFFFFF 0%, #FCF1F3 55%, #F8E3E7 100%)",
       }}
     >
-      <span
-        aria-hidden="true"
-        className="grid h-16 w-16 shrink-0 place-items-center rounded-[17px] bg-nv-primary text-white shadow-[0_10px_28px_rgba(187,24,46,0.25)] sm:h-[76px] sm:w-[76px] sm:rounded-[20px]"
-      >
-        <Vote className="h-8 w-8 sm:h-9 sm:w-9" />
-      </span>
-      <h1 className="mt-4 text-[clamp(28px,3vw,40px)] font-extrabold leading-[1.15] tracking-tight text-nv-ink">
-        {t.name}
+      {/* The real logo artwork already carries the wordmark, so the heading
+          stays available to screen readers instead of repeating the name. */}
+      <h1 className="shrink-0">
+        <BrandLogo className="h-36 w-36 rounded-3xl shadow-[0_10px_28px_rgba(187,24,46,0.25)] sm:h-44 sm:w-44" />
+        <span className="sr-only">{t.name}</span>
       </h1>
-      <p className="mt-1.5 max-w-[22rem] text-[15px] leading-relaxed text-nv-muted sm:text-base">
+      <p className="mt-5 max-w-[22rem] text-[15px] leading-relaxed text-nv-muted sm:text-base">
         {tenant.tagline}
       </p>
     </header>

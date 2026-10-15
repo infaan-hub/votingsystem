@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/nexvote_logo.jpeg", sizes: "1254x1254", type: "image/jpeg" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
     // iOS ignores SVG apple-touch-icons: the Home Screen icon must be PNG.
