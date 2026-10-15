@@ -43,7 +43,6 @@ const PAGE_SIZE = 25;
 
 const ENTITY_OPTIONS = [
   { value: "Election", label: "Election" },
-  { value: "ElectionRequest", label: "Election request" },
   { value: "Campaign", label: "Campaign" },
   { value: "ContactMessage", label: "Contact message" },
   { value: "OfficerAssignment", label: "Officer assignment" },

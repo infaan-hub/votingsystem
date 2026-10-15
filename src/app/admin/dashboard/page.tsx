@@ -3,7 +3,6 @@
 import {
   Activity,
   BarChart3,
-  Inbox,
   RefreshCw,
   ShieldCheck,
   Tags,
@@ -29,23 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table";
-import { ageLabel, apiRequest, displayDate, useResource } from "../_shared";
+import { apiRequest, displayDate, useResource } from "../_shared";
 
 type ElectionRow = { id: number; title: string; status: string };
 
 type UserRow = { id: number };
-
-type Requester = { full_name: string; username: string; email: string } | null;
-
-type RequestRow = {
-  id: number;
-  title: string;
-  status: string;
-  created_at: string | null;
-  category: { name: string } | null;
-  organization: string | null;
-  requester: Requester;
-};
 
 type VotesPayload = { total_votes: number; election_count: number };
 
@@ -61,7 +48,6 @@ type AuditRow = {
 type DashboardData = {
   elections: ElectionRow[];
   userCount: number;
-  requests: RequestRow[];
   totalVotes: number;
   audit: AuditRow[];
 };
@@ -77,26 +63,18 @@ const LIFECYCLE = [
   "ARCHIVED",
 ];
 
-const ATTENTION_STATUSES = new Set(["PENDING", "UNDER_REVIEW"]);
-
 export default function AdminDashboardPage() {
   return (
     <>
       <PageHero
         eyebrow="Administration"
         title="Platform dashboard"
-        description="Everything that needs an administrator today: open requests, election lifecycle, recent activity and platform totals."
+        description="Everything that needs an administrator today: election lifecycle, recent activity and platform totals."
         actions={
-          <>
-            <LinkButton href="/admin/election-requests" variant="hero" className="w-auto">
-              <Inbox className="h-4 w-4" aria-hidden="true" />
-              Review requests
-            </LinkButton>
-            <LinkButton href="/admin/elections" variant="heroGhost" className="w-auto">
-              <Vote className="h-4 w-4" aria-hidden="true" />
-              Elections
-            </LinkButton>
-          </>
+          <LinkButton href="/admin/elections" variant="heroGhost" className="w-auto">
+            <Vote className="h-4 w-4" aria-hidden="true" />
+            Elections
+          </LinkButton>
         }
       />
       <RequireRole role="admin">
@@ -144,7 +122,6 @@ function DashboardBody() {
 
   if (!data) return null;
 
-  const attention = data.requests.filter((request) => ATTENTION_STATUSES.has(request.status));
   const counts = LIFECYCLE.map((status) => ({
     status,
     count: data.elections.filter((election) => election.status === status).length,
@@ -181,13 +158,6 @@ function DashboardBody() {
           tone="default"
         />
         <StatCard
-          label="Open requests"
-          value={attention.length}
-          caption="Pending or under review"
-          icon={<Inbox className="h-4 w-4" aria-hidden="true" />}
-          tone={attention.length ? "warning" : "success"}
-        />
-        <StatCard
           label="Total votes"
           value={data.totalVotes}
           caption="Cast across all elections"
@@ -198,63 +168,6 @@ function DashboardBody() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Section
-          title="Needs your attention"
-          description="Election requests waiting for an administrator decision."
-          actions={
-            <LinkButton
-              href="/admin/election-requests"
-              variant="outline"
-              className="w-auto h-11 text-[12px]"
-            >
-              Open queue
-            </LinkButton>
-          }
-        >
-          {attention.length === 0 ? (
-            <EmptyState
-              icon={<Inbox className="h-5 w-5" aria-hidden="true" />}
-              title="Nothing is waiting on you"
-              description="No election request is pending or under review. New submissions from students and staff appear here the moment they are filed."
-              action={
-                <LinkButton href="/admin/election-requests" variant="outline" className="w-auto">
-                  Browse all requests
-                </LinkButton>
-              }
-            />
-          ) : (
-            <ul className="divide-y divide-nv-line">
-              {attention.slice(0, 6).map((request) => (
-                <li
-                  key={request.id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-nv-ink">
-                      {request.title}
-                    </p>
-                    <p className="truncate text-[12.5px] text-nv-muted">
-                      {request.requester?.full_name || request.requester?.username || "Unknown requester"}
-                      {" · filed "}
-                      {ageLabel(request.created_at)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <StatusBadge status={request.status} />
-                    <LinkButton
-                      href="/admin/election-requests"
-                      variant="outline"
-                      className="w-auto h-9 px-3 text-[12px]"
-                    >
-                      Review
-                    </LinkButton>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-
-        <Section
           title="Election lifecycle"
           description="How the platform's elections are distributed across lifecycle states."
         >
@@ -262,10 +175,10 @@ function DashboardBody() {
             <EmptyState
               icon={<Vote className="h-5 w-5" aria-hidden="true" />}
               title="No elections yet"
-              description="Approving an election request or creating an election directly will populate this breakdown."
+              description="Establishing an election from the elections area will populate this breakdown."
               action={
-                <LinkButton href="/admin/election-requests" variant="outline" className="w-auto">
-                  Review election requests
+                <LinkButton href="/admin/elections" variant="outline" className="w-auto">
+                  Go to elections
                 </LinkButton>
               }
             />
@@ -305,7 +218,7 @@ function DashboardBody() {
           <EmptyState
             icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
             title="No audit activity recorded yet"
-            description="Approvals, rejections, role changes and officer assignments are written here as they happen."
+            description="Election administration, role changes and officer assignments are written here as they happen."
             action={
               <LinkButton href="/admin/elections" variant="outline" className="w-auto">
                 Go to elections
@@ -350,11 +263,7 @@ function DashboardBody() {
 
       <Section title="Quick actions" description="Common administrator destinations.">
         <div className="flex flex-wrap gap-2">
-          <LinkButton href="/admin/election-requests" variant="primary" className="w-auto h-11">
-            <Inbox className="h-4 w-4" aria-hidden="true" />
-            Election requests
-          </LinkButton>
-          <LinkButton href="/admin/elections" variant="outline" className="w-auto h-11">
+          <LinkButton href="/admin/elections" variant="primary" className="w-auto h-11">
             <Vote className="h-4 w-4" aria-hidden="true" />
             Elections
           </LinkButton>
@@ -388,17 +297,15 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
 }
 
 async function loadDashboard(token: string): Promise<DashboardData> {
-  const [elections, users, requests, votes, audit] = await Promise.all([
+  const [elections, users, votes, audit] = await Promise.all([
     apiRequest<ElectionRow[]>(token, "/api/admin/elections"),
     apiRequest<{ users: UserRow[] }>(token, "/api/admin/users"),
-    apiRequest<RequestRow[]>(token, "/api/admin/election-requests/all"),
     apiRequest<VotesPayload>(token, "/api/admin/votes"),
     apiRequest<{ results: AuditRow[] }>(token, "/api/admin/audit-logs?limit=8"),
   ]);
   return {
     elections,
     userCount: users.users?.length ?? 0,
-    requests: Array.isArray(requests) ? requests : [],
     totalVotes: votes.total_votes ?? 0,
     audit: audit.results ?? [],
   };

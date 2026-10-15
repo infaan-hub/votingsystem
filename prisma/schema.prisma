@@ -66,7 +66,6 @@ model ElectionCategory {
 
   creator  User?      @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   elections Election[]
-  electionRequests ElectionRequest[]
 
   @@index([isActive])
 }
@@ -134,7 +133,6 @@ model User {
   categoriesCreated  ElectionCategory[] @relation("CategoryCreator")
   organizationsCreated Organization[]    @relation("OrgCreator")
   electionsCreated   Election[]
-  electionRequests   ElectionRequest[]   @relation("Requester")
   contactMessages    ContactMessage[]
   auditLogs          AuditLog[]         @relation("AuditActor")
   officerAssignments OfficerAssignment[] @relation("OfficerAssignee")
@@ -329,8 +327,6 @@ model Election {
 
   resultFinalizedAt  DateTime?
   resultPublishedAt  DateTime?
-  /// Set when an administrator approves the originating ElectionRequest.
-  approvedRequestId  Int?
 
   allowLiveResults            Boolean   @default(true)
   announceWinnersAutomatically Boolean  @default(true)
@@ -623,52 +619,6 @@ model Announcement {
   election Election? @relation(fields: [electionId], references: [id], onDelete: Cascade)
 
   @@index([electionId])
-}
-
-// ---------------------------------------------------------------------------
-// Election requests (normal user → administrator review)
-// ---------------------------------------------------------------------------
-
-model ElectionRequest {
-  id          Int      @id @default(autoincrement())
-  requesterId Int
-  title       String
-  /// Free-form category name when the requester picks "Other".
-  categoryName String  @default("")
-  categoryId  Int?
-  organization String  @default("")
-  description String   @default("")
-  purpose     String   @default("")
-  startAt     DateTime
-  endAt       DateTime
-  /// Expected number of voters; 0 means "not specified".
-  expectedVoters Int   @default(0)
-  /// public / restricted / internal — the requester's proposed election type.
-  electionType  String  @default("public")
-  /// Proposed voter identification method (account, student_id, membership...).
-  voterIdMethod String  @default("account")
-  /// Newline/comma separated proposed positions.
-  positionsText String  @default("")
-  reason      String   @default("")
-  contactInfo String   @default("")
-
-  /// PENDING / UNDER_REVIEW / APPROVED / REJECTED / CHANGES_REQUESTED / CANCELLED
-  status      String   @default("PENDING")
-  decisionNote String  @default("")
-  decidedBy   Int?
-  decidedAt   DateTime?
-  assignedOfficerId Int?
-  /// Set when approval produced an election.
-  electionId  Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  requester User  @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
-  category  ElectionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-
-  @@index([status])
-  @@index([requesterId])
-  @@index([createdAt])
 }
 
 // ---------------------------------------------------------------------------

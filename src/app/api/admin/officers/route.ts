@@ -1,6 +1,7 @@
 import { json, makeRoute } from "@/src/lib/api";
 import { fieldErrors } from "@/src/lib/http";
 import { Collector, intField, strField, isValidPhone } from "@/src/lib/fields";
+import { hashPassword } from "@/src/lib/password";
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { requireStateAdmin } from "@/src/lib/auth";
@@ -100,8 +101,9 @@ export const GET = makeRoute({
  * POST: register or promote an election-officer ACCOUNT.
  * - `user_id` may reference an existing account (role is promoted to
  *   `officer` when it is a normal user) or be omitted when `username` and
- *   `email` are supplied, in which case an officer account is created with an
- *   unusable password so it can only be activated via invite/reset.
+ *   `email` are supplied, in which case an officer account is created with
+ *   the admin-supplied password (unusable when none is given, until an
+ *   invitation or reset sets one).
  * - Registration carries NO election scope. An officer is scoped to exactly
  *   one election later — when an election is established (or edited) and its
  *   operator is selected there — never to every election.
@@ -142,6 +144,9 @@ export const POST = makeRoute({
       const whatsappPhone = strField(c, payload, "whatsapp_phone", {
         required: false, allowBlank: true, maxLength: 25,
       });
+      const password = strField(c, payload, "password", {
+        required: false, allowBlank: true, maxLength: 128,
+      });
       c.throwIfAny();
 
       const phone = (whatsappPhone ?? "").trim();
@@ -150,6 +155,12 @@ export const POST = makeRoute({
           whatsapp_phone:
             "Enter a valid WhatsApp number (digits, optionally starting with +).",
         });
+      }
+      // Admin-supplied credential: set on new accounts and as a reset on
+      // existing ones. Left blank, an existing account keeps its password.
+      const rawPassword = (password ?? "").trim();
+      if (rawPassword && rawPassword.length < 8) {
+        throw fieldErrors({ password: "Use at least 8 characters." });
       }
 
       let officerId = userId ?? null;
@@ -172,7 +183,7 @@ export const POST = makeRoute({
               lastName: rest.join(" "),
               role: "officer",
               isActive: true,
-              password: "",
+              password: rawPassword ? hashPassword(rawPassword) : "",
             },
             select: { id: true },
           });
@@ -201,6 +212,14 @@ export const POST = makeRoute({
         await prisma.user.update({
           where: { id: target.id },
           data: { phoneNumber: phone },
+        });
+      }
+      // An admin-supplied password also acts as a reset for an existing
+      // account; blank keeps whatever the account already has.
+      if (rawPassword) {
+        await prisma.user.update({
+          where: { id: target.id },
+          data: { password: hashPassword(rawPassword) },
         });
       }
 

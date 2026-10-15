@@ -77,7 +77,6 @@ export async function resetDb(): Promise<void> {
       prisma.campaign.deleteMany(),
       prisma.electionVoter.deleteMany(),
       prisma.officerAssignment.deleteMany(),
-      prisma.electionRequest.deleteMany(),
       prisma.contactMessage.deleteMany(),
       prisma.auditLog.deleteMany(),
       prisma.candidateImage.deleteMany(),

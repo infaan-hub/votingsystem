@@ -7,7 +7,6 @@ import { call, createTokenFor, jsonRequest, resetDb } from "./helpers";
 import { POST as contactPOST } from "@/src/app/api/contact/route";
 import { PATCH as contactPATCH } from "@/src/app/api/admin/contacts/[pk]/route";
 import { GET as adminContactsGET } from "@/src/app/api/admin/contacts/route";
-import { PATCH as requestDecisionPATCH } from "@/src/app/api/admin/election-requests/[pk]/route";
 import { GET as auditGET } from "@/src/app/api/admin/audit-logs/route";
 import { POST as assignOfficerPOST } from "@/src/app/api/admin/officers/route";
 import { PATCH as adminElectionPATCH } from "@/src/app/api/admin/elections/[pk]/route";
@@ -171,71 +170,6 @@ describe("platform: contact, requests, audit", () => {
     expect(auditBody.results.some((row) => row.action === "contact.create")).toBe(true);
   });
 
-  it("walks an election request from submission to an approved draft election", async () => {
-    const seed = await seedPlatform();
-    const adminToken = await createTokenFor(seed.adminId);
-    const now = Date.now();
-
-    const request = await prisma.electionRequest.create({
-      data: {
-        requesterId: seed.voterId,
-        title: "Department Council 2026",
-        categoryName: "Department",
-        organization: "Engineering",
-        description: "Council election for the engineering department.",
-        purpose: "Elect department representatives.",
-        startAt: new Date(now + DAY),
-        endAt: new Date(now + 2 * DAY),
-        expectedVoters: 120,
-        electionType: "restricted",
-        voterIdMethod: "student_id",
-        positionsText: "Representative\nSecretary",
-        reason: "Annual departmental elections.",
-        contactInfo: "voter@example.test",
-        status: "PENDING",
-      },
-    });
-
-    const underReview = await call(
-      requestDecisionPATCH,
-      jsonRequest(`/api/admin/election-requests/${request.id}`, {
-        method: "PATCH",
-        token: adminToken,
-        body: { status: "UNDER_REVIEW" },
-      }),
-      { pk: String(request.id) },
-    );
-    expect(underReview.status).toBe(200);
-
-    const approved = await call(
-      requestDecisionPATCH,
-      jsonRequest(`/api/admin/election-requests/${request.id}`, {
-        method: "PATCH",
-        token: adminToken,
-        body: { status: "APPROVED", decision_note: "Looks good." },
-      }),
-      { pk: String(request.id) },
-    );
-    expect(approved.status).toBe(200);
-    const approvedBody = (await approved.json()) as { request: { status: string; election_id: number } };
-    expect(approvedBody.request.status).toBe("APPROVED");
-    expect(approvedBody.request.election_id).toBeGreaterThan(0);
-
-    const draft = await prisma.election.findUnique({ where: { id: approvedBody.request.election_id } });
-    expect(draft?.status).toBe("DRAFT");
-    expect(draft?.approvedRequestId).toBe(request.id);
-
-    const illegal = await call(
-      requestDecisionPATCH,
-      jsonRequest(`/api/admin/election-requests/${request.id}`, {
-        method: "PATCH",
-        token: adminToken,
-        body: { status: "REJECTED", decision_note: "changed my mind" },
-      }),
-      { pk: String(request.id) },
-    );
-    expect(illegal.status).toBe(400);
-  });
 });
 
 describe("platform: officer scope, voters, share links", () => {

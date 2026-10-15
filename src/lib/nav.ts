@@ -2,7 +2,6 @@ import {
   BarChart3,
   Contact,
   FileClock,
-  Inbox,
   LayoutDashboard,
   Megaphone,
   PieChart,
@@ -88,7 +87,6 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "Administration",
     items: [
       { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-      { href: "/admin/election-requests", label: "Election requests", icon: Inbox },
       { href: "/admin/elections", label: "Elections", icon: Vote },
       { href: "/admin/compaigns", label: "Campaigns", icon: Megaphone },
       { href: "/admin/votes", label: "Votes", icon: BarChart3 },
@@ -130,7 +128,6 @@ export function bottomNavFor(shell: ShellRole): NavItem[] {
     case "admin":
       return [
         { href: "/admin/dashboard", label: "Home", icon: LayoutDashboard, exact: true },
-        { href: "/admin/election-requests", label: "Requests", icon: Inbox },
         { href: "/admin/elections", label: "Elections", icon: Vote },
         { href: "/admin/users", label: "Users", icon: Users },
         { href: "/admin/profile", label: "Profile", icon: UserRound },

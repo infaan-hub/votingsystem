@@ -103,9 +103,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       className="flex min-w-0 max-w-[55vw] items-center gap-2 sm:max-w-none"
       aria-label={`${t.name} home`}
     >
-      {/* The real NexVote logo (badge + wordmark) is the brand — centred in
-          the header as a lock-up, not as an app-icon tile. */}
+      {/* The real NexVote logo (badge + wordmark) with the product name
+          beside it — the header brand, not an app-icon tile. */}
       <BrandLogo className="h-10 w-auto shrink-0 sm:h-11" />
+      <span className="text-[15px] font-extrabold tracking-tight text-nv-ink">{t.name}</span>
     </Link>
   );
 

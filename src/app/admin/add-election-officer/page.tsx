@@ -117,6 +117,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -137,6 +138,12 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
       if (!email.trim()) next.email = "An email address is required.";
       else if (!email.includes("@") || !email.includes("."))
         next.email = "Enter a valid email address.";
+      // A new officer needs a usable password so they can sign in directly.
+      if (password.trim().length < 8) {
+        next.password = "Set a password of at least 8 characters.";
+      }
+    } else if (password.trim() && password.trim().length < 8) {
+      next.password = "Use at least 8 characters.";
     }
     return next;
   }
@@ -147,6 +154,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
     setUsername("");
     setEmail("");
     setFullName("");
+    setPassword("");
     setWhatsappPhone("");
     setErrors({});
     setCreated(null);
@@ -161,6 +169,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
     // is scoped to exactly one election later, when an election is
     // established (or edited) and its operator is selected there.
     const body: Record<string, unknown> = {};
+    if (password) body.password = password;
     if (whatsappPhone.trim()) body.whatsapp_phone = whatsappPhone.trim();
     if (mode === "existing") {
       body.user_id = Number(existingUserId);
@@ -262,7 +271,7 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
 
       <Section
         title="Officer account"
-        description="Existing accounts keep their password and are promoted to the officer role; new accounts are created with an unusable password that only an invitation or reset can set."
+        description="Existing accounts are promoted to the officer role (the password field can reset theirs); new accounts are created with the password you set, or unusable when left blank."
       >
         <div className="max-w-2xl space-y-4">
           <RadioGroup
@@ -344,6 +353,25 @@ function OfficerForm({ onCreated }: { onCreated?: () => void }) {
             />
             <p className="text-[12px] text-nv-muted">
               The WhatsApp number this officer uses to send election links to voters.
+            </p>
+          </div>
+          <div className="max-w-md space-y-1.5">
+            <Input
+              label={mode === "existing" ? "New password (optional)" : "Password"}
+              type="password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setErrors({});
+              }}
+              placeholder="At least 8 characters"
+              error={errors.password}
+              autoComplete="new-password"
+            />
+            <p className="text-[12px] text-nv-muted">
+              {mode === "existing"
+                ? "Leave blank to keep the officer's current password, or fill it to reset it."
+                : "The officer signs in with this password immediately."}
             </p>
           </div>
         </div>
