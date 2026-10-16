@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 
 import AppShell from "@/src/components/AppShell";
 import { AppProvider } from "@/src/components/AppProvider";
+import { SplashScreen } from "@/src/components/splash-screen";
 import { ToastProvider } from "@/src/components/ui/toast";
 import tenant from "@/config/tenant";
 import "./globals.css";
@@ -50,6 +51,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang={tenant.defaultLocale} dir={tenant.direction}>
       <body className={`${inter.variable} font-sans antialiased`}>
+        {/* 3-second brand splash on every full page load (first entry and
+            refresh); client-side navigation never remounts the layout. */}
+        <SplashScreen />
         <AppProvider>
           <ToastProvider>
             <AppShell>{children}</AppShell>

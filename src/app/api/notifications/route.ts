@@ -5,35 +5,13 @@ import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { requireStateUser } from "@/src/lib/auth";
 import { notify, schedulePushRetry } from "@/src/lib/notifications/notify";
+import { serializeNotification } from "@/src/lib/notifications/serialize";
 import { safeTargetUrl } from "@/src/lib/notifications/safe-url";
 
 const MAX_TITLE = 180;
 const MAX_BODY = 1000;
 const MAX_URL = 500;
 const RATE_LIMIT_PER_MINUTE = 30;
-
-function serializeNotification(notification: {
-  id: number;
-  title: string;
-  body: string;
-  category: string;
-  targetUrl: string;
-  tag: string;
-  createdAt: Date;
-  readAt: Date | null;
-}) {
-  return {
-    id: notification.id,
-    title: notification.title,
-    body: notification.body,
-    category: notification.category,
-    target_url: notification.targetUrl,
-    tag: notification.tag,
-    created_at: notification.createdAt.toISOString(),
-    is_read: notification.readAt !== null,
-    read_at: notification.readAt?.toISOString() ?? null,
-  };
-}
 
 /**
  * POST: create a notification. By default the recipient is the signed-in

@@ -98,6 +98,7 @@ general-purpose path end to end.
 | `/` | Home — hero, current election card, candidates, explore tiles |
 | `/login` | Hero splash + login sheet; lands on the role dashboard |
 | `/register` | Registration, and OTP when `features.phoneVerification` is on |
+| `/onboarding` | First-run flow for new accounts (notification permission) and the product intro for visitors |
 | `/explore`, `/feed` | Redirect to the elections list |
 | `/candidates/[id]` | Candidate detail — Posts / Info / People's Opinion, rating |
 | `/vote/[slug]` | E-voting ballot with watermark and sticky cast-vote CTA |
@@ -159,16 +160,30 @@ is never traded for the other:
   OS banner arrives even when the app is closed or in the background. Push is
   never suppressed while the app is open: an open tab receives the banner
   *and* the in-app alert.
-- **In-app** — a visible tab checks for fresh notifications every few seconds
-  (and immediately on focus or when it becomes visible again) and raises a
-  toast while the header bell badge and panel refresh. An alert that arrived
-  while the app was closed is announced when the user comes back, so nothing
-  is lost just because the tab was gone at that moment.
+- **In-app** — a visible tab holds a real-time event-stream connection to
+  `/api/notifications/stream`, so a new alert is raised as a banner docked to
+  the top of the app within a second or two of being created, while the header
+  bell badge and panel refresh at the same moment. An alert that arrived while
+  the app was closed is announced when the user comes back, so nothing is lost
+  just because the tab was gone at that moment. If the stream cannot be
+  established (an older deployment, a buffering proxy) the client falls back to
+  polling the list endpoint every three seconds and keeps retrying the stream
+  in the background; a per-browser cursor keeps the two modes from ever
+  double-announcing a row.
 
 Because the in-app channel does not need the OS notification permission, the
 voting code (for example) is surfaced inside the app even on browsers that
 never enabled push. Permission itself is only ever requested from the bell's
 explicit Enable click, and never on page load.
+
+**First run.** A newly registered account is walked through `/onboarding`
+before it can use the app — the flow asks for notification permission while the
+tap's user gesture is still live, and a redirect gate in the app shell keeps
+that onboarding mandatory until it is finished on the device. Continuing
+without granting permission is allowed; the browser controls the permission, so
+it is never something an app can force. A branded splash screen covers the
+first three seconds of every full page load (first entry and refresh) while the
+session and cached lists settle behind it.
 
 ## Responsive + platform behaviour
 

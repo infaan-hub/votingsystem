@@ -1,9 +1,17 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Eye, ShieldCheck, Smartphone } from "lucide-react";
 
+import { useApp } from "@/src/components/AppProvider";
 import { BrandLogo } from "@/src/components/brand-logo";
+import { OnboardingFlow } from "@/src/components/onboarding-flow";
 import { LinkButton } from "@/src/components/ui/page-header";
 import { Button } from "@/src/components/ui/button";
+import { dashboardPathFor } from "@/src/lib/auth-flow";
+import { isOnboardingComplete } from "@/src/lib/onboarding";
 import tenant from "@/config/tenant";
 
 const FEATURES = [
@@ -24,7 +32,35 @@ const FEATURES = [
   },
 ] as const;
 
+/**
+ * Dual-purpose entry route.
+ *
+ *  - Anonymous visitors see the product intro (this is also where a first-time
+ *    visitor is sent from the home page).
+ *  - A signed-in account that has not finished first-run onboarding on this
+ *    device gets the mandatory flow (notification permission first), and a
+ *    returning account that already finished is bounced to its dashboard.
+ *
+ * Storage/browser state is only read after mount, so the server HTML and the
+ * first client render always agree — the app's 3-second splash covers the
+ * one-frame swap.
+ */
 export default function OnboardingPage() {
+  const { token, user } = useApp();
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+
+  const firstRun = ready && Boolean(token) && user !== null && !isOnboardingComplete(user.id);
+
+  useEffect(() => {
+    if (!ready || !user) return;
+    if (firstRun) return;
+    router.replace(dashboardPathFor(user.role));
+  }, [ready, user, firstRun, router]);
+
+  if (firstRun && user) return <OnboardingFlow />;
+
   return (
     <div className="nv-grad-hero relative min-h-dvh overflow-hidden">
       <div aria-hidden="true" className="nv-dots pointer-events-none absolute inset-0 text-nv-primary" />

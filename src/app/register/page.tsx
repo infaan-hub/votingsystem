@@ -82,7 +82,8 @@ export default function RegisterPage() {
       }
 
       // Phone verification is optional per tenant; when disabled the new
-      // account is signed in immediately and the user lands on /welcome.
+      // account is signed in immediately and is walked through first-run
+      // onboarding (notification permission) before reaching the app.
       if (tenant.features.phoneVerification) {
         setAuthPayload(data as AuthPayload);
         setStep("otp");
@@ -94,7 +95,7 @@ export default function RegisterPage() {
         // immediately, not only after a later visit to notification settings.
         await subscribeToPush(auth.token);
         toast({ title: "Account created", description: "Welcome aboard!", tone: "success" });
-        router.push("/welcome");
+        router.push("/onboarding");
       }
     } catch {
       setError("Registration failed. Please try again.");
@@ -114,7 +115,7 @@ export default function RegisterPage() {
             void handleRegistration(authPayload).then(() => {
               // Best-effort device binding for the first sign-in codes.
               void subscribeToPush(authPayload.token);
-              router.push("/welcome");
+              router.push("/onboarding");
             });
           } else {
             router.push("/login");

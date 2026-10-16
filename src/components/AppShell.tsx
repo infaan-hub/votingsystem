@@ -12,6 +12,7 @@ import { BottomNav } from "@/src/components/bottom-nav";
 import { InAppNotifier } from "@/src/components/in-app-notifier";
 import { NotificationBell } from "@/src/components/notification-bell";
 import { NotificationPermissionPrompt } from "@/src/components/notification-permission-prompt";
+import { OnboardingGate } from "@/src/components/onboarding-gate";
 import { InstallAppProvider, InstallAppSidebarItem } from "@/src/components/install-app";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Button } from "@/src/components/ui/button";
@@ -370,6 +371,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* In-app alerts: toasts fresh notifications while the tab is visible,
           complementing Web Push for users inside the app. */}
       <InAppNotifier />
+
+      {/* First-run onboarding is mandatory: signed-in accounts that have not
+          finished it on this device are sent to /onboarding from anywhere in
+          the shell. */}
+      <OnboardingGate />
     </div>
   );
 
