@@ -231,9 +231,13 @@ const route = makeRoute({
     /**
      * DELETE: permanently remove an election (admin only, audited).
      *
-     * Ballot integrity comes first: `Vote.election` is ON DELETE CASCADE, so
-     * an election with recorded ballots is refused with guidance to archive
-     * it instead — cast ballots must never disappear silently.
+     * Administrators may delete an election at any stage, including one that
+     * already holds cast ballots: every dependent row — positions, candidates,
+     * ballot options, announcements, campaigns, officer assignments and votes —
+     * is removed with it through ON DELETE CASCADE. The removed ballot count
+     * lands in the audit entry (and in the response) so a destroyed election is
+     * still traceable in the log; officers stay blocked, and the UI keeps
+     * archiving beside Delete as the non-destructive option.
      */
     DELETE: async (req, params, state) => {
       const admin = requireStateAdmin(state);
@@ -241,12 +245,8 @@ const route = makeRoute({
       const existing = await prisma.election.findUnique({ where: { id: pk } });
       if (!existing) throw notFoundModel("Election");
 
+      // Recorded only — the cascade removes these ballots with the election.
       const votes = await prisma.vote.count({ where: { electionId: pk } });
-      if (votes > 0) {
-        throw new ApiError(409, {
-          detail: `This election has ${votes} cast vote${votes === 1 ? "" : "s"} and cannot be deleted — archive it instead to keep the ballots intact.`,
-        });
-      }
 
       try {
         await prisma.election.delete({ where: { id: pk } });
@@ -268,11 +268,11 @@ const route = makeRoute({
         entityType: "Election",
         entityId: pk,
         summary: `Election “${existing.title}” deleted`,
-        detail: { slug: existing.slug, status: existing.status },
+        detail: { slug: existing.slug, status: existing.status, votes_deleted: votes },
         ipAddress: clientIp(req),
       });
 
-      return json({ deleted: true, id: pk });
+      return json({ deleted: true, id: pk, votes_deleted: votes });
     },
   },
 });

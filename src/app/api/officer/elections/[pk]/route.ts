@@ -282,7 +282,7 @@ const route = makeRoute({
         throw fieldErrors({
           status:
             `This election already has ${votes} recorded ballot${votes === 1 ? "" : "s"} and ` +
-            "cannot be deleted. Ask an administrator to archive it instead.",
+            "cannot be deleted by its operator. Ask an administrator to archive or delete it instead.",
         });
       }
 

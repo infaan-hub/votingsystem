@@ -307,7 +307,7 @@ describe("admin election administration: establish, operate, delete", () => {
     expect(election.id).toBeGreaterThan(0);
   });
 
-  it("lets an admin delete an election, but never one with cast votes", async () => {
+  it("lets an admin delete an election with cast votes, cascading the ballots", async () => {
     const admin = await makeUser("root", "admin");
     const voter = await makeUser("balloter", "voter");
     const adminToken = await createTokenFor(admin.id);
@@ -329,20 +329,6 @@ describe("admin election administration: establish, operate, delete", () => {
       },
     });
 
-    const refused = await call(
-      adminElectionDELETE,
-      jsonRequest(`/api/admin/elections/${election.id}`, {
-        method: "DELETE",
-        token: adminToken,
-      }),
-      pkParams(election.id),
-    );
-    expect(refused.status).toBe(409);
-    expect(JSON.stringify(await refused.json())).toContain("archive");
-    expect(await prisma.election.findUnique({ where: { id: election.id } })).not.toBeNull();
-
-    // Without the ballot, the same deletion succeeds and cascades dependents.
-    await prisma.vote.deleteMany({});
     const deleted = await call(
       adminElectionDELETE,
       jsonRequest(`/api/admin/elections/${election.id}`, {
@@ -352,6 +338,37 @@ describe("admin election administration: establish, operate, delete", () => {
       pkParams(election.id),
     );
     expect(deleted.status).toBe(200);
+    expect(await deleted.json()).toMatchObject({
+      deleted: true,
+      id: election.id,
+      votes_deleted: 1,
+    });
+
+    // The election and everything under it — the cast ballot included — is gone.
+    expect(await prisma.election.findUnique({ where: { id: election.id } })).toBeNull();
+    expect(await prisma.vote.count({ where: { electionId: election.id } })).toBe(0);
+    expect(await prisma.position.count({ where: { electionId: election.id } })).toBe(0);
+    expect(await prisma.candidate.count({ where: { electionId: election.id } })).toBe(0);
+  });
+
+  it("deletes an election without votes and cascades its dependents", async () => {
+    const admin = await makeUser("root", "admin");
+    const adminToken = await createTokenFor(admin.id);
+    const election = await makeElection();
+    await prisma.position.create({
+      data: { electionId: election.id, name: "President", order: 0 },
+    });
+
+    const deleted = await call(
+      adminElectionDELETE,
+      jsonRequest(`/api/admin/elections/${election.id}`, {
+        method: "DELETE",
+        token: adminToken,
+      }),
+      pkParams(election.id),
+    );
+    expect(deleted.status).toBe(200);
+    expect(await deleted.json()).toMatchObject({ deleted: true, votes_deleted: 0 });
     expect(await prisma.election.findUnique({ where: { id: election.id } })).toBeNull();
     expect(await prisma.position.count({ where: { electionId: election.id } })).toBe(0);
   });

@@ -812,7 +812,8 @@ function DeleteElectionDialog({
       {row.counts.votes > 0 ? (
         <p className="mb-2 text-[13px] font-semibold text-nv-danger">
           This election has {row.counts.votes} recorded ballot{row.counts.votes === 1 ? "" : "s"}.
-          Elections with votes cannot be deleted — ask an administrator to archive it instead.
+          Elections with votes cannot be deleted here — ask an administrator to archive or
+          delete it instead.
         </p>
       ) : null}
       {error ? (

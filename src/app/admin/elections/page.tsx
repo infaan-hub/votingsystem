@@ -62,6 +62,8 @@ type AdminElection = {
   result_finalized_at?: string | null;
   result_published_at?: string | null;
   archived_at?: string | null;
+  /** Cast ballots that would be deleted with the election (list endpoint). */
+  vote_count?: number;
 };
 
 type CategoryRow = { id: number; name: string };
@@ -391,7 +393,15 @@ function ElectionsBody() {
       await apiRequest(token, `/api/admin/elections/${deleting.id}`, {
         method: "DELETE",
       });
-      toast({ title: `“${deleting.title}” deleted`, tone: "success" });
+      const removedVotes = deleting.vote_count ?? 0;
+      toast({
+        title: `“${deleting.title}” deleted`,
+        description:
+          removedVotes > 0
+            ? `${removedVotes} cast ballot${removedVotes === 1 ? "" : "s"} removed with it.`
+            : undefined,
+        tone: "success",
+      });
       setDeleting(null);
       await elections.reload();
     } catch (cause) {
@@ -871,7 +881,11 @@ function ElectionsBody() {
           if (!open && !deleteBusy) setDeleting(null);
         }}
         title={deleting ? `Delete “${deleting.title}” permanently?` : "Confirm deletion"}
-        description="This removes the election together with its positions, candidates and announcements. An election with cast votes cannot be deleted — archive it instead."
+        description={
+          deleting && (deleting.vote_count ?? 0) > 0
+            ? `This permanently removes the election together with its positions, candidates, announcements and ${deleting.vote_count} cast ballot${deleting.vote_count === 1 ? "" : "s"}. Deleted ballots cannot be recovered — archive it instead if the record must survive.`
+            : "This removes the election together with its positions, candidates and announcements. This cannot be undone."
+        }
         confirmLabel="Delete election"
         cancelLabel="Keep it"
         tone="destructive"

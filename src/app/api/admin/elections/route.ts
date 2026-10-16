@@ -56,7 +56,24 @@ const route = makeRoute({
         orderBy: { createdAt: "desc" },
         include: { category: true, organization: true },
       });
-      return json(elections.map((e) => serializeElectionAdmin(e)));
+      // Ballot counts travel with the list so the delete dialog can state
+      // exactly how many cast votes disappear with the election.
+      const grouped = elections.length
+        ? await prisma.vote.groupBy({
+            by: ["electionId"],
+            where: { electionId: { in: elections.map((e) => e.id) } },
+            _count: { _all: true },
+          })
+        : [];
+      const votesByElection = new Map(
+        grouped.map((row) => [row.electionId, row._count._all]),
+      );
+      return json(
+        elections.map((e) => ({
+          ...serializeElectionAdmin(e),
+          vote_count: votesByElection.get(e.id) ?? 0,
+        })),
+      );
     },
     POST: async (req, _params, state) => {
       const admin = requireStateAdmin(state);
