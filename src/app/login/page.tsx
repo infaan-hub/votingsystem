@@ -7,6 +7,7 @@ import { KeyRound } from "lucide-react";
 
 import { AuthCard, AuthShell } from "@/src/components/auth-shell";
 import { Button } from "@/src/components/ui/button";
+import { GoogleSignInButton } from "@/src/components/google-sign-in-button";
 import { Input } from "@/src/components/ui/input";
 import { useApp } from "@/src/components/AppProvider";
 import { useToast } from "@/src/components/ui/toast";
@@ -121,6 +122,20 @@ function LoginForm() {
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>
+
+      <div className="mt-6 flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-nv-line" />
+        <span className="text-[12px] font-bold uppercase tracking-[0.5px] text-nv-muted">or</span>
+        <span className="h-px flex-1 bg-nv-line" />
+      </div>
+
+      <GoogleSignInButton
+        className="mt-4"
+        disabled={loading}
+        onSuccess={(user) =>
+          router.push(dashboardPathFor(user.role, searchParams.get("next")))
+        }
+      />
 
       {supportNote ? (
         <p className="mt-4 rounded-lg bg-nv-primary-100/70 px-3 py-2.5 text-[12px] leading-relaxed text-nv-primary">

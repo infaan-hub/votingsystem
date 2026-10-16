@@ -163,7 +163,7 @@ export const login = (credentials: {
         : {}),
     },
   });
-export const loginWithGoogle = (payload: { credential: string }) =>
+export const loginWithGoogle = (payload: { credential?: string; code?: string }) =>
   request<AuthResponse>("/auth/google/", { method: "POST", body: payload });
 export const verifyLoginOtp = (challengeId: number, code: string) =>
   request<AuthResponse>("/auth/otp/verify/", {

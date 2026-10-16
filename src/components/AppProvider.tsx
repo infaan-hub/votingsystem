@@ -42,7 +42,7 @@ type AppContextType = {
   /** Stores the token after the OTP code was verified on /otp-verification. */
   completeOtpLogin: (authResponse: AuthResponse) => Promise<UserSummary>;
   handleRegistration: (authResponse: AuthResponse) => Promise<UserSummary>;
-  handleGoogleLogin: (payload: { credential: string }) => Promise<UserSummary>;
+  handleGoogleLogin: (payload: { credential?: string; code?: string }) => Promise<UserSummary>;
   handleLogout: () => Promise<void>;
   /** Re-fetches the signed-in user (e.g. after a photo upload). */
   refreshUser: () => Promise<UserSummary | null>;
@@ -139,7 +139,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return authResponse.user;
   }, []);
 
-  const handleGoogleLogin = useCallback(async (payload: { credential: string }) => {
+  const handleGoogleLogin = useCallback(async (payload: { credential?: string; code?: string }) => {
     const response = await loginWithGoogle(payload);
     window.localStorage.setItem(TOKEN_KEY, response.token);
     setToken(response.token);
