@@ -125,8 +125,13 @@ Register → Verify contact (OTP) → Complete profile → Eligibility check
 
 Integrity rules enforced server-side:
 
-- Identity and ballot are separate tables; a vote carries no link back to a
-  voter's choices beyond the aggregate.
+- A vote row stores the voter id only to enforce the one-vote-per-question
+  constraint; every administrative report is aggregate-only (never a voter next
+  to a selection), and the voter's own receipt view is the single place a
+  recorded choice can be seen.
+- A voter who already cast a ballot sees **Already voted** instead of the vote
+  CTA; while the tally is pending their election and result pages show only
+  their own recorded choices plus the pending status, never partial results.
 - One vote per voter per question, guaranteed by a database unique constraint
   rather than a pre-check — two concurrent submissions cannot both persist.
 - Every candidate is validated against the exact election and question it was
@@ -144,6 +149,26 @@ Integrity rules enforced server-side:
 **Not implemented:** public-key threshold encryption of ballots and a hash-chained
 audit log are schema-ready but not wired into the voting service. See
 `DEVELOPMENT.md` for the honest status of every item.
+
+## Notifications
+
+Every event fans out through two independent channels at the same time — one
+is never traded for the other:
+
+- **Web Push** — the server queues a push to every subscribed device, so the
+  OS banner arrives even when the app is closed or in the background. Push is
+  never suppressed while the app is open: an open tab receives the banner
+  *and* the in-app alert.
+- **In-app** — a visible tab checks for fresh notifications every few seconds
+  (and immediately on focus or when it becomes visible again) and raises a
+  toast while the header bell badge and panel refresh. An alert that arrived
+  while the app was closed is announced when the user comes back, so nothing
+  is lost just because the tab was gone at that moment.
+
+Because the in-app channel does not need the OS notification permission, the
+voting code (for example) is surfaced inside the app even on browsers that
+never enabled push. Permission itself is only ever requested from the bell's
+explicit Enable click, and never on page load.
 
 ## Responsive + platform behaviour
 

@@ -1,6 +1,7 @@
 import { json, makeRoute } from "@/src/lib/api";
 import { notFoundModel } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
+import { loadMyVote } from "@/src/lib/my-vote";
 import { serializeElectionList, serializePosition } from "@/src/lib/serializers";
 import { serializeElectionAdmin } from "@/src/lib/elections";
 import { checkElectionEligibility } from "@/src/lib/eligibility";
@@ -29,8 +30,17 @@ export const GET = makeRoute({
         orderBy: { order: "asc" },
       });
 
+      // The caller's own ballot record (never anyone else's) so the voter can
+      // see what they chose while the results are still pending.
+      const myVote = state.user
+        ? await loadMyVote(election.id, state.user.id, election.timezone || "UTC")
+        : null;
+
       return json({
-        election: serializeElectionList(election),
+        election: {
+          ...serializeElectionList(election),
+          has_voted: myVote?.has_voted ?? false,
+        },
         detail: serializeElectionAdmin(election),
         positions: await Promise.all(
           positions.map((position) => serializePosition(position)),
@@ -38,6 +48,7 @@ export const GET = makeRoute({
         eligibility: state.user
           ? await checkElectionEligibility(election, state.user)
           : null,
+        my_vote: myVote,
       });
     },
   },

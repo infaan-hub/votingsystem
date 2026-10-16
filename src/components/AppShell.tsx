@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogIn, LogOut, Menu, Search, UserPlus, X } from "lucide-react";
+import { LogIn, LogOut, Menu, UserPlus, X } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
 import { BrandLogo } from "@/src/components/brand-logo";
 import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
+import { InAppNotifier } from "@/src/components/in-app-notifier";
 import { NotificationBell } from "@/src/components/notification-bell";
 import { NotificationPermissionPrompt } from "@/src/components/notification-permission-prompt";
 import { InstallAppProvider, InstallAppSidebarItem } from "@/src/components/install-app";
@@ -241,17 +242,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ) : (
             <div className="absolute right-3 flex items-center gap-1">
               <NotificationBell compact />
-              <Button
-                asChild
-                variant="subtle"
-                size="dense"
-                className="h-9 w-9 px-0"
-                aria-label="Search"
-              >
-                <Link href="/elections">
-                  <Search className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              </Button>
             </div>
           )}
         </div>
@@ -376,6 +366,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Permission prompt: compact card, only for signed-in users, only ever
           requesting permission from an explicit click inside the card. */}
       <NotificationPermissionPrompt />
+
+      {/* In-app alerts: toasts fresh notifications while the tab is visible,
+          complementing Web Push for users inside the app. */}
+      <InAppNotifier />
     </div>
   );
 

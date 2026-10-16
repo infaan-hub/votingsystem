@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Clapperboard, RotateCw, Vote } from "lucide-react";
+import { CheckCircle2, Clapperboard, RotateCw, Vote } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
 import { RequireRole } from "@/src/components/require-role";
@@ -24,6 +24,8 @@ type PublicElection = {
   status: "upcoming" | "active" | "ended";
   voting_start_at: string | null;
   voting_end_at: string | null;
+  /** True when the signed-in voter already cast a ballot in this election. */
+  has_voted?: boolean;
 };
 
 type Campaign = {
@@ -61,7 +63,7 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
 }
 
 function DashboardContent() {
-  const { user } = useApp();
+  const { user, token } = useApp();
 
   const [elections, setElections] = useState<PublicElection[] | null>(null);
   const [electionsError, setElectionsError] = useState("");
@@ -72,7 +74,11 @@ function DashboardContent() {
     setElections(null);
     setElectionsError("");
     try {
-      const response = await fetch("/api/elections");
+      // The token makes the list personal: `has_voted` drives the
+      // "Already voted" state on each card.
+      const response = await fetch("/api/elections", {
+        headers: token ? { Authorization: `Token ${token}` } : {},
+      });
       if (!response.ok) throw new Error("We could not load your elections. Please try again.");
       const data = (await response.json()) as PublicElection[];
       setElections(Array.isArray(data) ? data : []);
@@ -83,7 +89,7 @@ function DashboardContent() {
           : "We could not load your elections. Please try again.",
       );
     }
-  }, []);
+  }, [token]);
 
   const loadCampaigns = useCallback(async () => {
     setCampaigns(null);
@@ -180,9 +186,21 @@ function DashboardContent() {
                     <Countdown target={election.voting_end_at} prefix="Closes in" className="mt-2" />
                   ) : null}
                 </div>
-                <LinkButton href={`/vote/${election.slug}`} className="shrink-0 sm:w-auto">
-                  Vote now
-                </LinkButton>
+                {election.has_voted ? (
+                  <LinkButton
+                    href={`/elections/${election.slug}`}
+                    variant="outline"
+                    className="shrink-0 border-nv-success/45 text-nv-success hover:bg-nv-success hover:text-white sm:w-auto"
+                    title="Your ballot is already recorded in this election"
+                  >
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    Already voted
+                  </LinkButton>
+                ) : (
+                  <LinkButton href={`/vote/${election.slug}`} className="shrink-0 sm:w-auto">
+                    Vote now
+                  </LinkButton>
+                )}
               </article>
             ))}
           </div>

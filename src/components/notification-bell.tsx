@@ -6,6 +6,7 @@ import { Bell, BellOff, Check, CheckCheck, Trash2 } from "lucide-react";
 import { useApp } from "@/src/components/AppProvider";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
+import { IN_APP_NOTIFICATION_EVENT } from "@/src/lib/notifications/in-app";
 import {
   deleteNotification,
   fetchNotifications,
@@ -75,6 +76,16 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
+  }, [token, refresh]);
+
+  // The in-app notifier polls for fresh notifications; when it finds any it
+  // asks every open surface to refresh at once, so the badge and the panel
+  // update immediately instead of waiting for the interval above.
+  useEffect(() => {
+    if (!token) return;
+    const onFresh = () => void refresh();
+    window.addEventListener(IN_APP_NOTIFICATION_EVENT, onFresh);
+    return () => window.removeEventListener(IN_APP_NOTIFICATION_EVENT, onFresh);
   }, [token, refresh]);
 
   // Close the panel on outside click or Escape.

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   CalendarClock,
+  CheckCircle2,
   Clapperboard,
   Info,
   Lock,
@@ -13,7 +14,9 @@ import {
 } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
+import { MyVoteCard } from "@/src/components/my-vote-card";
 import { ResultsBars, type ResultDatum } from "@/src/components/results-bars";
+import type { MyVote } from "@/src/lib/my-vote";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Badge } from "@/src/components/ui/badge";
@@ -46,6 +49,8 @@ type PublicElection = {
   status: "upcoming" | "active" | "ended";
   seconds_until_start: number;
   seconds_until_end: number;
+  /** True when the signed-in voter already cast a ballot in this election. */
+  has_voted?: boolean;
 };
 
 type ElectionAdminDetail = {
@@ -87,6 +92,8 @@ type PublicDetailResponse = {
   detail: ElectionAdminDetail;
   positions: Position[];
   eligibility: unknown;
+  /** The caller's own ballot record; null for anonymous visitors. */
+  my_vote?: MyVote | null;
 };
 
 type RankingEntry = {
@@ -375,10 +382,22 @@ function ElectionDetailContent() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {votingOpen ? (
-              <LinkButton href={`/vote/${election.slug}`} variant="hero" className="sm:w-auto">
-                <Vote className="h-4 w-4" aria-hidden="true" />
-                Cast your vote
-              </LinkButton>
+              election.has_voted ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button disabled variant="hero" className="sm:w-auto">
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    Already voted
+                  </Button>
+                  <p className="text-[13px] text-white/85">
+                    Your ballot is already recorded in this election.
+                  </p>
+                </div>
+              ) : (
+                <LinkButton href={`/vote/${election.slug}`} variant="hero" className="sm:w-auto">
+                  <Vote className="h-4 w-4" aria-hidden="true" />
+                  Cast your vote
+                </LinkButton>
+              )
             ) : (
               <div className="flex flex-wrap items-center gap-3">
                 <Button disabled variant="hero" className="sm:w-auto">
@@ -600,12 +619,17 @@ function ElectionDetailContent() {
       <div id="results">
         <Section title="Results">
         {!showResults ? (
-          <p className="flex items-start gap-2 text-[13.5px] leading-relaxed text-nv-muted">
-            <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            {detail.lifecycle_status === "CLOSED"
-              ? "Results are published when the election closes and the outcome is released by the election administrators."
-              : "Results are published when the election closes. Check back after the voting window ends."}
-          </p>
+          <div className="space-y-4">
+            {/* Only the voter's own recorded choices, while the public tally
+                stays pending until the officers publish it. */}
+            <MyVoteCard myVote={data?.my_vote ?? null} />
+            <p className="flex items-start gap-2 text-[13.5px] leading-relaxed text-nv-muted">
+              <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {detail.lifecycle_status === "CLOSED"
+                ? "Results are published when the election closes and the outcome is released by the election administrators."
+                : "Results are published when the election closes. Check back after the voting window ends."}
+            </p>
+          </div>
         ) : resultsLoading ? (
           <div className="space-y-3" aria-busy="true">
             <Skeleton className="h-6 w-48" />
@@ -613,9 +637,12 @@ function ElectionDetailContent() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : resultsHidden ? (
-          <p className="text-[13.5px] text-nv-muted">
-            Results are published when the election closes. They are not visible just yet.
-          </p>
+          <div className="space-y-4">
+            <MyVoteCard myVote={data?.my_vote ?? null} />
+            <p className="text-[13.5px] text-nv-muted">
+              Results are published when the election closes. They are not visible just yet.
+            </p>
+          </div>
         ) : resultsError ? (
           <div
             role="alert"

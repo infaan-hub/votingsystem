@@ -19,6 +19,7 @@ import { POST as registerVoterPOST } from "@/src/app/api/auth/register/voter/rou
 import { POST as googlePOST } from "@/src/app/api/auth/google/route";
 import { POST as forgotPasswordPOST } from "@/src/app/api/auth/forgot-password/route";
 import { GET as electionListGET } from "@/src/app/api/elections/route";
+import { GET as electionPublicDetailGET } from "@/src/app/api/elections/public/[slug]/route";
 import { GET as electionDetailGET } from "@/src/app/api/elections/[pk]/route";
 import { GET as electionImageGET } from "@/src/app/api/elections/[pk]/image/route";
 import { GET as electionCampaignsGET } from "@/src/app/api/elections/[pk]/campaigns/route";
@@ -262,6 +263,108 @@ describe("VotingApiTests", () => {
     const results = await readJson(resultsResponse);
     expect(results).toHaveProperty("stats");
     expect(results).toHaveProperty("winners");
+  });
+
+  it("reports has_voted and the caller's own my_vote record", async () => {
+    const { department, election, position, candidate, voter, voterToken } = await seedApi();
+    const detailPath = `/api/elections/public/${election.slug}/`;
+
+    // Anonymous callers get no personalisation and no ballot record.
+    const anonymousList = await call(electionListGET, jsonRequest("/api/elections/"));
+    const anonymousEntries = (await anonymousList.json()) as Array<{
+      id: number;
+      has_voted: boolean;
+    }>;
+    expect(anonymousEntries.every((entry) => entry.has_voted === false)).toBe(true);
+    const anonymousDetail = await call(
+      electionPublicDetailGET,
+      jsonRequest(detailPath),
+      { slug: election.slug },
+    );
+    const anonymousBody = await readJson(anonymousDetail);
+    expect((anonymousBody.election as { has_voted: boolean }).has_voted).toBe(false);
+    expect(anonymousBody.my_vote).toBeNull();
+
+    // The signed-in voter has not voted yet.
+    const beforeList = await call(
+      electionListGET,
+      jsonRequest("/api/elections/", { token: voterToken }),
+    );
+    const beforeEntries = (await beforeList.json()) as Array<{
+      id: number;
+      has_voted: boolean;
+    }>;
+    expect(beforeEntries.find((entry) => entry.id === election.id)?.has_voted).toBe(false);
+    const beforeDetail = await call(
+      electionPublicDetailGET,
+      jsonRequest(detailPath, { token: voterToken }),
+      { slug: election.slug },
+    );
+    const beforeBody = await readJson(beforeDetail);
+    expect((beforeBody.election as { has_voted: boolean }).has_voted).toBe(false);
+    expect(beforeBody.my_vote).toEqual({ has_voted: false, votes: [] });
+
+    // Record a vote (the ballot API itself is exercised by the voting tests).
+    await prisma.vote.create({
+      data: {
+        voterId: voter.id,
+        electionId: election.id,
+        positionId: position.id,
+        candidateId: candidate.id,
+        receiptCode: "API-TEST-RECEIPT",
+      },
+    });
+
+    const afterList = await call(
+      electionListGET,
+      jsonRequest("/api/elections/", { token: voterToken }),
+    );
+    const afterEntries = (await afterList.json()) as Array<{
+      id: number;
+      has_voted: boolean;
+    }>;
+    expect(afterEntries.find((entry) => entry.id === election.id)?.has_voted).toBe(true);
+
+    const afterDetail = await call(
+      electionPublicDetailGET,
+      jsonRequest(detailPath, { token: voterToken }),
+      { slug: election.slug },
+    );
+    const afterBody = await readJson(afterDetail);
+    expect((afterBody.election as { has_voted: boolean }).has_voted).toBe(true);
+    const myVote = afterBody.my_vote as {
+      has_voted: boolean;
+      votes: Array<Record<string, unknown>>;
+    };
+    expect(myVote.has_voted).toBe(true);
+    expect(myVote.votes).toHaveLength(1);
+    expect(myVote.votes[0]).toMatchObject({
+      position_id: position.id,
+      position_name: position.name,
+      choice: "Juma Ali",
+      candidate_id: candidate.id,
+    });
+
+    // Another voter never sees the first voter's ballot.
+    const other = await prisma.user.create({
+      data: {
+        username: "other_voter",
+        password: hashPassword("Pass1234!"),
+        firstName: "Other",
+        lastName: "Voter",
+        role: "voter",
+        departmentId: department.id,
+      },
+    });
+    const otherToken = await createTokenFor(other.id);
+    const otherDetail = await call(
+      electionPublicDetailGET,
+      jsonRequest(detailPath, { token: otherToken }),
+      { slug: election.slug },
+    );
+    const otherBody = await readJson(otherDetail);
+    expect((otherBody.election as { has_voted: boolean }).has_voted).toBe(false);
+    expect(otherBody.my_vote).toEqual({ has_voted: false, votes: [] });
   });
 
   it("blocks hidden results from guests", async () => {
