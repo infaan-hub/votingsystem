@@ -63,6 +63,14 @@ type CodeChallenge = { challengeId: number; expiresAt: string; codeLength: numbe
 type ConfirmMode = "loading" | "legacy" | "code";
 type IssueOutcome = "ok" | "forbidden" | "error";
 
+/** The exact question + choices the open confirm sheet will cast. */
+type PendingVote = {
+  positionId: number;
+  positionName: string;
+  candidateIds: number[];
+  candidateNames: string[];
+};
+
 function formatClock(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -97,7 +105,11 @@ function Ballot({
   const { toast } = useToast();
   const [ballot, setBallot] = useState<BallotResponse | null>(null);
   const [error, setError] = useState("");
+  // Single-choice questions cast straight from the candidate card (tap →
+  // confirm sheet → code). Multi-choice questions still collect choices here
+  // before their per-question "Cast vote" button opens the same sheet.
   const [selected, setSelected] = useState<Record<number, number[]>>({});
+  const [pending, setPending] = useState<PendingVote | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmMode, setConfirmMode] = useState<ConfirmMode>("legacy");
@@ -148,11 +160,12 @@ function Ballot({
     });
   }
 
-  const answeredCount = (ballot?.positions ?? []).filter(
-    (position) => (selected[position.id]?.length ?? 0) > 0,
-  ).length;
-  const totalCount = ballot?.positions.length ?? 0;
-  const complete = totalCount > 0 && answeredCount === totalCount;
+  const voteablePositions = (ballot?.positions ?? []).filter(
+    (position) => position.candidates.length > 0,
+  );
+  const votedIds = ballot?.voted_position_ids ?? [];
+  const votedCount = voteablePositions.filter((position) => votedIds.includes(position.id)).length;
+  const allVoted = voteablePositions.length > 0 && votedCount === voteablePositions.length;
 
   /** Asks the server which confirmation step applies and fetches the code. */
   async function requestCode(): Promise<IssueOutcome> {
@@ -210,9 +223,19 @@ function Ballot({
     }
   }
 
-  /** "Cast vote": decide the confirmation step, then open the dialog. */
-  async function startConfirmation() {
-    if (!ballot) return;
+  /** Candidate tap (or a multi-choice cast): decide the step, open the sheet. */
+  async function startConfirmation(position: BallotPosition, candidateIds: number[]) {
+    if (!ballot || candidateIds.length === 0) return;
+    const byId = new Map(position.candidates.map((candidate) => [candidate.id, candidate]));
+    setPending({
+      positionId: position.id,
+      positionName: position.name,
+      candidateIds,
+      candidateNames: candidateIds
+        .map((id) => byId.get(id))
+        .filter((candidate) => candidate !== undefined)
+        .map((candidate) => candidate.user.full_name || candidate.user.username),
+    });
     setError("");
     setVerifyError("");
     setIssueError("");
@@ -288,7 +311,7 @@ function Ballot({
   }
 
   async function submitBallot(extraBody: Record<string, unknown>) {
-    if (!ballot) return;
+    if (!ballot || !pending) return;
     setSubmitting(true);
     try {
       // Idempotency key so a retried or dropped request is not double-counted.
@@ -301,10 +324,10 @@ function Ballot({
           "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({
-          selections: Object.entries(selected).map(([positionId, candidateIds]) => ({
-            position_id: Number(positionId),
-            candidate_ids: candidateIds,
-          })),
+          // Exactly the question the voter tapped — nothing else is required.
+          selections: [
+            { position_id: pending.positionId, candidate_ids: pending.candidateIds },
+          ],
           ...extraBody,
         }),
       });
@@ -324,10 +347,36 @@ function Ballot({
       }
 
       setConfirming(false);
-      onDone({
+      const receipt = {
         code: data.receipt_code ?? "—",
         castAt: data.cast_at ?? new Date().toISOString(),
-      });
+      };
+      // Mark the tapped question as voted; only when every voteable question
+      // has been cast does the flow finish with the receipt. Otherwise the
+      // voter stays on the ballot for the remaining questions.
+      const justVoted = pending;
+      const nextVotedIds = [
+        ...new Set([...ballot.voted_position_ids, justVoted.positionId]),
+      ];
+      const remainingCount = voteablePositions.filter(
+        (position) => !nextVotedIds.includes(position.id),
+      ).length;
+      setPending(null);
+      if (remainingCount > 0) {
+        setBallot((current) =>
+          current ? { ...current, voted_position_ids: nextVotedIds } : current,
+        );
+        setSelected((current) => ({ ...current, [justVoted.positionId]: [] }));
+        toast({
+          title: "Vote recorded",
+          description: `You can now vote ${remainingCount} more question${
+            remainingCount === 1 ? "" : "s"
+          }.`,
+          tone: "success",
+        });
+        return;
+      }
+      onDone(receipt);
     } catch (submitError) {
       const message =
         submitError instanceof Error
@@ -422,7 +471,8 @@ function Ballot({
           {ballot.election.title}
         </h1>
         <p className="nums-tabular mt-1 text-[13px] text-nv-muted">
-          {answeredCount} of {totalCount} question{totalCount === 1 ? "" : "s"} answered
+          {votedCount} of {voteablePositions.length} question
+          {voteablePositions.length === 1 ? "" : "s"} voted
         </p>
       </header>
 
@@ -449,6 +499,7 @@ function Ballot({
               const picks = selected[position.id] ?? [];
               const locked = ballot.voted_position_ids.includes(position.id);
               const max = Math.max(1, position.max_selections);
+              const hasCandidates = position.candidates.length > 0;
 
               return (
                 <section key={position.id} aria-labelledby={`q-${position.id}`}>
@@ -464,87 +515,122 @@ function Ballot({
                         <CheckCircle2 className="h-3 w-3 text-nv-success" aria-hidden="true" />
                         Voted
                       </span>
+                    ) : !hasCandidates ? (
+                      <span className="text-[12px] text-nv-muted">No candidates yet</span>
+                    ) : max === 1 ? (
+                      <span className="text-[12px] text-nv-muted">
+                        Tap a candidate to cast your vote
+                      </span>
                     ) : (
                       <span className="nums-tabular text-[12px] text-nv-muted">
-                        {max === 1 ? "Choose 1" : `Choose up to ${max}`} · {picks.length}/{max}
+                        Choose up to {max} · {picks.length}/{max}
                       </span>
                     )}
                   </div>
 
-                  <ul className="grid gap-2 sm:grid-cols-2">
-                    {position.candidates.map((candidate) => {
-                      const checked = picks.includes(candidate.id);
-                      return (
-                        <li key={candidate.id}>
-                          <label
-                            className={cn(
-                              "flex items-center gap-3 rounded-nv-md border bg-nv-surface p-4 shadow-nv-card transition-colors duration-200",
-                              locked
-                                ? "cursor-not-allowed opacity-60"
-                                : "cursor-pointer hover:border-nv-primary/50",
-                              checked && "border-nv-primary bg-nv-primary-100/40",
-                            )}
-                          >
-                            <input
-                              type={max === 1 ? "radio" : "checkbox"}
-                              name={`q-${position.id}`}
-                              checked={checked}
-                              disabled={locked}
-                              onChange={() => toggle(position, candidate.id)}
-                              className="h-5 w-5 shrink-0 accent-[var(--nv-primary)]"
-                            />
-                            <Avatar
-                              name={candidate.user.full_name || candidate.user.username}
-                              src={candidate.photo_url}
-                              size={40}
-                              className="shrink-0"
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[14.5px] font-bold text-nv-ink">
-                                {candidate.user.full_name || candidate.user.username}
-                              </span>
-                              {candidate.slogan ? (
-                                <span className="block truncate text-[12.5px] font-semibold text-nv-primary">
-                                  {candidate.slogan}
+                  {!hasCandidates ? (
+                    <Card>
+                      <CardContent className="py-6 text-center text-[12.5px] text-nv-muted">
+                        No candidates have been approved for this question yet.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      <ul className="grid gap-2 sm:grid-cols-2">
+                        {position.candidates.map((candidate) => {
+                          const checked = picks.includes(candidate.id);
+                          const name = candidate.user.full_name || candidate.user.username;
+                          return (
+                            <li key={candidate.id}>
+                              {/* One tap starts the vote for this candidate:
+                                  confirmation sheet → code → vote recorded. */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  max === 1
+                                    ? void startConfirmation(position, [candidate.id])
+                                    : toggle(position, candidate.id)
+                                }
+                                disabled={locked}
+                                aria-pressed={max === 1 ? undefined : checked}
+                                className={cn(
+                                  "flex w-full items-center gap-3 rounded-nv-md border bg-nv-surface p-4 text-left shadow-nv-card transition-colors duration-200",
+                                  locked
+                                    ? "cursor-not-allowed opacity-60"
+                                    : "cursor-pointer hover:border-nv-primary/50",
+                                  max > 1 && checked && "border-nv-primary bg-nv-primary-100/40",
+                                )}
+                              >
+                                {max > 1 ? (
+                                  checked ? (
+                                    <CheckCircle2
+                                      className="h-5 w-5 shrink-0 text-nv-primary"
+                                      aria-hidden="true"
+                                    />
+                                  ) : (
+                                    <span
+                                      className="h-5 w-5 shrink-0 rounded-full border-2 border-nv-line"
+                                      aria-hidden="true"
+                                    />
+                                  )
+                                ) : (
+                                  <ShieldCheck
+                                    className="h-5 w-5 shrink-0 text-nv-muted"
+                                    aria-hidden="true"
+                                  />
+                                )}
+                                <Avatar name={name} src={candidate.photo_url} size={40} className="shrink-0" />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-[14.5px] font-bold text-nv-ink">
+                                    {name}
+                                  </span>
+                                  {candidate.slogan ? (
+                                    <span className="block truncate text-[12.5px] font-semibold text-nv-primary">
+                                      {candidate.slogan}
+                                    </span>
+                                  ) : null}
                                 </span>
-                              ) : null}
-                            </span>
-                            {candidate.party_code ? (
-                              <Badge className="shrink-0 text-[10px]">
-                                {candidate.party_code}
-                              </Badge>
-                            ) : null}
-                          </label>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                                {candidate.party_code ? (
+                                  <Badge className="shrink-0 text-[10px]">
+                                    {candidate.party_code}
+                                  </Badge>
+                                ) : null}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+
+                      {max > 1 && !locked ? (
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                          <p className="nums-tabular text-[12px] text-nv-muted">
+                            {picks.length} of up to {max} selected
+                          </p>
+                          <Button
+                            size="dense"
+                            className="w-auto"
+                            disabled={picks.length === 0 || issuing}
+                            onClick={() => void startConfirmation(position, picks)}
+                          >
+                            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                            Cast vote for this question
+                          </Button>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
                 </section>
               );
             })}
           </div>
 
-          {/* ---------------- Sticky CTA ---------------- */}
-          <div className="sticky bottom-above-nav z-30 lg:bottom-4">
-            <div className="rounded-nv-lg border border-nv-line bg-nv-surface/95 p-3 shadow-nv-sheet backdrop-blur">
-              {!complete ? (
-                <p className="px-1 pb-2 text-[12px] text-nv-muted">
-                  Answer every question to submit your ballot.
-                </p>
-              ) : null}
-              <Button
-                onClick={() => void startConfirmation()}
-                disabled={!complete}
-                aria-describedby="cast-help"
-              >
-                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                Cast vote
-              </Button>
-              <p id="cast-help" className="sr-only">
-                Opens a confirmation step before your ballot is submitted.
-              </p>
-            </div>
-          </div>
+          {allVoted ? (
+            <Card>
+              <CardContent className="py-10 text-center text-[13px] text-nv-muted">
+                You have voted on every question in this election.
+              </CardContent>
+            </Card>
+          ) : null}
         </>
       )}
 
@@ -552,7 +638,7 @@ function Ballot({
       <ConfirmSheet
         open={confirming}
         onOpenChange={setConfirming}
-        positionNames={ballot.positions.map((position) => position.name)}
+        subject={pending}
         submitting={submitting}
         mode={confirmMode}
         challenge={challenge}
@@ -571,7 +657,7 @@ function Ballot({
 function ConfirmSheet({
   open,
   onOpenChange,
-  positionNames,
+  subject,
   submitting,
   mode,
   challenge,
@@ -585,7 +671,7 @@ function ConfirmSheet({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  positionNames: string[];
+  subject: PendingVote | null;
   submitting: boolean;
   mode: ConfirmMode;
   challenge: CodeChallenge | null;
@@ -660,19 +746,20 @@ function ConfirmSheet({
     }
   }
 
-  const positionsLine = (
+  const subjectLine = subject ? (
     <p className="text-[13px] text-nv-muted">
-      You are voting on {positionNames.length} question
-      {positionNames.length === 1 ? "" : "s"}: {positionNames.join(", ")}.
+      You are voting for{" "}
+      <span className="font-bold text-nv-ink">{subject.candidateNames.join(", ")}</span> for{" "}
+      <span className="font-bold text-nv-ink">{subject.positionName}</span>.
     </p>
-  );
+  ) : null;
 
   return (
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
       title="Confirm your vote"
-      description="Your ballot is final once submitted."
+      description="This vote is final once submitted."
       footer={
         mode === "loading" ? (
           <Button disabled>
@@ -709,7 +796,7 @@ function ConfirmSheet({
     >
       {mode === "loading" ? (
         <div className="space-y-4">
-          {positionsLine}
+          {subjectLine}
           <div className="flex flex-col items-center gap-3 py-4">
             <Loader2 className="h-6 w-6 animate-spin text-nv-primary" aria-hidden="true" />
             <p className="text-[13px] text-nv-muted">Preparing secure verification…</p>
@@ -717,7 +804,7 @@ function ConfirmSheet({
         </div>
       ) : mode === "code" ? (
         <div className="space-y-4">
-          {positionsLine}
+          {subjectLine}
 
           <p className="text-[13px] text-nv-ink">
             Enter the {codeLength}-digit code we sent to your notifications to
@@ -798,7 +885,7 @@ function ConfirmSheet({
         </div>
       ) : (
         <div className="space-y-4">
-          {positionsLine}
+          {subjectLine}
 
           {supportsBiometrics ? (
             <Button variant="dark" onClick={onBiometric} disabled={submitting}>

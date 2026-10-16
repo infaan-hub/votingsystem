@@ -18,9 +18,14 @@ export { OTP_LENGTH, OTP_RESEND_COOLDOWN_MS, OTP_TTL_MS };
 export const MAX_VOTE_CODE_ATTEMPTS = 5;
 /** Codes that may be issued per challenge (initial send + resends). */
 export const MAX_VOTE_CODE_SENDS = 3;
-/** Durable per (voter, election) issuance limit, measured over this window. */
+/**
+ * Durable per (voter, election) issuance limit, measured over this window.
+ * Voters confirm each question separately (tap → confirm → code), so a
+ * multi-question ballot consumes one code per question; live codes are reused
+ * between taps, and the cap still bounds notification spam per voter.
+ */
 export const VOTE_CODE_ISSUE_WINDOW_MS = 10 * 60_000;
-export const MAX_VOTE_CODE_ISSUES_PER_WINDOW = 5;
+export const MAX_VOTE_CODE_ISSUES_PER_WINDOW = 10;
 
 /**
  * Whether the confirmation code is REQUIRED for this voter right now: the

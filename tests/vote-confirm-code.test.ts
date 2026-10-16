@@ -17,6 +17,7 @@ import { call, createTokenFor, jsonRequest, resetDb } from "./helpers";
 import { POST as codePOST } from "@/src/app/api/elections/[pk]/vote/code/route";
 import { POST as resendPOST } from "@/src/app/api/elections/[pk]/vote/code/resend/route";
 import { POST as votePOST } from "@/src/app/api/elections/[pk]/vote/route";
+import { MAX_VOTE_CODE_ISSUES_PER_WINDOW } from "@/src/lib/vote-confirm";
 
 // Valid-format dummy VAPID material (never used: web-push is mocked).
 const DUMMY_PUBLIC_KEY =
@@ -318,7 +319,7 @@ describe("POST /api/elections/[pk]/vote/code", () => {
     const { election } = await makeElection();
     const { token } = await makeVoter({ withSubscription: true });
 
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0; i < MAX_VOTE_CODE_ISSUES_PER_WINDOW; i += 1) {
       const ok = await call(codePOST, codeRequest(election.id, token), {
         pk: String(election.id),
       });
