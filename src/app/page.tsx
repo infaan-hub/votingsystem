@@ -141,7 +141,7 @@ export default async function HomePage() {
               See all
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {tiles.map((tile) => (
               <Tile key={tile.id} tile={tile} />
             ))}

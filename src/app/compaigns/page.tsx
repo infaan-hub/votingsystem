@@ -140,7 +140,7 @@ function CampaignsContent() {
       ) : null}
 
       {campaigns === null && !error ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
           {[0, 1, 2, 3, 4, 5].map((card) => (
             <div key={card} className="space-y-3 rounded-nv-md border border-nv-line bg-nv-surface p-5">
               <Skeleton className="h-32 w-full" />
@@ -182,7 +182,7 @@ function CampaignsContent() {
       ) : null}
 
       {!error && filtered.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((campaign) => (
             <button
               key={campaign.id}
@@ -191,7 +191,7 @@ function CampaignsContent() {
               className="flex h-full flex-col overflow-hidden rounded-nv-md border border-nv-line bg-nv-surface text-left shadow-nv-card transition-shadow hover:shadow-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
             >
               {campaign.image_url || campaign.candidate.photo_url ? (
-                <div className="relative h-36 w-full overflow-hidden bg-nv-bg">
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-nv-bg">
                   <img
                     src={campaign.image_url ?? campaign.candidate.photo_url ?? ""}
                     alt=""
@@ -208,7 +208,7 @@ function CampaignsContent() {
                   ) : null}
                 </div>
               ) : (
-                <div className="nv-grad-candidate grid h-36 w-full place-items-center">
+                <div className="nv-grad-candidate grid aspect-[16/10] w-full place-items-center">
                   <Avatar
                     name={campaign.candidate.user.full_name || campaign.candidate.user.username}
                     size={64}
@@ -284,9 +284,9 @@ export default function CampaignsPage() {
         <div className="space-y-6" aria-busy="true">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-11 w-full sm:max-w-md" />
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2].map((card) => (
-              <Skeleton key={card} className="h-56 w-full" />
+              <Skeleton key={card} className="h-80 w-full" />
             ))}
           </div>
         </div>

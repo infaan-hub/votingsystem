@@ -174,7 +174,7 @@ export default function ElectionsPage() {
       ) : null}
 
       {elections === null && !error ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
           {[0, 1, 2, 3, 4, 5].map((card) => (
             <div key={card} className="space-y-3 rounded-nv-md border border-nv-line bg-nv-surface p-5">
               <Skeleton className="h-5 w-3/4" />
@@ -215,7 +215,7 @@ export default function ElectionsPage() {
       ) : null}
 
       {!error && filtered.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((election) => (
             <article key={election.id} className="h-full">
               {/* The whole card is the link so the voter can tap anywhere —

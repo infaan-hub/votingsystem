@@ -123,52 +123,56 @@ export default async function CandidateDetailPage({
         }
       />
 
-      {/* ---------------- Tabs ---------------- */}
-      <Tabs
-        items={[
-          { id: "posts", label: "Posts", content: <PostsTab candidate={candidate} /> },
-          {
-            id: "info",
-            label: "Info",
-            content: <InfoTab candidate={candidate} initials={initials} />,
-          },
-          {
-            id: "opinions",
-            label: "People's Opinion",
-            content: <OpinionsTab opinions={opinions} />,
-          },
-        ]}
-      />
+      {/* Cards stay a standard reading width on desktop instead of stretching
+          across the whole column. */}
+      <div className="mx-auto w-full max-w-3xl space-y-5">
+        {/* ---------------- Tabs ---------------- */}
+        <Tabs
+          items={[
+            { id: "posts", label: "Posts", content: <PostsTab candidate={candidate} /> },
+            {
+              id: "info",
+              label: "Info",
+              content: <InfoTab candidate={candidate} initials={initials} />,
+            },
+            {
+              id: "opinions",
+              label: "People's Opinion",
+              content: <OpinionsTab opinions={opinions} />,
+            },
+          ]}
+        />
 
-      {/* ---------------- Rating ---------------- */}
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-[15px] font-bold text-nv-ink">Voter rating</h2>
-              <p className="text-[12px] text-nv-muted">
-                Based on {ratings.length} rating{ratings.length === 1 ? "" : "s"}
+        {/* ---------------- Rating ---------------- */}
+        <Card>
+          <CardContent className="space-y-4 p-4">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <h2 className="text-[15px] font-bold text-nv-ink">Voter rating</h2>
+                <p className="text-[12px] text-nv-muted">
+                  Based on {ratings.length} rating{ratings.length === 1 ? "" : "s"}
+                </p>
+              </div>
+              <p className="nums-tabular text-[28px] font-extrabold leading-8 text-nv-ink">
+                {overall.toFixed(1)}
+                <span className="text-[14px] font-bold text-nv-muted"> / 5</span>
               </p>
             </div>
-            <p className="nums-tabular text-[28px] font-extrabold leading-8 text-nv-ink">
-              {overall.toFixed(1)}
-              <span className="text-[14px] font-bold text-nv-muted"> / 5</span>
-            </p>
-          </div>
 
-          {ratingData.length === 0 ? (
-            <p className="py-4 text-center text-[13px] text-nv-muted">
-              No rating categories are configured for this position yet.
-            </p>
-          ) : (
-            <ResultsBars data={ratingData} />
-          )}
+            {ratingData.length === 0 ? (
+              <p className="py-4 text-center text-[13px] text-nv-muted">
+                No rating categories are configured for this position yet.
+              </p>
+            ) : (
+              <ResultsBars data={ratingData} />
+            )}
 
-          <Button asChild>
-            <Link href={`/vote/${candidate.election.slug}`}>Rate now</Link>
-          </Button>
-        </CardContent>
-      </Card>
+            <Button asChild>
+              <Link href={`/vote/${candidate.election.slug}`}>Rate now</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

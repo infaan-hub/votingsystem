@@ -426,7 +426,7 @@ function ElectionDetailContent() {
         ) : null}
       </PageHero>
 
-      <div className="relative h-44 w-full overflow-hidden rounded-nv-md sm:h-56">
+      <div className="relative aspect-[16/9] w-full max-w-3xl overflow-hidden rounded-nv-md">
         {election.image_url ? (
           <img
             src={election.image_url}
@@ -540,7 +540,7 @@ function ElectionDetailContent() {
                     No candidates have been approved for this position yet.
                   </p>
                 ) : (
-                  <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {position.candidates.map((candidate) => (
                       <li
                         key={candidate.id}

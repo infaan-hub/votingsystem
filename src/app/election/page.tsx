@@ -176,7 +176,7 @@ export default function ElectionHubPage() {
         <div className="space-y-6" aria-busy="true">
           {[0, 1].map((row) => (
             <Section key={row} title={<Skeleton className="h-6 w-40" />}>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[0, 1, 2].map((card) => (
                   <div key={card} className="space-y-3 rounded-nv-md border border-nv-line bg-nv-surface p-5">
                     <Skeleton className="h-5 w-3/4" />
@@ -214,7 +214,7 @@ export default function ElectionHubPage() {
         ? grouped.map((group) =>
             group.elections.length > 0 ? (
               <Section key={group.key} title={group.title} description={group.description}>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {group.elections.map((election) => (
                     <ElectionTile key={election.id} election={election} />
                   ))}
