@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { fetchCurrentUser, fetchElections, login, loginWithGoogle, logout } from "@/src/lib/api-client";
+import type { PushSubscriptionPayload } from "@/src/lib/notifications/types";
 
 const TOKEN_KEY = "election-hub-token";
 const ELECTIONS_CACHE_KEY = "election-hub-elections";
@@ -32,7 +33,12 @@ type AppContextType = {
   user: UserSummary | null;
   elections: unknown[];
   appError: string;
-  handleLogin: (credentials: { username: string; password: string }) => Promise<LoginResult>;
+  handleLogin: (credentials: {
+    username: string;
+    password: string;
+    /** Browser push subscription created during the sign-in tap, if any. */
+    pushSubscription?: PushSubscriptionPayload | null;
+  }) => Promise<LoginResult>;
   /** Stores the token after the OTP code was verified on /otp-verification. */
   completeOtpLogin: (authResponse: AuthResponse) => Promise<UserSummary>;
   handleRegistration: (authResponse: AuthResponse) => Promise<UserSummary>;
@@ -98,7 +104,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const handleLogin = useCallback(
-    async (credentials: { username: string; password: string }): Promise<LoginResult> => {
+    async (credentials: {
+      username: string;
+      password: string;
+      pushSubscription?: PushSubscriptionPayload | null;
+    }): Promise<LoginResult> => {
       const response = await login(credentials);
       if (response.otp_required) {
         return {

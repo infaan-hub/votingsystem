@@ -1,39 +1,31 @@
+import crypto from "node:crypto";
+
 import { json, makeRoute } from "@/src/lib/api";
-import { ApiError, fieldErrors } from "@/src/lib/http";
 import { Collector, strField } from "@/src/lib/fields";
+import { clientIp } from "@/src/lib/audit";
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { requireStateUser } from "@/src/lib/auth";
+import {
+  MAX_ENDPOINT_LENGTH,
+  registerPushSubscription,
+  validateSubscription,
+  type SubscribePayload,
+} from "@/src/lib/notifications/subscription";
 
-const MAX_ENDPOINT_LENGTH = 1024;
-const MAX_KEY_LENGTH = 256;
-
-type SubscribePayload = {
-  endpoint?: unknown;
-  keys?: { p256dh?: unknown; auth?: unknown };
-  expirationTime?: unknown;
-};
-
-function validateSubscription(payload: SubscribePayload) {
-  const c = new Collector();
-  const endpoint = strField(c, payload, "endpoint", { required: true, maxLength: MAX_ENDPOINT_LENGTH });
-  const keys = (payload.keys ?? {}) as { p256dh?: unknown; auth?: unknown };
-  const p256dhKey = typeof keys.p256dh === "string" ? keys.p256dh.trim() : "";
-  const authKey = typeof keys.auth === "string" ? keys.auth.trim() : "";
-  if (!p256dhKey) c.field("keys.p256dh", "This field is required.");
-  else if (p256dhKey.length > MAX_KEY_LENGTH) c.field("keys.p256dh", "This value is too long.");
-  if (!authKey) c.field("keys.auth", "This field is required.");
-  else if (authKey.length > MAX_KEY_LENGTH) c.field("keys.auth", "This value is too long.");
-  c.throwIfAny();
-
-  if (endpoint && !/^https:\/\//i.test(endpoint)) {
-    throw fieldErrors({ endpoint: "Push endpoints must be https URLs." });
-  }
-  return { endpoint: endpoint!, p256dh: p256dhKey, auth: authKey };
+/**
+ * Non-reversible fingerprint of an endpoint. The client compares it with the
+ * fingerprint of its own browser subscription to tell whether this device
+ * belongs to the signed-in account — the endpoint secret never leaves the
+ * server.
+ */
+function hashEndpoint(endpoint: string): string {
+  return crypto.createHash("sha256").update(endpoint, "utf8").digest("hex").slice(0, 32);
 }
 
 function serializeSubscription(subscription: {
   id: number;
+  endpoint: string;
   userAgent: string;
   createdAt: Date;
   lastSuccessAt: Date | null;
@@ -42,6 +34,7 @@ function serializeSubscription(subscription: {
 }) {
   return {
     id: subscription.id,
+    endpoint_hash: hashEndpoint(subscription.endpoint),
     user_agent: subscription.userAgent,
     created_at: subscription.createdAt.toISOString(),
     last_success_at: subscription.lastSuccessAt?.toISOString() ?? null,
@@ -53,33 +46,25 @@ function serializeSubscription(subscription: {
 const route = makeRoute({
   permission: "authenticated",
   handlers: {
-    /** Register (or refresh) a Push API subscription for the signed-in user. */
+    /**
+     * Register (or refresh) a Push API subscription for the signed-in user.
+     * A browser subscription left behind by another account moves over here;
+     * registerPushSubscription audits that reassignment.
+     */
     POST: async (req, _params, state) => {
       const user = requireStateUser(state);
       const payload = (await readPayload(req)) as SubscribePayload;
       const { endpoint, p256dh, auth } = validateSubscription(payload);
 
-      // The same endpoint may only belong to one account.
-      const existing = await prisma.pushSubscription.findUnique({ where: { endpoint } });
-      if (existing && existing.userId !== user.id) {
-        throw new ApiError(403, {
-          detail: "This browser subscription is registered to a different account.",
-        });
-      }
-
-      const userAgent = (req.headers.get("user-agent") ?? "").slice(0, 300);
-      const subscription = await prisma.pushSubscription.upsert({
-        where: { endpoint },
-        create: { userId: user.id, endpoint, p256dh, auth, userAgent },
-        update: {
-          userId: user.id,
-          p256dh,
-          auth,
-          userAgent,
-          disabledAt: null,
-          lastFailureAt: null,
-        },
+      const { subscription, existing } = await registerPushSubscription({
+        userId: user.id,
+        endpoint,
+        p256dh,
+        auth,
+        userAgent: (req.headers.get("user-agent") ?? "").slice(0, 300),
+        ipAddress: clientIp(req),
       });
+
       return json(serializeSubscription(subscription), existing ? 200 : 201);
     },
 

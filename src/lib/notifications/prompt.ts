@@ -70,11 +70,22 @@ export function promptDecision(input: {
   }
 }
 
+/**
+ * Dismissals are scoped to one account so that signing into a different
+ * account on the same browser never inherits the previous account's
+ * "Not Now" — each account gets its own prompt (and its own claim flow for a
+ * device subscription left behind by another account).
+ */
+export function promptDismissalKey(scope?: string): string {
+  const clean = (scope ?? "").trim();
+  return clean ? `${PROMPT_DISMISSAL_KEY}:${clean}` : PROMPT_DISMISSAL_KEY;
+}
+
 /** Read the stored dismissal timestamp (safe outside a browser). */
-export function readDismissedAt(): number | null {
+export function readDismissedAt(scope?: string): number | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(PROMPT_DISMISSAL_KEY);
+    const raw = window.localStorage.getItem(promptDismissalKey(scope));
     const value = raw === null ? NaN : Number(raw);
     return Number.isFinite(value) ? value : null;
   } catch {
@@ -83,10 +94,10 @@ export function readDismissedAt(): number | null {
 }
 
 /** Persist a dismissal so the prompt stays quiet for the suppression window. */
-export function writeDismissedAt(now: number = Date.now()): void {
+export function writeDismissedAt(scope?: string, now: number = Date.now()): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(PROMPT_DISMISSAL_KEY, String(now));
+    window.localStorage.setItem(promptDismissalKey(scope), String(now));
   } catch {
     /* private mode / storage disabled: prompt simply reappears later */
   }

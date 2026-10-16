@@ -7,7 +7,7 @@ import { useApp } from "@/src/components/AppProvider";
 import { Button } from "@/src/components/ui/button";
 import {
   getNotificationSupport,
-  hasPushSubscription,
+  hasRegisteredPushSubscription,
   subscribeToPush,
 } from "@/src/lib/notifications/client";
 import {
@@ -58,9 +58,13 @@ export function NotificationPermissionPrompt() {
     }
     const current = getNotificationSupport();
     setSupport(current);
+    // "Subscribed" means registered to THIS account: a browser subscription
+    // still owned by another account (shared device, account switch) must
+    // surface the enable card so this account can claim it and receive login
+    // codes the way the account that first enabled it does.
     let hasSubscription = false;
     try {
-      hasSubscription = await hasPushSubscription();
+      hasSubscription = await hasRegisteredPushSubscription(token);
     } catch {
       hasSubscription = false;
     }
@@ -68,7 +72,9 @@ export function NotificationPermissionPrompt() {
       promptDecision({
         supportStatus: current.status,
         hasSubscription,
-        dismissedAt: readDismissedAt(),
+        // Per-account dismissal: another account on this browser must not
+        // inherit a "Not Now" it never gave.
+        dismissedAt: readDismissedAt(String(user.id)),
       }),
     );
   }, [token, user]);
@@ -108,10 +114,10 @@ export function NotificationPermissionPrompt() {
   }, [token, busy, recompute]);
 
   const onDismiss = useCallback(() => {
-    writeDismissedAt();
+    writeDismissedAt(user ? String(user.id) : undefined);
     setDecision("hidden");
     setError(null);
-  }, []);
+  }, [user]);
 
   if (!token || !user) return null;
 
@@ -151,7 +157,7 @@ export function NotificationPermissionPrompt() {
         return {
           icon: <BellRing className="h-4.5 w-4.5" aria-hidden="true" />,
           title: "Enable NexVote Notifications",
-          body: "Get notified about election openings, results, and updates even when NexVote is not open in your browser.",
+          body: "Get notified about election openings, results, and updates — and receive your sign-in verification codes — even when NexVote is not open in your browser.",
           showEnable: true,
           enableLabel: busy ? "Requesting…" : "Enable Notifications",
           dismissLabel: "Not Now",

@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
+import { createHash, webcrypto } from "node:crypto";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+
+/** The one browser endpoint every mock uses; hash mirrors the server fingerprint. */
+const ENDPOINT = "https://push.example.invalid/sub-endpoint";
+const ENDPOINT_HASH = createHash("sha256").update(ENDPOINT).digest("hex").slice(0, 32);
 
 const appState = vi.hoisted(() => ({
   current: {
@@ -33,6 +39,8 @@ type BrowserOptions = {
   secure?: boolean;
   capabilities?: boolean;
   subscribed?: boolean;
+  /** Whether the server list credits this browser's subscription to this account (default: yes). */
+  ownedByAccount?: boolean;
   /** HTTP status for the subscribe POST / DELETE (default 200). */
   status?: number;
   failRequestPermission?: Promise<NotificationPermission>;
@@ -42,7 +50,7 @@ type BrowserOptions = {
 type BrowserMock = {
   requestPermission: ReturnType<typeof vi.fn>;
   fetchMock: ReturnType<typeof vi.fn>;
-  state: { subscribed: boolean };
+  state: { subscribed: boolean; ownedByAccount: boolean };
   pushManager: { getSubscription: ReturnType<typeof vi.fn>; subscribe: ReturnType<typeof vi.fn> };
 };
 
@@ -52,6 +60,7 @@ function installBrowser(options: BrowserOptions = {}): BrowserMock {
     secure = true,
     capabilities = true,
     subscribed = false,
+    ownedByAccount = true,
     status = 200,
     failRequestPermission,
     userAgent,
@@ -62,11 +71,11 @@ function installBrowser(options: BrowserOptions = {}): BrowserMock {
     Object.defineProperty(navigator, "userAgent", { value: userAgent, configurable: true });
   }
 
-  const state = { subscribed };
+  const state = { subscribed, ownedByAccount };
   const subscription = {
-    endpoint: "https://push.example.invalid/sub-endpoint",
+    endpoint: ENDPOINT,
     toJSON: () => ({
-      endpoint: "https://push.example.invalid/sub-endpoint",
+      endpoint: ENDPOINT,
       keys: { p256dh: "test-p256dh", auth: "test-auth" },
       expirationTime: null,
     }),
@@ -108,13 +117,36 @@ function installBrowser(options: BrowserOptions = {}): BrowserMock {
     delete (navigator as { serviceWorker?: unknown }).serviceWorker;
   }
 
-  const fetchMock = vi.fn(
-    async () =>
-      new Response(JSON.stringify({ ok: true }), {
-        status,
+  // Mirrors the real API: GET lists the signed-in account's devices (by
+  // fingerprint); POST registers/claims this browser — after which the
+  // fingerprint is credited to this account.
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const method = init?.method ?? "GET";
+    if (method === "GET") {
+      const rows = state.subscribed
+        ? [
+            {
+              id: 1,
+              endpoint_hash: state.ownedByAccount ? ENDPOINT_HASH : "0".repeat(32),
+              user_agent: "vitest",
+              created_at: new Date().toISOString(),
+              last_success_at: null,
+              last_failure_at: null,
+              is_disabled: false,
+            },
+          ]
+        : [];
+      return new Response(JSON.stringify(rows), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
-  );
+      });
+    }
+    if (method === "POST") state.ownedByAccount = true;
+    return new Response(JSON.stringify({ ok: true }), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
   vi.stubGlobal("fetch", fetchMock);
 
   return { requestPermission, fetchMock, state, pushManager };
@@ -124,6 +156,9 @@ describe("NotificationSettings", () => {
   const ORIGINAL_USER_AGENT = navigator.userAgent;
 
   beforeEach(() => {
+    // jsdom may not expose WebCrypto's digest; the client hashes the browser
+    // endpoint to match the server fingerprint, so provide it when missing.
+    if (!globalThis.crypto?.subtle) vi.stubGlobal("crypto", webcrypto);
     Object.defineProperty(navigator, "userAgent", {
       value: ORIGINAL_USER_AGENT,
       configurable: true,
@@ -163,8 +198,14 @@ describe("NotificationSettings", () => {
 
     // Permission was only requested because the user clicked.
     await waitFor(() => expect(mock.requestPermission).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(mock.fetchMock).toHaveBeenCalledTimes(1));
-    const [url, init] = mock.fetchMock.mock.calls[0] as [string, RequestInit];
+    await waitFor(() =>
+      expect(
+        mock.fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "POST"),
+      ).toBe(true),
+    );
+    const [url, init] = mock.fetchMock.mock.calls.find(
+      ([, callInit]) => (callInit as RequestInit)?.method === "POST",
+    ) as [string, RequestInit];
     expect(url).toBe("/api/notifications/subscribe");
     expect(init.method).toBe("POST");
 
@@ -183,8 +224,14 @@ describe("NotificationSettings", () => {
 
     fireEvent.click(button);
 
-    await waitFor(() => expect(mock.fetchMock).toHaveBeenCalledTimes(1));
-    const [, init] = mock.fetchMock.mock.calls[0] as [string, RequestInit];
+    await waitFor(() =>
+      expect(
+        mock.fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "DELETE"),
+      ).toBe(true),
+    );
+    const [, init] = mock.fetchMock.mock.calls.find(
+      ([, callInit]) => (callInit as RequestInit)?.method === "DELETE",
+    ) as [string, RequestInit];
     expect(init.method).toBe("DELETE");
 
     expect(await screen.findByText("Notifications are off for this device.")).toBeTruthy();
@@ -199,6 +246,30 @@ describe("NotificationSettings", () => {
     // Already on: opening the card never calls the provider or re-registers.
     expect(await screen.findByText("Notifications are on for this device.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Turn on notifications/ })).toBeNull();
+  });
+
+  it("offers to claim a device subscription another account left on this browser", async () => {
+    // Shared browser: a subscription exists, but the server list credits it to
+    // another account — so this account receives no login codes and the panel
+    // must read "off", then claim the device on turn on.
+    const mock = installBrowser({ permission: "granted", subscribed: true, ownedByAccount: false });
+
+    render(<NotificationSettings />);
+
+    expect(await screen.findByText("Notifications are off for this device.")).toBeTruthy();
+    const button = screen.getByRole("button", { name: /Turn on notifications/ });
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(
+        mock.fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "POST"),
+      ).toBe(true),
+    );
+    // No permission dialog: this browser already holds the subscription.
+    expect(mock.requestPermission).not.toHaveBeenCalled();
+    expect(await screen.findByText("Notifications are on for this device.")).toBeTruthy();
   });
 
   it("disables the toggle with settings guidance when permission was blocked", async () => {

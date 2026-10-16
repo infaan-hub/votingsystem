@@ -1,6 +1,25 @@
 // @vitest-environment jsdom
+import { createHash, webcrypto } from "node:crypto";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+
+/** The one browser endpoint every mock uses; hash mirrors the server fingerprint. */
+const ENDPOINT = "https://push.example.invalid/sub-endpoint";
+const ENDPOINT_HASH = createHash("sha256").update(ENDPOINT).digest("hex").slice(0, 32);
+
+function ownSubscriptionRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    endpoint_hash: ENDPOINT_HASH,
+    user_agent: "vitest",
+    created_at: new Date().toISOString(),
+    last_success_at: null,
+    last_failure_at: null,
+    is_disabled: false,
+    ...overrides,
+  };
+}
 
 // AppProvider is mocked: the prompt only reads token/user from it, and the
 // real provider performs network calls we do not want in a unit test.
@@ -46,6 +65,8 @@ type BrowserOptions = {
   /** HTTP status for the subscribe POST (default 200). */
   subscribeStatus?: number;
   subscribeDetail?: string;
+  /** Rows the GET list returns for the signed-in account (default: this browser is registered). */
+  ownSubscriptions?: Array<ReturnType<typeof ownSubscriptionRow>>;
 };
 
 type BrowserMock = {
@@ -64,6 +85,7 @@ function installBrowser(options: BrowserOptions = {}): BrowserMock {
     userAgent,
     subscribeStatus = 200,
     subscribeDetail,
+    ownSubscriptions = [ownSubscriptionRow()],
   } = options;
 
   vi.stubGlobal("isSecureContext", secure);
@@ -83,9 +105,9 @@ function installBrowser(options: BrowserOptions = {}): BrowserMock {
   );
 
   const subscription = {
-    endpoint: "https://push.example.invalid/sub-endpoint",
+    endpoint: ENDPOINT,
     toJSON: () => ({
-      endpoint: "https://push.example.invalid/sub-endpoint",
+      endpoint: ENDPOINT,
       keys: { p256dh: "test-p256dh", auth: "test-auth" },
       expirationTime: null,
     }),
@@ -115,15 +137,16 @@ function installBrowser(options: BrowserOptions = {}): BrowserMock {
     delete (navigator as { serviceWorker?: unknown }).serviceWorker;
   }
 
-  const fetchMock = vi.fn(
-    async () =>
-      new Response(
-        JSON.stringify(subscribeDetail ? { detail: subscribeDetail } : { ok: true }),
-        {
+  const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
+    (init?.method ?? "GET") === "GET"
+      ? new Response(JSON.stringify(ownSubscriptions), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      : new Response(JSON.stringify(subscribeDetail ? { detail: subscribeDetail } : { ok: true }), {
           status: subscribeStatus,
           headers: { "Content-Type": "application/json" },
-        },
-      ),
+        }),
   );
   vi.stubGlobal("fetch", fetchMock);
 
@@ -135,6 +158,9 @@ describe("NotificationPermissionPrompt", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
+    // jsdom may not expose WebCrypto's digest; the client hashes the browser
+    // endpoint to match the server fingerprint, so provide it when missing.
+    if (!globalThis.crypto?.subtle) vi.stubGlobal("crypto", webcrypto);
     // The iOS case rewrites userAgent — restore it so later tests see the
     // default jsdom agent again.
     Object.defineProperty(navigator, "userAgent", {
@@ -209,18 +235,50 @@ describe("NotificationPermissionPrompt", () => {
     expect(await screen.findByText("Notifications are on")).toBeTruthy();
   });
 
-  it("hides completely when this device is already subscribed", async () => {
+  it("hides completely when this device is already subscribed to this account", async () => {
     const mock = installBrowser({ permission: "granted", hasExistingSubscription: true });
 
     const { container } = render(<NotificationPermissionPrompt />);
 
-    // Recompute runs hasPushSubscription() on mount — use it as the canary.
+    // Recompute runs the registered-device check on mount — use it as the canary.
     await waitFor(() => expect(mock.serviceWorker.getRegistration).toHaveBeenCalled());
     expect(
       screen.queryByRole("region", { name: "Notification permission" }),
     ).toBeNull();
     expect(container.textContent).toBe("");
     expect(mock.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it("offers Enable when the browser subscription belongs to another account", async () => {
+    // Shared device: the browser holds a subscription, but the signed-in
+    // account has none, so no login code could reach it — the card must offer
+    // to claim the device instead of staying silent.
+    const mock = installBrowser({
+      permission: "granted",
+      hasExistingSubscription: true,
+      ownSubscriptions: [],
+    });
+
+    render(<NotificationPermissionPrompt />);
+
+    expect(await screen.findByText("Enable NexVote Notifications")).toBeTruthy();
+    expect(mock.requestPermission).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Enable Notifications/ }));
+
+    await waitFor(() =>
+      expect(
+        mock.fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "POST"),
+      ).toBe(true),
+    );
+    const [url, init] = mock.fetchMock.mock.calls.find(
+      ([, callInit]) => (callInit as RequestInit)?.method === "POST",
+    ) as [string, RequestInit];
+    expect(url).toBe("/api/notifications/subscribe");
+    expect(init.method).toBe("POST");
+    // No permission dialog: permission was already granted on this browser.
+    expect(mock.requestPermission).not.toHaveBeenCalled();
+    expect(await screen.findByText("Notifications are on")).toBeTruthy();
   });
 
   it("guides instead of prompting when permission was denied", async () => {
@@ -240,7 +298,7 @@ describe("NotificationPermissionPrompt", () => {
     await waitFor(() =>
       expect(screen.queryByRole("region", { name: "Notification permission" })).toBeNull(),
     );
-    expect(window.localStorage.getItem("nexvote-push-prompt-dismissed-at")).toBeTruthy();
+    expect(window.localStorage.getItem("nexvote-push-prompt-dismissed-at:1")).toBeTruthy();
 
     cleanup();
     render(<NotificationPermissionPrompt />);

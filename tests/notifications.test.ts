@@ -16,6 +16,7 @@ import { call, createTokenFor, jsonRequest, resetDb } from "./helpers";
 
 import {
   POST as subscribePOST,
+  GET as subscribeGET,
   DELETE as subscribeDELETE,
 } from "@/src/app/api/notifications/subscribe/route";
 import {
@@ -105,6 +106,10 @@ describe("NotificationApiTests", () => {
     const body = await readJson(response);
     expect(body.user_agent).toBeDefined();
     expect(body.is_disabled).toBe(false);
+    // The client matches its own browser subscription by fingerprint — never
+    // by exposing the endpoint or its keys in responses.
+    expect(typeof body.endpoint_hash).toBe("string");
+    expect(body.endpoint_hash).toMatch(/^[0-9a-f]{32}$/);
     // Never expose endpoint keys in list responses.
     expect(JSON.stringify(body)).not.toContain(SAMPLE_SUBSCRIPTION.keys.p256dh);
     expect(JSON.stringify(body)).not.toContain(SAMPLE_SUBSCRIPTION.keys.auth);
@@ -113,6 +118,14 @@ describe("NotificationApiTests", () => {
       where: { endpoint: SAMPLE_SUBSCRIPTION.endpoint },
     });
     expect(stored?.userId).toBe(user.id);
+
+    // The device list exposes the same fingerprint and still no secrets.
+    const list = await call(subscribeGET, jsonRequest("/api/notifications/subscribe", { token }));
+    expect(list.status).toBe(200);
+    const rows = (await list.json()) as Record<string, unknown>[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].endpoint_hash).toBe(body.endpoint_hash);
+    expect(JSON.stringify(rows)).not.toContain(SAMPLE_SUBSCRIPTION.endpoint);
 
     // Re-subscribe refreshes (200, single row).
     const again = await call(
@@ -159,9 +172,9 @@ describe("NotificationApiTests", () => {
     expect(body.endpoint).toBeDefined();
   });
 
-  it("refuses an endpoint already registered to another account", async () => {
-    const { token: ownerToken } = await makeUser("owner", "voter");
-    await call(
+  it("moves a browser subscription to the account that re-registers it", async () => {
+    const { user: owner, token: ownerToken } = await makeUser("sub_owner", "voter");
+    const first = await call(
       subscribePOST,
       jsonRequest("/api/notifications/subscribe", {
         method: "POST",
@@ -169,16 +182,36 @@ describe("NotificationApiTests", () => {
         body: SAMPLE_SUBSCRIPTION,
       }),
     );
-    const { token: strangerToken } = await makeUser("stranger", "voter");
+    expect(first.status).toBe(201);
+
+    // A shared browser: the same device now signs in as an admin and enables
+    // notifications. The endpoint must follow the signed-in account —
+    // otherwise this account could never receive a login code and its sign-in
+    // could not step up to OTP the way voters' does.
+    const { user: claimant, token: claimantToken } = await makeUser("sub_claimant", "admin");
     const response = await call(
       subscribePOST,
       jsonRequest("/api/notifications/subscribe", {
         method: "POST",
-        token: strangerToken,
+        token: claimantToken,
         body: SAMPLE_SUBSCRIPTION,
       }),
     );
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
+
+    const stored = await prisma.pushSubscription.findUnique({
+      where: { endpoint: SAMPLE_SUBSCRIPTION.endpoint },
+    });
+    expect(stored?.userId).toBe(claimant.id);
+    expect(await prisma.pushSubscription.count()).toBe(1);
+
+    // Device ownership changes are traceable.
+    const audit = await prisma.auditLog.findFirst({
+      where: { action: "notification.subscription.reassigned" },
+    });
+    expect(audit).not.toBeNull();
+    expect(audit?.actorId).toBe(claimant.id);
+    expect(audit?.detail).toContain(String(owner.id));
   });
 
   it("lets a user remove only their own subscription", async () => {

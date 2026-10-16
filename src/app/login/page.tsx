@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
@@ -15,6 +15,10 @@ import {
   safeNextPath,
   storeOtpChallenge,
 } from "@/src/lib/auth-flow";
+import {
+  getNotificationSupport,
+  prepareNotificationDevice,
+} from "@/src/lib/notifications/client";
 import { t } from "@/config/tenant";
 
 function LoginForm() {
@@ -26,13 +30,35 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [supportNote, setSupportNote] = useState<string | null>(null);
 
+  // Shown only when this device genuinely cannot receive sign-in codes yet
+  // (blocked permission or an iPhone that needs the Home Screen install).
+  useEffect(() => {
+    const support = getNotificationSupport();
+    if (
+      support.status === "permission-denied" ||
+      support.status === "requires-home-screen-install"
+    ) {
+      setSupportNote(support.detail);
+    }
+  }, []);
+
+  /**
+   * Every sign-in starts with the device check: when notification permission
+   * has never been decided, ask for it here — the submit tap is the user
+   * gesture browsers require to open the dialog — then make sure this browser
+   * has a push subscription ready. The login request carries it so an
+   * account's first device receives its verification code on the device that
+   * is signing in.
+   */
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const result = await handleLogin({ username: identifier, password });
+      const pushSubscription = await prepareNotificationDevice();
+      const result = await handleLogin({ username: identifier, password, pushSubscription });
       if (result.status === "otp_required") {
         // Password accepted; a 6-digit code is waiting on the user's
         // notification devices. Hand the challenge to the verification step.
@@ -95,6 +121,12 @@ function LoginForm() {
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>
+
+      {supportNote ? (
+        <p className="mt-4 rounded-lg bg-nv-primary-100/70 px-3 py-2.5 text-[12px] leading-relaxed text-nv-primary">
+          {supportNote}
+        </p>
+      ) : null}
 
       <p className="mt-6 text-center text-[13px] text-nv-muted">
         Don&apos;t have an account?{" "}

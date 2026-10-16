@@ -3,6 +3,7 @@ import type {
   NotificationSupport,
   NotifyOptions,
   NotifyResult,
+  PushSubscriptionPayload,
 } from "@/src/lib/notifications/types";
 
 /**
@@ -157,6 +158,69 @@ function vapidPublicKey(): string {
 }
 
 /**
+ * Creates (or reuses) this browser's Push API subscription WITHOUT contacting
+ * the server. A sign-in can hand the payload straight to the login request so
+ * an account's first device receives its login code on the device asking for
+ * it. Returns null whenever the browser cannot subscribe (no permission, iOS
+ * without Home Screen install, missing APIs).
+ */
+export async function createBrowserPushSubscription(): Promise<PushSubscriptionPayload | null> {
+  const support = getNotificationSupport();
+  if (support.status === "unsupported" || support.status === "requires-home-screen-install") {
+    return null;
+  }
+  if (
+    !isBrowser() ||
+    !("Notification" in window) ||
+    // Only a hard block stops the attempt: some browsers report a stale
+    // "default" right after a granted request, and pushManager.subscribe
+    // itself fails (caught below) when permission truly is not granted.
+    Notification.permission === "denied"
+  ) {
+    return null;
+  }
+  try {
+    const registration = await registerServiceWorker();
+    const subscription =
+      (await registration.pushManager.getSubscription()) ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey()),
+      }));
+    const json = subscription.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return null;
+    return {
+      endpoint: json.endpoint,
+      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      expirationTime: json.expirationTime ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sign-in / onboarding device check. Call from a user-gesture handler (the
+ * only place browsers open a permission dialog): asks for notification
+ * permission when it has never been decided, then returns this browser's push
+ * subscription, creating it when missing. Returns null when the device cannot
+ * receive notifications right now.
+ */
+export async function prepareNotificationDevice(): Promise<PushSubscriptionPayload | null> {
+  const support = getNotificationSupport();
+  if (support.status === "permission-required" || support.status === "supported") {
+    try {
+      await requestNotificationPermission();
+    } catch {
+      // Some browsers reject the request when the gesture context is lost —
+      // sign-in must continue without a device subscription.
+      return null;
+    }
+  }
+  return createBrowserPushSubscription();
+}
+
+/**
  * Full enable flow: permission → service worker → Push subscription →
  * server registration. Call only from a user gesture.
  */
@@ -176,23 +240,16 @@ export async function subscribeToPush(token: string): Promise<{ ok: boolean; rea
     };
   }
 
+  const payload = await createBrowserPushSubscription();
+  if (!payload) {
+    return { ok: false, reason: "Could not create a push subscription on this device." };
+  }
+
   try {
-    const registration = await registerServiceWorker();
-    const subscription =
-      (await registration.pushManager.getSubscription()) ??
-      (await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey()),
-      }));
-    const json = subscription.toJSON();
     const response = await fetch(SUBSCRIBE_PATH, {
       method: "POST",
       headers: authHeaders(token),
-      body: JSON.stringify({
-        endpoint: json.endpoint,
-        keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth },
-        expirationTime: json.expirationTime ?? null,
-      }),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) {
       const data = (await response.json().catch(() => null)) as { detail?: string } | null;
@@ -237,6 +294,64 @@ export async function hasPushSubscription(): Promise<boolean> {
     const registration = await navigator.serviceWorker.getRegistration(SW_URL);
     const subscription = await registration?.pushManager.getSubscription();
     return Boolean(subscription);
+  } catch {
+    return false;
+  }
+}
+
+/** SHA-256 hex fingerprint, matching the server's GET-list `endpoint_hash`. */
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** Fingerprint of this browser's current endpoint, or null when it has none. */
+async function currentEndpointHash(): Promise<string | null> {
+  if (!isBrowser() || !("serviceWorker" in navigator)) return null;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration(SW_URL);
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return null;
+    if (!globalThis.crypto?.subtle) return null;
+    return (await sha256Hex(subscription.endpoint)).slice(0, 32);
+  } catch {
+    return null;
+  }
+}
+
+export type OwnPushSubscription = {
+  id: number;
+  endpoint_hash: string;
+  user_agent: string;
+  created_at: string;
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  is_disabled: boolean;
+};
+
+/** The signed-in account's registered devices (endpoints stay hashed server-side). */
+export async function fetchOwnPushSubscriptions(token: string): Promise<OwnPushSubscription[]> {
+  const response = await fetch(SUBSCRIBE_PATH, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Could not load your notification devices.");
+  const data = (await response.json()) as unknown;
+  return Array.isArray(data) ? (data as OwnPushSubscription[]) : [];
+}
+
+/**
+ * True when THIS browser's push subscription is registered to the signed-in
+ * account — the state in which login codes (OTP) and alerts actually reach
+ * this device. A browser subscription still owned by another account (shared
+ * device, account switch) reports false so the UI offers to claim it.
+ */
+export async function hasRegisteredPushSubscription(token: string): Promise<boolean> {
+  const hash = await currentEndpointHash();
+  if (hash === null) return false;
+  try {
+    const rows = await fetchOwnPushSubscriptions(token);
+    return rows.some((row) => row.endpoint_hash === hash && !row.is_disabled);
   } catch {
     return false;
   }

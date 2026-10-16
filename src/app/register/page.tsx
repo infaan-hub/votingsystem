@@ -12,6 +12,7 @@ import { Input } from "@/src/components/ui/input";
 import { OtpInput, OtpKeypad } from "@/src/components/ui/otp-input";
 import { useToast } from "@/src/components/ui/toast";
 import { useApp } from "@/src/components/AppProvider";
+import { prepareNotificationDevice, subscribeToPush } from "@/src/lib/notifications/client";
 import tenant, { t } from "@/config/tenant";
 
 type Step = "form" | "otp";
@@ -55,6 +56,10 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
+      // Onboarding asks about notifications while the tap's user gesture is
+      // still live (browsers only open the permission dialog from a gesture).
+      await prepareNotificationDevice();
+
       const response = await fetch("/api/auth/register/voter/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,7 +88,11 @@ export default function RegisterPage() {
         setStep("otp");
         toast({ title: "Verification code sent", tone: "info" });
       } else {
-        await handleRegistration(data as AuthPayload);
+        const auth = data as AuthPayload;
+        await handleRegistration(auth);
+        // Best-effort: bind this browser so sign-in codes reach this device
+        // immediately, not only after a later visit to notification settings.
+        await subscribeToPush(auth.token);
         toast({ title: "Account created", description: "Welcome aboard!", tone: "success" });
         router.push("/welcome");
       }
@@ -102,7 +111,11 @@ export default function RegisterPage() {
         onVerified={() => {
           toast({ title: "Phone verified", tone: "success" });
           if (authPayload) {
-            void handleRegistration(authPayload).then(() => router.push("/welcome"));
+            void handleRegistration(authPayload).then(() => {
+              // Best-effort device binding for the first sign-in codes.
+              void subscribeToPush(authPayload.token);
+              router.push("/welcome");
+            });
           } else {
             router.push("/login");
           }

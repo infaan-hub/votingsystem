@@ -27,6 +27,17 @@ export type NotifyResult = {
   reason?: string;
 };
 
+/**
+ * Wire shape of a browser Push subscription. Created client-side (no server
+ * call needed) and handed to an authenticated endpoint — including the login
+ * request when a device signs in for the first time.
+ */
+export type PushSubscriptionPayload = {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  expirationTime: number | null;
+};
+
 export type NotificationSupportStatus =
   | "supported"
   | "permission-required"

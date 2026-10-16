@@ -52,16 +52,19 @@ function restoreEnv() {
 
 let seq = 0;
 
-async function makeUser(options: { withSubscription?: boolean } = {}) {
+async function makeUser(
+  options: { withSubscription?: boolean; role?: "voter" | "officer" | "admin" } = {},
+) {
   seq += 1;
+  const role = options.role ?? "voter";
   const user = await prisma.user.create({
     data: {
-      username: `otp_voter_${seq}`,
+      username: `otp_${role}_${seq}`,
       password: hashPassword("Pass1234!"),
       firstName: "Otp",
       lastName: "Voter",
       email: `otp${seq}@example.com`,
-      role: "voter",
+      role,
     },
   });
   if (options.withSubscription) {
@@ -191,6 +194,27 @@ describe("POST /api/auth/login (OTP step-up)", () => {
     expect(challenge!.consumedAt).not.toBeNull();
   });
 
+  it("requires a login code for admin and officer accounts exactly like voters", async () => {
+    for (const role of ["admin", "officer", "voter"] as const) {
+      const user = await makeUser({ withSubscription: true, role });
+
+      const response = await call(loginPOST, loginRequest(user.username));
+      expect(response.status).toBe(200);
+      const body = await readJson(response);
+      expect(body.otp_required).toBe(true);
+      expect(body.token).toBeUndefined();
+
+      // The code is delivered to the account as a notification, whatever its
+      // role, and points at the verification step.
+      const notification = await prisma.notification.findFirst({
+        where: { recipientId: user.id, title: "Your login code" },
+        orderBy: { id: "desc" },
+      });
+      expect(notification).not.toBeNull();
+      expect(notification!.targetUrl).toBe("/otp-verification");
+    }
+  });
+
   it("falls back to password-only sign-in when the user has no subscribed device", async () => {
     const user = await makeUser();
 
@@ -202,6 +226,68 @@ describe("POST /api/auth/login (OTP step-up)", () => {
 
     const challenges = await prisma.otpChallenge.count({ where: { userId: user.id } });
     expect(challenges).toBe(0);
+  });
+
+  it("binds the device carried by the sign-in and requires a code when the account has none", async () => {
+    const user = await makeUser();
+    const endpoint = `https://push.example.com/first-device-${Date.now()}`;
+
+    const response = await call(
+      loginPOST,
+      jsonRequest("/api/auth/login/", {
+        method: "POST",
+        body: {
+          username: user.username,
+          password: "Pass1234!",
+          push_subscription: {
+            endpoint,
+            keys: { p256dh: "first-device-p256dh", auth: "first-device-auth" },
+            expirationTime: null,
+          },
+        },
+        headers: { "x-forwarded-for": nextIp() },
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = await readJson(response);
+    expect(body.otp_required).toBe(true);
+    expect(body.token).toBeUndefined();
+
+    // The browser became the account's first device, so the code is
+    // delivered to the very device that is signing in.
+    const subscription = await prisma.pushSubscription.findUnique({ where: { endpoint } });
+    expect(subscription).not.toBeNull();
+    expect(subscription!.userId).toBe(user.id);
+    const notification = await prisma.notification.findFirst({
+      where: { recipientId: user.id, title: "Your login code" },
+    });
+    expect(notification).not.toBeNull();
+  });
+
+  it("ignores an invalid sign-in device subscription without failing the sign-in", async () => {
+    const user = await makeUser();
+
+    const response = await call(
+      loginPOST,
+      jsonRequest("/api/auth/login/", {
+        method: "POST",
+        body: {
+          username: user.username,
+          password: "Pass1234!",
+          // Not an https endpoint: it must be ignored, never fail this login.
+          push_subscription: {
+            endpoint: "http://insecure.example.com/endpoint",
+            keys: { p256dh: "ignored-p256dh", auth: "ignored-auth" },
+          },
+        },
+        headers: { "x-forwarded-for": nextIp() },
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = await readJson(response);
+    expect(body.otp_required).toBe(false);
+    expect(typeof body.token).toBe("string");
+    expect(await prisma.pushSubscription.count()).toBe(0);
   });
 
   it("falls back to password-only sign-in when VAPID is not configured", async () => {

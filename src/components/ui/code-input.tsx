@@ -88,7 +88,7 @@ export function CodeInput({
 
   return (
     <div
-      className={cn("flex justify-between gap-2", className)}
+      className={cn("flex items-center justify-between gap-1.5 sm:gap-2", className)}
       onPaste={handlePaste}
       role="group"
       aria-label={`Enter the ${length}-digit ${label.toLowerCase()}`}
@@ -109,7 +109,9 @@ export function CodeInput({
           maxLength={1}
           aria-label={`Digit ${index + 1}`}
           disabled={disabled}
-          className="h-12 w-11 rounded-lg border border-nv-primary/20 bg-white text-center text-lg font-bold text-nv-ink focus:border-nv-primary focus:outline-none focus:ring-2 focus:ring-nv-primary/30 disabled:opacity-50 sm:h-14 sm:w-12"
+          // w-full + flex-1 + max-w keeps the six boxes inside the card on
+          // narrow phones (down to 320px) instead of overflowing off centre.
+          className="h-12 w-full min-w-0 max-w-[2.75rem] flex-1 rounded-lg border border-nv-primary/20 bg-white text-center text-lg font-bold text-nv-ink focus:border-nv-primary focus:outline-none focus:ring-2 focus:ring-nv-primary/30 disabled:opacity-50 sm:h-14 sm:max-w-[3rem]"
         />
       ))}
     </div>

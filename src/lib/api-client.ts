@@ -1,3 +1,5 @@
+import type { PushSubscriptionPayload } from "@/src/lib/notifications/types";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 30000;
@@ -141,8 +143,26 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const fetchElections = () => request<unknown[]>("/elections/");
-export const login = (credentials: { username: string; password: string }) =>
-  request<LoginOutcome>("/auth/login/", { method: "POST", body: credentials });
+export const login = (credentials: {
+  username: string;
+  password: string;
+  /**
+   * Push subscription this browser created during the sign-in tap. The server
+   * binds it when the account has no device yet, so the login code reaches
+   * the device that is signing in.
+   */
+  pushSubscription?: PushSubscriptionPayload | null;
+}) =>
+  request<LoginOutcome>("/auth/login/", {
+    method: "POST",
+    body: {
+      username: credentials.username,
+      password: credentials.password,
+      ...(credentials.pushSubscription
+        ? { push_subscription: credentials.pushSubscription }
+        : {}),
+    },
+  });
 export const loginWithGoogle = (payload: { credential: string }) =>
   request<AuthResponse>("/auth/google/", { method: "POST", body: payload });
 export const verifyLoginOtp = (challengeId: number, code: string) =>

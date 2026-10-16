@@ -17,7 +17,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import {
   getNotificationSupport,
-  hasPushSubscription,
+  hasRegisteredPushSubscription,
   subscribeToPush,
   unsubscribeFromPush,
 } from "@/src/lib/notifications/client";
@@ -55,7 +55,10 @@ export function NotificationSettings() {
     setSupport(getNotificationSupport());
     setDeviceSubscribed(null);
     try {
-      setDeviceSubscribed(await hasPushSubscription());
+      // Registered to THIS account: a subscription left behind by another
+      // account on a shared browser correctly reads as "off for this device",
+      // so turning on can claim it for the signed-in account.
+      setDeviceSubscribed(await hasRegisteredPushSubscription(token));
     } catch {
       setDeviceSubscribed(false);
     }

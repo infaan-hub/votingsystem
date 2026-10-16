@@ -43,8 +43,11 @@ export function AuthShell({
 }) {
   if (!showBrand) {
     return (
-      <div className="app-shell min-h-dvh w-full bg-white pb-safe">
-        <div className="mx-auto w-full max-w-[480px] px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-10 max-[360px]:px-3">
+      <div className="app-shell flex min-h-dvh w-full flex-col bg-white pb-safe">
+        {/* flex-1 + justify-center keeps the card vertically centred on a
+            phone (Android and iOS) while the page still scrolls from the top
+            when the content is taller than the viewport. */}
+        <div className="mx-auto flex w-full max-w-[480px] flex-1 flex-col justify-center px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-10 max-[360px]:px-3">
           {children}
         </div>
       </div>
