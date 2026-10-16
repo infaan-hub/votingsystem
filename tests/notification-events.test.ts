@@ -27,6 +27,7 @@ import {
   PATCH as officerElectionPATCH,
 } from "@/src/app/api/officer/elections/[pk]/route";
 import { POST as contactPOST } from "@/src/app/api/contact/route";
+import { PATCH as adminContactPATCH } from "@/src/app/api/admin/contacts/[pk]/route";
 import { transitionElection } from "@/src/lib/elections";
 import { runElectionReminders } from "@/src/lib/notifications/events";
 
@@ -719,7 +720,7 @@ describe("EventDrivenNotificationTests", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].recipientId).toBe(admin.user.id);
     expect(rows[0].idempotencyKey).toBe(`contact-${contactId}:${admin.user.id}`);
-    expect(rows[0].targetUrl).toBe("/admin/dashboard");
+    expect(rows[0].targetUrl).toBe("/admin/messages");
     expect(rows[0].body).toBe("A new contact message has been received.");
     // Neither the message text nor sender details leak into the payload.
     expect(JSON.stringify(rows)).not.toContain("ada@example.invalid");
@@ -732,6 +733,82 @@ describe("EventDrivenNotificationTests", () => {
     expect(second.status).toBe(201);
     expect(await prisma.contactMessage.count()).toBe(2);
     expect(await prisma.notification.count({ where: { tag: "contact-new" } })).toBe(1);
+  });
+
+  it("stores admin replies and notifies a signed-in sender only", async () => {
+    const admin = await makeUser("reply_admin", "admin");
+    const voter = await makeUser("reply_voter", "voter");
+
+    const submit = (token?: string) =>
+      call(
+        contactPOST,
+        jsonRequest("/api/contact/", {
+          method: "POST",
+          token,
+          body: {
+            name: "Rue",
+            email: "rue@example.invalid",
+            subject: "Ballot access",
+            message: "Please help me get back into my ballot.",
+          },
+        }),
+      );
+
+    // A signed-in submission links the message to the account, so the reply
+    // can be delivered to that account's notification bell.
+    const fromVoter = await submit(voter.token);
+    expect(fromVoter.status).toBe(201);
+    const voterContactId = (await readJson(fromVoter)).id as number;
+
+    const replied = await call(
+      adminContactPATCH,
+      jsonRequest(`/api/admin/contacts/${voterContactId}/`, {
+        method: "PATCH",
+        token: admin.token,
+        body: { reply: "Your account is active — sign in and try again." },
+      }),
+      { pk: String(voterContactId) },
+    );
+    expect(replied.status).toBe(200);
+    const replyPayload = await readJson(replied);
+    expect(replyPayload.reply).toContain("sign in and try again");
+
+    const stored = await prisma.contactMessage.findUniqueOrThrow({
+      where: { id: voterContactId },
+    });
+    expect(stored.reply).toContain("sign in and try again");
+    expect(stored.status).toBe("RESOLVED");
+    expect(stored.repliedById).toBe(admin.user.id);
+
+    const rows = await prisma.notification.findMany({
+      where: { tag: `contact-reply-${voterContactId}` },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].recipientId).toBe(voter.user.id);
+    expect(rows[0].body).toContain("sign in and try again");
+    expect(rows[0].targetUrl).toBe("/contact");
+
+    // Anonymous messages have no account to notify; the reply is still stored.
+    const fromGuest = await submit();
+    expect(fromGuest.status).toBe(201);
+    const guestContactId = (await readJson(fromGuest)).id as number;
+    const guestReply = await call(
+      adminContactPATCH,
+      jsonRequest(`/api/admin/contacts/${guestContactId}/`, {
+        method: "PATCH",
+        token: admin.token,
+        body: { reply: "Thanks for writing in." },
+      }),
+      { pk: String(guestContactId) },
+    );
+    expect(guestReply.status).toBe(200);
+    expect(
+      await prisma.notification.count({ where: { tag: `contact-reply-${guestContactId}` } }),
+    ).toBe(0);
+    const guestStored = await prisma.contactMessage.findUniqueOrThrow({
+      where: { id: guestContactId },
+    });
+    expect(guestStored.reply).toBe("Thanks for writing in.");
   });
 
   /* ------------------------------------------------------------------ *

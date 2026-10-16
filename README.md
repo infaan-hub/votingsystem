@@ -106,7 +106,7 @@ general-purpose path end to end.
 | `/elections`, `/elections/[slug]` | Election list and detail |
 | `/categories`, `/categories/[slug]` | Category browse |
 | `/privacy`, `/terms` | Legal pages |
-| `/admin`, `/admin/categories` | Administration |
+| `/admin`, `/admin/messages` | Administration |
 
 Legacy URL spellings resolve through permanent redirects configured in
 `next.config.ts` (`/voter/dashboad` → `/voter/dashboard`, `/voter/compain` →

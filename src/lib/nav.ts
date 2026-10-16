@@ -3,11 +3,11 @@ import {
   Contact,
   FileClock,
   LayoutDashboard,
+  Mail,
   Megaphone,
   PieChart,
   Settings2,
   ShieldCheck,
-  Tags,
   UserRound,
   Users,
   Vote,
@@ -91,6 +91,7 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/admin/compaigns", label: "Campaigns", icon: Megaphone },
       { href: "/admin/votes", label: "Votes", icon: BarChart3 },
       { href: "/admin/results", label: "Results", icon: PieChart },
+      { href: "/admin/messages", label: "Messages", icon: Mail },
     ],
   },
   {
@@ -102,10 +103,7 @@ export const ADMIN_NAV: NavGroup[] = [
   },
   {
     label: "Integrity",
-    items: [
-      { href: "/admin/categories", label: "Categories", icon: Tags },
-      { href: "/admin/audit-logs", label: "Audit logs", icon: FileClock },
-    ],
+    items: [{ href: "/admin/audit-logs", label: "Audit logs", icon: FileClock }],
   },
   {
     label: "Account",
@@ -130,6 +128,7 @@ export function bottomNavFor(shell: ShellRole): NavItem[] {
         { href: "/admin/dashboard", label: "Home", icon: LayoutDashboard, exact: true },
         { href: "/admin/elections", label: "Elections", icon: Vote },
         { href: "/admin/users", label: "Users", icon: Users },
+        { href: "/admin/messages", label: "Messages", icon: Mail },
         { href: "/admin/profile", label: "Profile", icon: UserRound },
       ];
     case "officer":

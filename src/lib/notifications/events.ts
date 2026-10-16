@@ -583,13 +583,45 @@ export async function notifyContactReceived(contactId: number): Promise<void> {
       recipientIds: admins.map((admin) => admin.id),
       title: "New contact message",
       body: "A new contact message has been received.",
-      targetUrl: "/admin/dashboard",
+      targetUrl: "/admin/messages",
       tag: "contact-new",
       category: "contact",
       idempotencyKey: `contact-${contactId}`,
       data: { contactId },
     });
     return { recipients: admins.length, ...summarize(outcome) };
+  });
+}
+
+/**
+ * Administrator reply on a contact message → the sender's account, when the
+ * message was submitted while signed in. The reply text is the notification
+ * body so the sender can read it straight from the bell (or the push), and
+ * tapping it opens the contact page to write back. Anonymous messages have no
+ * account to notify; the reply is still stored on the message.
+ */
+export async function notifyContactReplied(contactId: number): Promise<void> {
+  await runEvent("contact.replied", { contactId }, async () => {
+    const contact = await prisma.contactMessage.findUnique({
+      where: { id: contactId },
+      include: { user: { select: { id: true, isActive: true } } },
+    });
+    if (!contact?.reply || !contact.userId || !contact.user?.isActive) {
+      return { recipients: 0, created: 0, deduplicated: 0, deliveriesQueued: 0 };
+    }
+    const outcome = await notify({
+      recipientIds: [contact.userId],
+      title: `Reply: ${contact.subject}`.slice(0, 180),
+      body: contact.reply,
+      targetUrl: "/contact",
+      tag: `contact-reply-${contactId}`,
+      category: "contact",
+      // A fresh key per reply revision so a corrected reply notifies again
+      // while retries of the same write dedupe.
+      idempotencyKey: `contact-reply-${contactId}-${contact.repliedAt?.getTime() ?? 0}`,
+      data: { contactId },
+    });
+    return { recipients: 1, ...summarize(outcome) };
   });
 }
 
