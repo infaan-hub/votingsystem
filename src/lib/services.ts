@@ -1,7 +1,7 @@
 import { prisma } from "@/src/lib/db";
 import { ValidationError, pythonTextCompare } from "@/src/lib/validation";
 import { electionStatus, isVotingOpen, voterGroupLabel } from "@/src/lib/serializers";
-import { secondsUntil } from "@/src/lib/time";
+import { DEFAULT_TIME_ZONE, formatDateTime, secondsUntil } from "@/src/lib/time";
 import type { UserWithRelations } from "@/src/lib/auth";
 import type {
   Announcement,
@@ -386,6 +386,74 @@ export async function buildWinnerAnnouncement(election: Election) {
     });
   }
   return announcements;
+}
+
+export type ResultCardCandidate = {
+  candidate_id: number;
+  name: string;
+  photo_url: string | null;
+  slogan: string;
+  position_name: string;
+  votes: number;
+  percentage: number;
+};
+
+/**
+ * One card-shaped view of an election's tally: the election-wide leader plus
+ * every approved candidate with their totals and share of all votes cast in
+ * the election. The officer preview and the published voter page render this
+ * exact payload, so what an officer previews is exactly what voters receive.
+ */
+export async function buildElectionResultCard(election: Election) {
+  const positions = await prisma.position.findMany({
+    where: { electionId: election.id },
+    include: { department: true, section: { include: { department: true } } },
+    orderBy: { name: "asc" },
+  });
+
+  const candidates: ResultCardCandidate[] = [];
+  for (const position of positions) {
+    for (const entry of await buildPositionRanking(position)) {
+      candidates.push({
+        candidate_id: entry.candidate_id,
+        name: entry.candidate_name,
+        photo_url: entry.photo_url,
+        slogan: entry.slogan,
+        position_name: position.name,
+        votes: entry.vote_total,
+        percentage: 0,
+      });
+    }
+  }
+
+  const totalVotes = candidates.reduce((sum, row) => sum + row.votes, 0);
+  for (const row of candidates) {
+    row.percentage = totalVotes
+      ? Number(((row.votes / totalVotes) * 100).toFixed(2))
+      : 0;
+  }
+  candidates.sort((a, b) => {
+    if (b.votes !== a.votes) return b.votes - a.votes;
+    return pythonTextCompare(a.name, b.name);
+  });
+
+  const timeZone = election.timezone || DEFAULT_TIME_ZONE;
+  return {
+    election: {
+      id: election.id,
+      slug: election.slug,
+      title: election.title,
+      status: electionStatus(election),
+      lifecycle_status: election.status,
+      voting_end_at: formatDateTime(election.votingEndAt, timeZone),
+      published: election.resultPublishedAt !== null,
+      result_published_at: formatDateTime(election.resultPublishedAt, timeZone),
+    },
+    // Only a candidate with at least one vote can be presented as the winner.
+    winner: candidates.find((row) => row.votes > 0) ?? null,
+    candidates,
+    totals: { votes: totalVotes, candidates: candidates.length },
+  };
 }
 
 export async function serializeStatsEvent(election: Election, now = new Date()) {

@@ -229,6 +229,40 @@ export async function notifyElectionResultsPublished(election: Election): Promis
   });
 }
 
+/**
+ * Result card published by an election officer. Unlike the lifecycle fan-out
+ * above, recipients are exactly the accounts that cast a ballot in this
+ * election — resolved from the Vote table, never from request input — and the
+ * notification opens the published result card itself.
+ */
+export async function notifyElectionResultsReady(election: Election): Promise<void> {
+  await runEvent("election.result_card_published", { electionId: election.id }, async () => {
+    const votes = await prisma.vote.findMany({
+      where: { electionId: election.id },
+      select: { voterId: true },
+      distinct: ["voterId"],
+    });
+    if (!votes.length) {
+      return { recipients: 0, created: 0, deduplicated: 0, deliveriesQueued: 0 };
+    }
+    const users = await prisma.user.findMany({
+      where: { id: { in: votes.map((vote) => vote.voterId) }, isActive: true },
+      select: { id: true },
+    });
+    const outcome = await notify({
+      recipientIds: users.map((user) => user.id),
+      title: "Election results are published",
+      body: `The results for ${election.title} are out. Open the result card to see the winner.`,
+      targetUrl: `/results/${election.slug}`,
+      tag: "election-result-card",
+      category: "election",
+      idempotencyKey: `election-${election.id}-result-card`,
+      data: { electionId: election.id },
+    });
+    return { recipients: users.length, ...summarize(outcome) };
+  });
+}
+
 /** Archive announced only when the election was previously public. */
 export async function notifyElectionArchived(
   election: Election,

@@ -1,19 +1,23 @@
 "use client";
 
-import { Suspense } from "react";
-import { BarChart3, Flag, RefreshCw, Users } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { BarChart3, Eye, Flag, Loader2, Megaphone, RefreshCw, Users } from "lucide-react";
 
+import { useApp } from "@/src/components/AppProvider";
 import { RequireRole } from "@/src/components/require-role";
+import { ResultCard, type ResultCardPayload } from "@/src/components/result-card";
 import { ResultsBars } from "@/src/components/results-bars";
 import { StatusBadge } from "@/src/components/status-badge";
 import { Button } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
+import { Dialog } from "@/src/components/ui/dialog";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
+import { useToast } from "@/src/components/ui/toast";
 import {
   ElectionPickerSection,
   ErrorBanner,
@@ -90,6 +94,13 @@ const VISIBILITY_POLICIES: { key: string; label: string; detail: string }[] = [
   },
 ];
 
+function formatPublished(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
 export default function OfficerResultsPage() {
   return (
     <>
@@ -121,6 +132,11 @@ function ResultsBody() {
   const { selected: selectedId, select } = useElectionSelection();
   const selected = rows.find((row) => String(row.id) === selectedId) ?? null;
 
+  const { token } = useApp();
+  const { toast } = useToast();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+
   const results = useResource<ResultPayload | null>(
     (token) =>
       selected
@@ -128,6 +144,58 @@ function ResultsBody() {
         : Promise.resolve(null),
     [selected?.id ?? 0],
   );
+
+  // The exact payload the published card shows — and the officer preview
+  // renders — so what is previewed is what gets published.
+  const card = useResource<ResultCardPayload | null>(
+    (authToken) =>
+      selected
+        ? apiFetch<ResultCardPayload>(authToken, `/api/elections/${selected.id}/result-card/`)
+        : Promise.resolve(null),
+    [selected?.id ?? 0],
+  );
+
+  const published = Boolean(card.data?.election.published);
+  // Ticks while the page is open so the publish button unlocks right when the
+  // voting window closes, without a manual refresh.
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const votingEnded = selected?.voting_end_at
+    ? new Date(selected.voting_end_at).getTime() <= now
+    : false;
+  const ballotCount = selected?.counts.votes ?? 0;
+  const canPublish = Boolean(selected) && votingEnded && ballotCount > 0 && !published;
+
+  async function publishResult() {
+    if (!selected || publishing) return;
+    setPublishing(true);
+    try {
+      await apiFetch(token, `/api/officer/elections/${selected.id}/results/`, {
+        method: "POST",
+        body: JSON.stringify({ action: "publish" }),
+      });
+      toast({
+        title: "Result published",
+        description: "Everyone who voted in this election has been notified.",
+        tone: "success",
+      });
+      setPreviewOpen(false);
+      card.reload();
+      results.reload();
+      list.reload();
+    } catch (cause) {
+      toast({
+        title: "Could not publish the result",
+        description: cause instanceof Error ? cause.message : undefined,
+        tone: "error",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   if (list.loading && !list.data) {
     return <div className="mt-6"><ListSkeleton /></div>;
@@ -347,11 +415,72 @@ function ResultsBody() {
             )}
           </Section>
 
+          <Section
+            title="Publish result"
+            description="Preview the exact result card voters will receive, then publish it. Publishing notifies everyone who cast a ballot and opens the same card on their device."
+          >
+            <div className="space-y-4">
+              {card.loading && !card.data ? <Skeleton className="h-28 w-full" /> : null}
+              {card.error && !card.data ? (
+                <ErrorBanner message={card.error} onRetry={card.reload} />
+              ) : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="dense"
+                  className="w-auto"
+                  onClick={() => setPreviewOpen(true)}
+                  disabled={!card.data}
+                >
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                  Preview result
+                </Button>
+                <Button
+                  size="dense"
+                  className="w-auto"
+                  onClick={() => void publishResult()}
+                  disabled={!canPublish || publishing}
+                >
+                  {publishing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Megaphone className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  Publish result
+                </Button>
+              </div>
+
+              {published ? (
+                <p className="text-[13px] text-nv-muted">
+                  Published
+                  {formatPublished(card.data?.election.result_published_at)
+                    ? ` on ${formatPublished(card.data?.election.result_published_at)}`
+                    : ""}
+                  . Everyone who voted was notified and opens this exact card on their device.
+                </p>
+              ) : !votingEnded ? (
+                <p className="text-[13px] text-nv-muted">
+                  Publishing unlocks after this election&apos;s voting window closes.
+                </p>
+              ) : ballotCount === 0 ? (
+                <p className="text-[13px] text-nv-muted">
+                  No ballots have been cast yet, so there is nothing to publish.
+                </p>
+              ) : (
+                <p className="nums-tabular text-[13px] text-nv-muted">
+                  {ballotCount.toLocaleString()} ballot{ballotCount === 1 ? "" : "s"} ready.
+                  Preview the card, then publish to notify every voter who took part.
+                </p>
+              )}
+            </div>
+          </Section>
+
           <div className="rounded-nv-md border border-nv-line bg-nv-bg p-4">
             <p className="text-[13px] text-nv-muted">
-              Publishing or finalizing a tally is an administrator action. Ask an administrator
-              when the numbers should be locked and released to voters — this officer screen only
-              reads results that are already visible to you.
+              Publishing above releases the result card and notifies the voters who took part.
+              Closing, finalizing and archiving the election remain administrator actions — ask an
+              administrator when the lifecycle should move.
             </p>
             <div className="mt-3">
               <LinkButton href="/contact" variant="outline" className="w-auto">
@@ -359,6 +488,42 @@ function ResultsBody() {
               </LinkButton>
             </div>
           </div>
+
+          <Dialog
+            open={previewOpen}
+            onOpenChange={setPreviewOpen}
+            title="Result card preview"
+            description="This is exactly what every voter who took part opens from the notification."
+            footer={
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setPreviewOpen(false)}
+                  className="sm:w-auto"
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => void publishResult()}
+                  disabled={!canPublish || publishing}
+                  className="sm:w-auto"
+                >
+                  {publishing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Megaphone className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  Publish result
+                </Button>
+              </>
+            }
+          >
+            {card.data ? (
+              <ResultCard card={card.data} />
+            ) : (
+              <Skeleton className="h-80 w-full" />
+            )}
+          </Dialog>
         </>
       ) : null}
     </div>

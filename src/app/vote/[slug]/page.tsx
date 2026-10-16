@@ -160,12 +160,9 @@ function Ballot({
     });
   }
 
-  const voteablePositions = (ballot?.positions ?? []).filter(
-    (position) => position.candidates.length > 0,
-  );
-  const votedIds = ballot?.voted_position_ids ?? [];
-  const votedCount = voteablePositions.filter((position) => votedIds.includes(position.id)).length;
-  const allVoted = voteablePositions.length > 0 && votedCount === voteablePositions.length;
+  // One verified vote completes the voter's ballot: the page locks as soon
+  // as any vote exists, so the voter is never asked to answer every question.
+  const hasVoted = (ballot?.voted_position_ids ?? []).length > 0;
 
   /** Asks the server which confirmation step applies and fetches the code. */
   async function requestCode(): Promise<IssueOutcome> {
@@ -347,36 +344,13 @@ function Ballot({
       }
 
       setConfirming(false);
-      const receipt = {
+      setPending(null);
+      // One verified vote is the whole ballot: finish with the receipt
+      // instead of asking the voter to answer every remaining question.
+      onDone({
         code: data.receipt_code ?? "—",
         castAt: data.cast_at ?? new Date().toISOString(),
-      };
-      // Mark the tapped question as voted; only when every voteable question
-      // has been cast does the flow finish with the receipt. Otherwise the
-      // voter stays on the ballot for the remaining questions.
-      const justVoted = pending;
-      const nextVotedIds = [
-        ...new Set([...ballot.voted_position_ids, justVoted.positionId]),
-      ];
-      const remainingCount = voteablePositions.filter(
-        (position) => !nextVotedIds.includes(position.id),
-      ).length;
-      setPending(null);
-      if (remainingCount > 0) {
-        setBallot((current) =>
-          current ? { ...current, voted_position_ids: nextVotedIds } : current,
-        );
-        setSelected((current) => ({ ...current, [justVoted.positionId]: [] }));
-        toast({
-          title: "Vote recorded",
-          description: `You can now vote ${remainingCount} more question${
-            remainingCount === 1 ? "" : "s"
-          }.`,
-          tone: "success",
-        });
-        return;
-      }
-      onDone(receipt);
+      });
     } catch (submitError) {
       const message =
         submitError instanceof Error
@@ -470,9 +444,10 @@ function Ballot({
         <h1 className="mt-1.5 text-fluid-xl tracking-tight text-nv-ink">
           {ballot.election.title}
         </h1>
-        <p className="nums-tabular mt-1 text-[13px] text-nv-muted">
-          {votedCount} of {voteablePositions.length} question
-          {voteablePositions.length === 1 ? "" : "s"} voted
+        <p className="mt-1 text-[13px] text-nv-muted">
+          {hasVoted
+            ? "Your vote has been recorded in this election."
+            : "Tap a candidate to cast your vote — one verified vote completes your ballot."}
         </p>
       </header>
 
@@ -489,6 +464,22 @@ function Ballot({
         <Card>
           <CardContent className="py-12 text-center text-[13px] text-nv-muted">
             Voting is not open for this election right now.
+          </CardContent>
+        </Card>
+      ) : hasVoted ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="nv-grad-candidate grid h-14 w-14 place-items-center rounded-full text-nv-navy">
+              <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
+            </span>
+            <h2 className="text-fluid-lg text-nv-ink">You already voted in this election</h2>
+            <p className="max-w-sm text-[13px] text-nv-muted">
+              Your ballot has been recorded and cannot be changed. One verified vote is all this
+              election needs.
+            </p>
+            <Button asChild variant="outline" size="dense" className="w-auto">
+              <Link href={`/elections/${ballot.election.slug}`}>Back to election</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -623,14 +614,6 @@ function Ballot({
               );
             })}
           </div>
-
-          {allVoted ? (
-            <Card>
-              <CardContent className="py-10 text-center text-[13px] text-nv-muted">
-                You have voted on every question in this election.
-              </CardContent>
-            </Card>
-          ) : null}
         </>
       )}
 

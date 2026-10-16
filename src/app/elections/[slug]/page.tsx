@@ -162,9 +162,9 @@ function defaultVotingSteps(): string[] {
   return [
     "Sign in with your account before the voting window closes.",
     "Open the election and read the rules for each position.",
-    "Select your choice for every position you are eligible to vote on.",
-    "Review your ballot carefully — some ballots cannot be changed once submitted.",
-    "Submit your ballot. Your vote is recorded anonymously and no one can see how you voted.",
+    "Tap the candidate you want — one verified vote is all the election needs.",
+    "Confirm your vote with the verification code sent to your devices.",
+    "Your vote is recorded anonymously and no one can see how you voted.",
   ];
 }
 
