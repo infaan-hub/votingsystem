@@ -61,9 +61,13 @@ describe("published result card", () => {
     expect(logo?.getAttribute("src")).toBe("/nexvote_logo.jpeg");
     expect(screen.getByText("Chancellor 2026")).toBeTruthy();
 
-    // Winner in bold green type, then the winner's front image and name.
+    // "Winner" in bold green type, then the winner's front image, then the
+    // winner's name in large, bold, capitalized red type.
+    const winnerLabel = screen.getByText("Winner");
+    expect(winnerLabel.className).toContain("text-nv-success");
     const nameNodes = screen.getAllByText("Alice Mensah");
-    expect(nameNodes.some((node) => node.className.includes("text-nv-success"))).toBe(true);
+    expect(nameNodes.some((node) => node.className.includes("text-nv-primary"))).toBe(true);
+    expect(nameNodes.some((node) => node.className.includes("capitalize"))).toBe(true);
     const photos = [...container.querySelectorAll("img")].map((img) => img.getAttribute("src"));
     expect(photos).toContain("/media/alice.jpg");
 

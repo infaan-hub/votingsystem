@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { RotateCw, Vote } from "lucide-react";
+import { ChevronRight, RotateCw, Vote } from "lucide-react";
 
 import { StatusBadge } from "@/src/components/status-badge";
-import { Button } from "@/src/components/ui/button";
+import { Button, buttonVariants } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { FiltersToolbar, FilterSelect, SearchInput } from "@/src/components/ui/filters";
@@ -217,58 +217,56 @@ export default function ElectionsPage() {
       {!error && filtered.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((election) => (
-            <article
-              key={election.id}
-              className="flex h-full flex-col overflow-hidden rounded-nv-md border border-nv-line bg-nv-surface shadow-nv-card transition-shadow hover:shadow-panel"
-            >
-              {election.image_url ? (
-                <div className="relative h-36 w-full overflow-hidden bg-nv-bg">
-                  <img
-                    src={election.image_url}
-                    alt=""
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
+            <article key={election.id} className="h-full">
+              {/* The whole card is the link so the voter can tap anywhere —
+                  no need to aim for the button. */}
+              <Link
+                href={`/elections/${election.slug}`}
+                className="flex h-full flex-col overflow-hidden rounded-nv-md border border-nv-line bg-nv-surface shadow-nv-card transition-shadow hover:shadow-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
+              >
+                {election.image_url ? (
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-nv-bg">
+                    <img
+                      src={election.image_url}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="nv-grad-candidate nv-dots grid aspect-[16/10] w-full place-items-center">
+                    <Vote className="h-8 w-8 text-white/80" aria-hidden="true" />
+                  </div>
+                )}
+                <div className="flex flex-1 flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="text-fluid-lg text-nv-ink">{election.title}</h2>
+                    <StatusBadge status={election.lifecycle_status} className="shrink-0" />
+                  </div>
+                  {election.description ? (
+                    <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-nv-muted">
+                      {election.description}
+                    </p>
+                  ) : null}
+                  <div className="nums-tabular mt-4 space-y-1 text-[12.5px] text-nv-muted">
+                    <p>Opens {formatDate(election.voting_start_at)}</p>
+                    <p>Closes {formatDate(election.voting_end_at)}</p>
+                  </div>
+                  {election.status === "active" && election.voting_end_at ? (
+                    <Countdown target={election.voting_end_at} prefix="Closes in" className="mt-3" />
+                  ) : null}
+                  {election.status === "upcoming" && election.voting_start_at ? (
+                    <Countdown target={election.voting_start_at} prefix="Opens in" className="mt-3" />
+                  ) : null}
+                  {/* Canonical button style for the card's call to action. */}
+                  <span className="mt-auto block pt-4">
+                    <span className={buttonVariants({ variant: "outline", size: "dense" })}>
+                      View details
+                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                  </span>
                 </div>
-              ) : (
-                <div className="nv-grad-candidate nv-dots grid h-36 w-full place-items-center">
-                  <Vote className="h-8 w-8 text-white/80" aria-hidden="true" />
-                </div>
-              )}
-              <div className="flex flex-1 flex-col p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-fluid-lg text-nv-ink">
-                    <Link
-                      href={`/elections/${election.slug}`}
-                      className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
-                    >
-                      {election.title}
-                    </Link>
-                  </h2>
-                  <StatusBadge status={election.lifecycle_status} className="shrink-0" />
-                </div>
-                {election.description ? (
-                  <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-nv-muted">
-                    {election.description}
-                  </p>
-                ) : null}
-                <div className="nums-tabular mt-4 space-y-1 text-[12.5px] text-nv-muted">
-                  <p>Opens {formatDate(election.voting_start_at)}</p>
-                  <p>Closes {formatDate(election.voting_end_at)}</p>
-                </div>
-                {election.status === "active" && election.voting_end_at ? (
-                  <Countdown target={election.voting_end_at} prefix="Closes in" className="mt-3" />
-                ) : null}
-                {election.status === "upcoming" && election.voting_start_at ? (
-                  <Countdown target={election.voting_start_at} prefix="Opens in" className="mt-3" />
-                ) : null}
-                <Link
-                  href={`/elections/${election.slug}`}
-                  className="mt-auto pt-4 text-[13px] font-bold text-nv-primary hover:underline"
-                >
-                  View details
-                </Link>
-              </div>
+              </Link>
             </article>
           ))}
         </div>

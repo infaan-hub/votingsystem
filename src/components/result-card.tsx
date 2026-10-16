@@ -45,10 +45,10 @@ function voteLabel(count: number): string {
  * published notification render the same payload through this same component,
  * so what an officer previews is exactly what voters receive.
  *
- * Layout follows the product spec: small NexVote logo top-left, election
- * name, the winner in large green type, the winner's photo, their name, the
- * votes and share, then a "Show full result" toggle that reveals every
- * candidate with photo, name, votes and percentage.
+ * Layout follows the product spec: small NexVote logo top-left, the centered
+ * election name, "Winner" in large green type, the winner's front image, their
+ * name in large red type, the votes and share, then a "Show full result"
+ * toggle that reveals every candidate with photo, name, votes and percentage.
  */
 export function ResultCard({ card, className }: { card: ResultCardPayload; className?: string }) {
   const [showAll, setShowAll] = useState(false);
@@ -71,8 +71,8 @@ export function ResultCard({ card, className }: { card: ResultCardPayload; class
           )}
         </div>
 
-        {/* Election name. */}
-        <div className="space-y-1">
+        {/* Centered election name. */}
+        <div className="space-y-1 text-center">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-nv-muted">
             Election result
           </p>
@@ -81,22 +81,25 @@ export function ResultCard({ card, className }: { card: ResultCardPayload; class
 
         {winner ? (
           <div className="space-y-4 text-center">
-            {/* Winner in large green type. */}
-            <p className="text-[26px] font-extrabold leading-tight tracking-tight text-nv-success sm:text-[30px]">
-              {winner.name}
+            {/* "Winner" in large green type — not the candidate's name. */}
+            <p className="text-[26px] font-extrabold uppercase leading-tight tracking-[0.08em] text-nv-success sm:text-[30px]">
+              Winner
             </p>
 
-            {/* Winner's front image. */}
+            {/* Winner's front image, a standard responsive square. */}
             <Avatar
               name={winner.name}
               src={winner.photo_url}
-              size={132}
+              size={160}
               square
               className="mx-auto rounded-2xl border border-nv-line"
+              style={{ width: "clamp(8rem, 45vw, 10rem)", height: "clamp(8rem, 45vw, 10rem)" }}
             />
 
-            {/* Winner's name… */}
-            <p className="text-[17px] font-bold text-nv-ink">{winner.name}</p>
+            {/* Winner's name in large, bold, capitalized red type. */}
+            <p className="text-[22px] font-extrabold capitalize leading-tight text-nv-primary sm:text-[26px]">
+              {winner.name}
+            </p>
 
             {/* …with the votes and share received. */}
             <p className="nums-tabular text-[13px] text-nv-muted">

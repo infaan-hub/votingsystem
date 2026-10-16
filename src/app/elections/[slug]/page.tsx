@@ -24,7 +24,6 @@ import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { WhatsAppShareButton } from "@/src/components/whatsapp-share-button";
 
 type PublicElection = {
   id: number;
@@ -174,7 +173,7 @@ function ElectionDetailContent() {
   const slug = params.slug;
   const invite = searchParams.get("invite") ?? "";
 
-  const { token, user } = useApp();
+  const { token } = useApp();
 
   const [data, setData] = useState<PublicDetailResponse | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -398,13 +397,6 @@ function ElectionDetailContent() {
                 ) : null}
               </div>
             )}
-            <WhatsAppShareButton
-              title={election.title}
-              url={`/elections/${election.slug}${inviteUsed ? `?invite=${encodeURIComponent(invite)}` : ""}`}
-              senderPhone={user?.phone_number}
-              variant="hero"
-              className="sm:w-auto"
-            />
           </div>
         }
       >

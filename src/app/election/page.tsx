@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, RotateCw, Vote } from "lucide-react";
+import { CalendarDays, ChevronRight, RotateCw, Vote } from "lucide-react";
 
 import { StatusBadge } from "@/src/components/status-badge";
-import { Button } from "@/src/components/ui/button";
+import { Button, buttonVariants } from "@/src/components/ui/button";
 import { Countdown } from "@/src/components/ui/countdown";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { PageHero } from "@/src/components/page-hero";
@@ -53,16 +53,12 @@ function formatDate(value: string | null): string {
 
 function ElectionTile({ election }: { election: PublicElection }) {
   return (
-    <article className="flex h-full flex-col rounded-nv-md border border-nv-line bg-nv-surface p-5 shadow-nv-card transition-shadow hover:shadow-panel">
+    <Link
+      href={`/elections/${election.slug}`}
+      className="flex h-full flex-col rounded-nv-md border border-nv-line bg-nv-surface p-5 shadow-nv-card transition-shadow hover:shadow-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
+    >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-fluid-lg text-nv-ink">
-          <Link
-            href={`/elections/${election.slug}`}
-            className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
-          >
-            {election.title}
-          </Link>
-        </h3>
+        <h3 className="text-fluid-lg text-nv-ink">{election.title}</h3>
         <StatusBadge status={election.lifecycle_status} className="shrink-0" />
       </div>
       {election.description ? (
@@ -85,13 +81,15 @@ function ElectionTile({ election }: { election: PublicElection }) {
       {election.status === "upcoming" && election.voting_start_at ? (
         <Countdown target={election.voting_start_at} prefix="Opens in" className="mt-3" />
       ) : null}
-      <Link
-        href={`/elections/${election.slug}`}
-        className="mt-4 text-[13px] font-bold text-nv-primary hover:underline"
-      >
-        View details
-      </Link>
-    </article>
+      {/* The whole card is the link; this is the canonical button styled as
+          the card's call to action. */}
+      <span className="mt-auto block pt-4">
+        <span className={buttonVariants({ variant: "outline", size: "dense" })}>
+          View details
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </span>
+    </Link>
   );
 }
 

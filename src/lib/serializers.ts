@@ -288,6 +288,7 @@ export function serializeElectionList(election: Election, now = new Date()) {
     voting_end_at: formatDateTime(election.votingEndAt, tz),
     allow_live_results: election.allowLiveResults,
     announce_winners_automatically: election.announceWinnersAutomatically,
+    result_published_at: formatDateTime(election.resultPublishedAt, tz),
     status: electionStatus(election, now),
     seconds_until_start: secondsUntil(election.votingStartAt, now),
     seconds_until_end: secondsUntil(election.votingEndAt, now),

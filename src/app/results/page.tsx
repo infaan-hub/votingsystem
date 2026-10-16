@@ -20,6 +20,7 @@ type PublicElection = {
   lifecycle_status: string;
   visibility: string;
   result_visibility: string;
+  result_published_at: string | null;
   status: "upcoming" | "active" | "ended";
   voting_start_at: string | null;
   voting_end_at: string | null;
@@ -84,12 +85,14 @@ export default function ResultsPage() {
         throw new Error("We could not load results right now. Please try again.");
       }
       const data = (await response.json()) as PublicElection[];
-      const finished = (Array.isArray(data) ? data : []).filter(
-        (election) => election.status === "ended",
+      // Nothing shows here until an election officer actually publishes the
+      // result — a closed voting window alone is not a published result.
+      const published = (Array.isArray(data) ? data : []).filter(
+        (election) => election.result_published_at,
       );
-      setElections(finished);
+      setElections(published);
 
-      const top = finished[0];
+      const top = published[0];
       if (top) {
         try {
           const resultsResponse = await fetch(`/api/elections/${top.id}/results`);
@@ -138,7 +141,7 @@ export default function ResultsPage() {
     <div className="space-y-6">
       <PageHero
         title="Results"
-        description="Final results from elections whose voting window has closed. Each entry links back to the election page for full details."
+        description="Results published by election officers. Each entry opens its published result card."
         className="-mt-6"
       />
 
@@ -169,12 +172,7 @@ export default function ResultsPage() {
         <EmptyState
           icon={<PieChart className="h-6 w-6" aria-hidden="true" />}
           title="No results published yet"
-          description="Results appear here once an election's voting window closes and the outcome is released. Browse open elections to vote while you wait."
-          action={
-            <Button asChild>
-              <Link href="/elections">Browse elections</Link>
-            </Button>
-          }
+          description="Nothing is shown here until an election officer publishes the result. You will get a notification when a result is released."
         />
       ) : null}
 
@@ -255,19 +253,19 @@ export default function ResultsPage() {
 
       {!error && featuredHidden && rows.length > 0 ? (
         <p className="rounded-nv-md border border-nv-line bg-nv-surface p-4 text-[13.5px] text-nv-muted">
-          Results are published when the election closes. The summary for{" "}
-          <span className="font-semibold text-nv-text">{rows[0]?.title}</span> is not visible yet —
-          open the election page for the expected publication point.
+          The summary for{" "}
+          <span className="font-semibold text-nv-text">{rows[0]?.title}</span> could not be
+          loaded right now. Try again in a moment.
         </p>
       ) : null}
 
       {!error && rows.length > 0 ? (
-        <Section title="All finished elections" description="Voting has ended on these elections.">
+        <Section title="Published results" description="Elections whose results have been published.">
           <ul className="divide-y divide-nv-line">
             {rows.map((election) => (
               <li key={election.id}>
                 <Link
-                  href={`/elections/${election.slug}#results`}
+                  href={`/results/${election.slug}`}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-md px-1 py-3 transition-colors hover:bg-nv-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nv-primary"
                 >
                   <div className="min-w-0">

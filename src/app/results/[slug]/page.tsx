@@ -62,7 +62,7 @@ export default function ElectionResultCardPage() {
   }, [load]);
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-4 pb-6">
+    <div className="mx-auto w-full max-w-md space-y-4 pb-6">
       <BackButton label="Back to results" fallback="/results" />
 
       {state === "loading" ? (
