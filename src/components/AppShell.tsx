@@ -11,6 +11,7 @@ import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
 import { NotificationBell } from "@/src/components/notification-bell";
 import { NotificationPermissionPrompt } from "@/src/components/notification-permission-prompt";
+import { InstallAppProvider, InstallAppSidebarItem } from "@/src/components/install-app";
 import { Avatar } from "@/src/components/ui/avatar";
 import { Button } from "@/src/components/ui/button";
 import tenant, { t } from "@/config/tenant";
@@ -155,7 +156,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
    *  - Phone (<md): sticky header, hamburger left, brand centred,        *
    *    slide-in drawer sidebar, bottom tab bar.                           *
    * ------------------------------------------------------------------ */
-  return (
+  const shellContent = (
     <div className="app-shell">
       {/* Desktop header — hamburger left, brand centred. */}
       <header className="sticky top-0 z-30 hidden border-b border-nv-line bg-nv-surface/90 backdrop-blur md:block">
@@ -191,6 +192,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         links={isPublic ? publicRailLinks : undefined}
         collapsed={!railOpen}
         profile={!isPublic && user ? { name: profileName, src: profileSrc } : undefined}
+        installAction={<InstallAppSidebarItem collapsed={!railOpen} />}
         roleBadge={
           !isPublic && chip ? (
             <span className="inline-flex rounded-md border border-sidebar-border bg-sidebar-accent px-2 py-1 text-[11px] font-bold uppercase tracking-[0.6px] text-sidebar-accent-foreground">
@@ -346,7 +348,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 ))
               )}
             </nav>
-            <div className="shrink-0 border-t border-sidebar-border p-3">{drawerFooter}</div>
+            <div className="shrink-0 border-t border-sidebar-border p-3">
+              <InstallAppSidebarItem />
+              <div className="mt-2">{drawerFooter}</div>
+            </div>
           </div>
         </div>
       ) : null}
@@ -373,6 +378,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <NotificationPermissionPrompt />
     </div>
   );
+
+  return <InstallAppProvider>{shellContent}</InstallAppProvider>;
 }
 
 function PublicFooter() {

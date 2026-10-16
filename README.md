@@ -166,8 +166,13 @@ audit log are schema-ready but not wired into the voting service. See
 
 The app ships a web manifest with regular and maskable icons
 (`public/manifest.webmanifest`), so it installs to the home screen on iOS and
-Android. For store packages, wrap the same build with Capacitor — no second
-codebase is required.
+Android. While it runs in a browser tab, a "Download app" badge pinned to the
+right edge — plus a matching row at the bottom of the sidebar — opens a short
+per-device how-to: Android and desktop get a button that triggers the browser's
+install prompt; iOS gets the Safari Share-sheet steps (the platform exposes no
+install API). "Got it" hides the badge for good; the sidebar row stays as the
+permanent entry point. For store packages, wrap the same build with Capacitor —
+no second codebase is required.
 
 ## Browser test checklist
 

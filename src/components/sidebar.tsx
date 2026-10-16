@@ -33,6 +33,7 @@ export function Sidebar({
   footer,
   roleBadge,
   profile,
+  installAction,
   onSignOut,
 }: {
   links?: SidebarLink[];
@@ -44,6 +45,8 @@ export function Sidebar({
   roleBadge?: React.ReactNode;
   /** Signed-in user's picture; the Profile nav item shows it instead of an icon. */
   profile?: { name: string; src: string | null };
+  /** Bottom row above Sign out, e.g. the "Download app" install entry. */
+  installAction?: React.ReactNode;
   /** Renders a Sign out control pinned under the nav (desktop rail). */
   onSignOut?: () => void;
 }) {
@@ -101,6 +104,10 @@ export function Sidebar({
           </ul>
         )}
       </nav>
+
+      {installAction ? (
+        <div className="shrink-0 border-t border-sidebar-border p-2 lg:p-3">{installAction}</div>
+      ) : null}
 
       {onSignOut ? (
         <div className="shrink-0 border-t border-sidebar-border p-2 lg:p-3">
