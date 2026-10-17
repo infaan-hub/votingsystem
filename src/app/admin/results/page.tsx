@@ -18,6 +18,7 @@ import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
 import { useToast } from "@/src/components/ui/toast";
 import { apiRequest, useResource, useToken } from "../_shared";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type AdminElection = {
   id: number;
@@ -143,6 +144,13 @@ function ResultsBody() {
     },
     [selectedId],
   );
+
+  // Tallies move while the page is open; refresh on live alerts, on tab focus
+  // and via a slow safety poll.
+  useLiveRefresh(() => {
+    elections.reload();
+    results.reload();
+  }, { intervalMs: 120_000 });
 
   const selected = useMemo(
     () => electionRows.find((row) => String(row.id) === selectedId) ?? null,

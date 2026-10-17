@@ -11,6 +11,7 @@ import { EmptyState } from "@/src/components/ui/empty-state";
 import { FiltersToolbar, FilterSelect, SearchInput } from "@/src/components/ui/filters";
 import { PageHero } from "@/src/components/page-hero";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type PublicElection = {
   id: number;
@@ -60,9 +61,11 @@ export default function ElectionsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
-  const load = useCallback(async () => {
-    setElections(null);
-    setError("");
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setElections(null);
+      setError("");
+    }
     try {
       const response = await fetch("/api/elections");
       if (!response.ok) {
@@ -71,11 +74,13 @@ export default function ElectionsPage() {
       const data = (await response.json()) as PublicElection[];
       setElections(Array.isArray(data) ? data : []);
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not load elections right now. Please try again.",
-      );
+      if (!options.silent) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "We could not load elections right now. Please try again.",
+        );
+      }
     }
   }, []);
 
@@ -101,6 +106,10 @@ export default function ElectionsPage() {
       ignore = true;
     };
   }, []);
+
+  // Election statuses flip while the page is open; refresh on live alerts
+  // (signed-in), on tab focus, and via a slow safety poll.
+  useLiveRefresh(() => void load({ silent: true }), { intervalMs: 60_000 });
 
   const categoryOptions = useMemo(
     () => categories.map((category) => ({ value: String(category.id), label: category.name })),

@@ -1,11 +1,21 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { fetchCurrentUser, fetchElections, login, loginWithGoogle, logout } from "@/src/lib/api-client";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { fetchCurrentUser, login, loginWithGoogle, logout } from "@/src/lib/api-client";
 import type { PushSubscriptionPayload } from "@/src/lib/notifications/types";
 
 const TOKEN_KEY = "election-hub-token";
-const ELECTIONS_CACHE_KEY = "election-hub-elections";
+/** A tab may re-check the signed-in user at most this often. */
+const USER_REVALIDATE_MS = 30_000;
 
 type UserSummary = {
   id: number;
@@ -33,8 +43,6 @@ type LoginResult =
 type AppContextType = {
   token: string;
   user: UserSummary | null;
-  elections: unknown[];
-  appError: string;
   handleLogin: (credentials: {
     username: string;
     password: string;
@@ -52,37 +60,23 @@ type AppContextType = {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-function readCachedElections(): unknown[] {
-  try {
-    const cachedValue = window.localStorage.getItem(ELECTIONS_CACHE_KEY);
-    if (!cachedValue) return [];
-    const parsedValue = JSON.parse(cachedValue);
-    return Array.isArray(parsedValue) ? parsedValue : [];
-  } catch {
-    return [];
-  }
-}
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState(() =>
     typeof window === "undefined" ? "" : window.localStorage.getItem(TOKEN_KEY) || "",
   );
   const [user, setUser] = useState<UserSummary | null>(null);
-  const [elections, setElections] = useState<unknown[]>(() => (typeof window === "undefined" ? [] : readCachedElections()));
-  const [appError, setAppError] = useState("");
+  const lastUserCheckRef = useRef(0);
 
+  // Sign-in and sign-out in another tab are mirrored here: the `storage`
+  // event only fires in the tabs that did not write the value.
   useEffect(() => {
-    let ignore = false;
-    fetchElections()
-      .then((response) => {
-        if (ignore) return;
-        setElections(response);
-        setAppError("");
-      })
-      .catch((requestError: Error) => {
-        if (!ignore) setAppError(requestError.message);
-      });
-    return () => { ignore = true; };
+    function onStorage(event: StorageEvent) {
+      if (event.key !== TOKEN_KEY) return;
+      const next = event.newValue ?? "";
+      setToken((current) => (current === next ? current : next));
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   useEffect(() => {
@@ -91,6 +85,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     let ignore = false;
+    lastUserCheckRef.current = Date.now();
     fetchCurrentUser(token)
       .then((response) => {
         if (!ignore) setUser(response);
@@ -103,6 +98,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       });
     return () => { ignore = true; };
+  }, [token]);
+
+  // Returning to a tab re-checks the account so role or profile changes made
+  // elsewhere (an admin promoting this user, a photo update on another
+  // device) show up without a manual reload. Throttled, visible tabs only.
+  useEffect(() => {
+    if (!token) return;
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastUserCheckRef.current < USER_REVALIDATE_MS) return;
+      lastUserCheckRef.current = Date.now();
+      fetchCurrentUser(token)
+        .then((response) => setUser(response))
+        .catch(() => {
+          /* transient; the next interval or the token effect handles it */
+        });
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [token]);
 
   const handleLogin = useCallback(
@@ -170,8 +184,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const value = useMemo(
-    () => ({ token, user, elections, appError, handleLogin, completeOtpLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser }),
-    [token, user, elections, appError, handleLogin, completeOtpLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser],
+    () => ({ token, user, handleLogin, completeOtpLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser }),
+    [token, user, handleLogin, completeOtpLogin, handleRegistration, handleGoogleLogin, handleLogout, refreshUser],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

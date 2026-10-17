@@ -15,6 +15,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
+import { useLiveRefresh } from "@/src/lib/live";
 import {
   ErrorBanner,
   NoElectionsState,
@@ -57,6 +58,10 @@ function DashboardBody() {
     (token) => apiFetch<ManagedElection[]>(token, "/api/officer/elections"),
     [],
   );
+
+  // Counts move while the page is open (votes cast, campaigns published);
+  // refresh on live alerts, on tab focus and via a slow safety poll.
+  useLiveRefresh(elections.reload, { intervalMs: 120_000 });
 
   if (elections.loading && !elections.data) {
     return (

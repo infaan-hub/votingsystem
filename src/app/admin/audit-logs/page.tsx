@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/src/components/ui/table";
 import { apiRequest, displayDate, useResource } from "../_shared";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type Actor = { id: number; username: string; full_name: string } | null;
 
@@ -82,6 +83,10 @@ function AuditBody() {
     (authToken) => apiRequest<AuditPage>(authToken, `/api/admin/audit-logs?${params}`),
     [params],
   );
+
+  // New audit entries land while the log is open; refresh on live alerts and
+  // on tab focus (the current filters and page are kept).
+  useLiveRefresh(reload, { intervalMs: 180_000 });
 
   const rows = data?.results ?? [];
   const total = data?.total ?? 0;

@@ -11,6 +11,7 @@ import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type PublicElection = {
   id: number;
@@ -74,11 +75,13 @@ export default function ResultsPage() {
   const [featured, setFeatured] = useState<ResultsPayload | null>(null);
   const [featuredHidden, setFeaturedHidden] = useState(false);
 
-  const load = useCallback(async () => {
-    setElections(null);
-    setFeatured(null);
-    setFeaturedHidden(false);
-    setError("");
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setElections(null);
+      setFeatured(null);
+      setFeaturedHidden(false);
+      setError("");
+    }
     try {
       const response = await fetch("/api/elections");
       if (!response.ok) {
@@ -97,26 +100,34 @@ export default function ResultsPage() {
         try {
           const resultsResponse = await fetch(`/api/elections/${top.id}/results`);
           if (resultsResponse.status === 403) {
+            setFeatured(null);
             setFeaturedHidden(true);
           } else if (resultsResponse.ok) {
             setFeatured((await resultsResponse.json()) as ResultsPayload);
+            setFeaturedHidden(false);
           }
         } catch {
           setFeaturedHidden(true);
         }
       }
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not load results right now. Please try again.",
-      );
+      if (!options.silent) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "We could not load results right now. Please try again.",
+        );
+      }
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Published results and tallies can change while the page is open; refresh
+  // on live alerts (signed-in), on tab focus, and via a slow safety poll.
+  useLiveRefresh(() => void load({ silent: true }), { intervalMs: 60_000 });
 
   const rows = useMemo(() => elections ?? [], [elections]);
 

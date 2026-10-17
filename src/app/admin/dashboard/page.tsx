@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/src/components/ui/table";
 import { apiRequest, displayDate, useResource } from "../_shared";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type ElectionRow = { id: number; title: string; status: string };
 
@@ -86,6 +87,10 @@ export default function AdminDashboardPage() {
 
 function DashboardBody() {
   const { data, error, loading, reload } = useResource<DashboardData>(loadDashboard, []);
+
+  // Totals and activity move while the dashboard is open; refresh on live
+  // alerts, on tab focus and via a slow safety poll.
+  useLiveRefresh(reload, { intervalMs: 120_000 });
 
   if (loading && !data) {
     return (

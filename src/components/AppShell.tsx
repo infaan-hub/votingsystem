@@ -10,6 +10,7 @@ import { BrandLogo } from "@/src/components/brand-logo";
 import { Sidebar } from "@/src/components/sidebar";
 import { BottomNav } from "@/src/components/bottom-nav";
 import { InAppNotifier } from "@/src/components/in-app-notifier";
+import { LiveRefresher } from "@/src/components/live-refresher";
 import { NotificationBell } from "@/src/components/notification-bell";
 import { NotificationPermissionPrompt } from "@/src/components/notification-permission-prompt";
 import { OnboardingGate } from "@/src/components/onboarding-gate";
@@ -371,6 +372,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* In-app alerts: toasts fresh notifications while the tab is visible,
           complementing Web Push for users inside the app. */}
       <InAppNotifier />
+
+      {/* Live data: re-renders server-rendered screens when an alert lands. */}
+      <LiveRefresher />
 
       {/* First-run onboarding is mandatory: signed-in accounts that have not
           finished it on this device are sent to /onboarding from anywhere in

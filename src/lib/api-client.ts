@@ -142,7 +142,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return data as T;
 }
 
-export const fetchElections = () => request<unknown[]>("/elections/");
 export const login = (credentials: {
   username: string;
   password: string;

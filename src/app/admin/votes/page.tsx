@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/src/components/ui/table";
 import { apiRequest, useResource } from "../_shared";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type Tally = {
   kind: "candidate" | "option";
@@ -90,6 +91,10 @@ function VotesBody() {
     (authToken) => apiRequest<VotesReport>(authToken, "/api/admin/votes"),
     [],
   );
+
+  // Ballot counts grow while the report is open; refresh on live alerts, on
+  // tab focus and via a slow safety poll.
+  useLiveRefresh(reload, { intervalMs: 120_000 });
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");

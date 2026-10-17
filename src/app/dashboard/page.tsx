@@ -14,6 +14,7 @@ import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type PublicElection = {
   id: number;
@@ -70,9 +71,11 @@ function DashboardContent() {
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [campaignsError, setCampaignsError] = useState("");
 
-  const loadElections = useCallback(async () => {
-    setElections(null);
-    setElectionsError("");
+  const loadElections = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setElections(null);
+      setElectionsError("");
+    }
     try {
       // The token makes the list personal: `has_voted` drives the
       // "Already voted" state on each card.
@@ -83,28 +86,34 @@ function DashboardContent() {
       const data = (await response.json()) as PublicElection[];
       setElections(Array.isArray(data) ? data : []);
     } catch (requestError) {
-      setElectionsError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not load your elections. Please try again.",
-      );
+      if (!options.silent) {
+        setElectionsError(
+          requestError instanceof Error
+            ? requestError.message
+            : "We could not load your elections. Please try again.",
+        );
+      }
     }
   }, [token]);
 
-  const loadCampaigns = useCallback(async () => {
-    setCampaigns(null);
-    setCampaignsError("");
+  const loadCampaigns = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setCampaigns(null);
+      setCampaignsError("");
+    }
     try {
       const response = await fetch("/api/campaigns");
       if (!response.ok) throw new Error("We could not load campaigns. Please try again.");
       const data = (await response.json()) as Campaign[];
       setCampaigns(Array.isArray(data) ? data : []);
     } catch (requestError) {
-      setCampaignsError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not load campaigns. Please try again.",
-      );
+      if (!options.silent) {
+        setCampaignsError(
+          requestError instanceof Error
+            ? requestError.message
+            : "We could not load campaigns. Please try again.",
+        );
+      }
     }
   }, []);
 
@@ -112,6 +121,12 @@ function DashboardContent() {
     void loadElections();
     void loadCampaigns();
   }, [loadElections, loadCampaigns]);
+
+  // Voting windows open and campaigns go live while the dashboard is open.
+  useLiveRefresh(() => {
+    void loadElections({ silent: true });
+    void loadCampaigns({ silent: true });
+  }, { intervalMs: 120_000 });
 
   const openNow = useMemo(
     () => (elections ?? []).filter((election) => election.status === "active"),

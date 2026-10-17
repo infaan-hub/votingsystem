@@ -18,6 +18,7 @@ import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/src/components/ui/stat-card";
 import { useToast } from "@/src/components/ui/toast";
+import { useLiveRefresh } from "@/src/lib/live";
 import {
   ElectionPickerSection,
   ErrorBanner,
@@ -163,6 +164,14 @@ function ResultsBody() {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  // Ballots and publish state move while the page is open; refresh on live
+  // alerts, on tab focus and via a slow safety poll.
+  useLiveRefresh(() => {
+    list.reload();
+    results.reload();
+    card.reload();
+  }, { intervalMs: 120_000 });
   const votingEnded = selected?.voting_end_at
     ? new Date(selected.voting_end_at).getTime() <= now
     : false;

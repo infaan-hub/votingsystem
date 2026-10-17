@@ -150,16 +150,25 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
   };
 
   const markAll = async () => {
-    await markAllNotificationsRead(token);
-    setRows((prev) =>
-      prev.map((item) => ({ ...item, is_read: true, read_at: item.read_at ?? new Date().toISOString() })),
-    );
-    setUnread(0);
+    try {
+      await markAllNotificationsRead(token);
+      setRows((prev) =>
+        prev.map((item) => ({ ...item, is_read: true, read_at: item.read_at ?? new Date().toISOString() })),
+      );
+      setUnread(0);
+    } catch {
+      // Optimistic state may be wrong: reconcile with the server.
+      void refresh();
+    }
   };
 
   const removeRow = async (id: number) => {
-    await deleteNotification(token, id);
-    setRows((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await deleteNotification(token, id);
+      setRows((prev) => prev.filter((item) => item.id !== id));
+    } catch {
+      void refresh();
+    }
   };
 
   const showEnable =
@@ -291,7 +300,11 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
                     {!row.is_read ? (
                       <button
                         type="button"
-                        onClick={() => void markNotificationRead(token, row.id).then(refresh)}
+                        onClick={() =>
+                          void markNotificationRead(token, row.id)
+                            .then(refresh)
+                            .catch(() => refresh())
+                        }
                         aria-label="Mark as read"
                         title="Mark as read"
                         className="grid h-8 w-8 place-items-center rounded-md text-nv-muted transition-colors hover:bg-nv-primary-100 hover:text-nv-primary"

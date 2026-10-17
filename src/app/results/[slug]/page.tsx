@@ -12,6 +12,7 @@ import { ResultCard, type ResultCardPayload } from "@/src/components/result-card
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { useLiveRefresh } from "@/src/lib/live";
 import type { MyVote } from "@/src/lib/my-vote";
 
 type PageState = "loading" | "ready" | "pending" | "missing" | "error";
@@ -32,11 +33,13 @@ export default function ElectionResultCardPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [myVote, setMyVote] = useState<MyVote | null>(null);
 
-  const load = useCallback(async () => {
-    setState("loading");
-    setCard(null);
-    setErrorMessage("");
-    setMyVote(null);
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setState("loading");
+      setCard(null);
+      setErrorMessage("");
+      setMyVote(null);
+    }
     try {
       const response = await fetch(
         `/api/elections/${encodeURIComponent(slug)}/result-card/`,
@@ -71,18 +74,25 @@ export default function ElectionResultCardPage() {
       setCard((await response.json()) as ResultCardPayload);
       setState("ready");
     } catch (cause) {
-      setErrorMessage(
-        cause instanceof Error
-          ? cause.message
-          : "We could not load these results right now. Please try again.",
-      );
-      setState("error");
+      if (!options.silent) {
+        setErrorMessage(
+          cause instanceof Error
+            ? cause.message
+            : "We could not load these results right now. Please try again.",
+        );
+        setState("error");
+      }
     }
   }, [slug, token]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The tally can be published (or updated) while the card is open — refresh
+  // on live alerts, on tab focus, and via a slow safety poll without flashing
+  // the skeleton.
+  useLiveRefresh(() => void load({ silent: true }), { intervalMs: 60_000 });
 
   return (
     <div className="mx-auto w-full max-w-md space-y-4 pb-6">

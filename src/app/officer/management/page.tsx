@@ -46,6 +46,7 @@ import {
   windowText,
   type ManagedElection,
 } from "../_shared";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type VoterRow = {
   id: number;
@@ -174,6 +175,14 @@ function ManagementBody() {
         : Promise.resolve(null),
     [selected?.id ?? 0],
   );
+
+  // The voter roll and the counts move while the console is open; refresh on
+  // live alerts, on tab focus and via a slow safety poll.
+  useLiveRefresh(() => {
+    list.reload();
+    voters.reload();
+    overview.reload();
+  }, { intervalMs: 120_000 });
 
   const [mode, setMode] = useState("account");
   const [entryText, setEntryText] = useState("");

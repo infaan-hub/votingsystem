@@ -27,6 +27,7 @@ import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { KeyValueList, Section } from "@/src/components/ui/section";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { useLiveRefresh } from "@/src/lib/live";
 
 type PublicElection = {
   id: number;
@@ -192,10 +193,12 @@ function ElectionDetailContent() {
   const [resultsHidden, setResultsHidden] = useState(false);
   const [resultsLoading, setResultsLoading] = useState(false);
 
-  const load = useCallback(async () => {
-    setData(null);
-    setNotFound(false);
-    setError("");
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setData(null);
+      setNotFound(false);
+      setError("");
+    }
     const query = invite ? `?invite=${encodeURIComponent(invite)}` : "";
     try {
       const response = await fetch(`/api/elections/public/${encodeURIComponent(slug)}${query}`, {
@@ -210,11 +213,13 @@ function ElectionDetailContent() {
       }
       setData((await response.json()) as PublicDetailResponse);
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not load this election right now. Please try again.",
-      );
+      if (!options.silent) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "We could not load this election right now. Please try again.",
+        );
+      }
     }
   }, [slug, invite, token]);
 
@@ -255,12 +260,14 @@ function ElectionDetailContent() {
 
   const showResults = detail ? resultsAreShown(detail) : false;
 
-  const loadResults = useCallback(async () => {
+  const loadResults = useCallback(async (options: { silent?: boolean } = {}) => {
     if (!election) return;
-    setResultsLoading(true);
-    setResults(null);
-    setResultsError("");
-    setResultsHidden(false);
+    if (!options.silent) {
+      setResults(null);
+      setResultsError("");
+      setResultsHidden(false);
+      setResultsLoading(true);
+    }
     try {
       const response = await fetch(`/api/elections/${election.id}/results`, {
         headers: token ? { Authorization: `Token ${token}` } : {},
@@ -271,13 +278,18 @@ function ElectionDetailContent() {
         throw new Error("We could not load the results right now.");
       } else {
         setResults((await response.json()) as ResultsPayload);
+        // A tally published after this page opened clears the hidden state.
+        setResultsHidden(false);
+        setResultsError("");
       }
     } catch (requestError) {
-      setResultsError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We could not load the results right now.",
-      );
+      if (!options.silent) {
+        setResultsError(
+          requestError instanceof Error
+            ? requestError.message
+            : "We could not load the results right now.",
+        );
+      }
     } finally {
       setResultsLoading(false);
     }
@@ -288,6 +300,14 @@ function ElectionDetailContent() {
       void loadResults();
     }
   }, [showResults, election, results, resultsError, resultsHidden, resultsLoading, loadResults]);
+
+  // Status, window and tally can all change while the page is open. Live
+  // alerts (signed-in), tab focus and a slow safety poll re-fetch the detail
+  // and the results without flashing the page.
+  useLiveRefresh(() => {
+    void load({ silent: true });
+    void loadResults({ silent: true });
+  }, { intervalMs: 60_000 });
 
   const votingOpen = election?.status === "active";
   const categoryName =
@@ -424,6 +444,7 @@ function ElectionDetailContent() {
             target={election.voting_end_at}
             prefix="Voting closes in"
             className="mt-4 text-white/85 [&>span]:text-white"
+            onElapsed={() => void load()}
           />
         ) : election.status === "upcoming" ? (
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1">
@@ -432,6 +453,7 @@ function ElectionDetailContent() {
                 target={election.campaign_end_at}
                 prefix="Campaign closes in"
                 className="text-white/85 [&>span]:text-white"
+                onElapsed={() => void load()}
               />
             ) : null}
             {election.voting_start_at ? (
@@ -439,6 +461,7 @@ function ElectionDetailContent() {
                 target={election.voting_start_at}
                 prefix="Voting opens in"
                 className="text-white/85 [&>span]:text-white"
+                onElapsed={() => void load()}
               />
             ) : null}
           </div>

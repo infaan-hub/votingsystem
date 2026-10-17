@@ -472,22 +472,25 @@ export async function fetchUnreadCount(token: string): Promise<number> {
 }
 
 export async function markNotificationRead(token: string, id: number): Promise<void> {
-  await fetch(`${NOTIFICATIONS_PATH}/${id}/read`, {
+  const response = await fetch(`${NOTIFICATIONS_PATH}/${id}/read`, {
     method: "PATCH",
     headers: authHeaders(token),
   });
+  if (!response.ok) throw new Error("Could not mark the notification as read.");
 }
 
 export async function markAllNotificationsRead(token: string): Promise<void> {
-  await fetch(`${NOTIFICATIONS_PATH}/read-all`, {
+  const response = await fetch(`${NOTIFICATIONS_PATH}/read-all`, {
     method: "POST",
     headers: authHeaders(token),
   });
+  if (!response.ok) throw new Error("Could not mark the notifications as read.");
 }
 
 export async function deleteNotification(token: string, id: number): Promise<void> {
-  await fetch(`${NOTIFICATIONS_PATH}/${id}`, {
+  const response = await fetch(`${NOTIFICATIONS_PATH}/${id}`, {
     method: "DELETE",
     headers: authHeaders(token),
   });
+  if (!response.ok) throw new Error("Could not delete the notification.");
 }
