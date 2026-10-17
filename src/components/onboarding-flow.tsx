@@ -78,6 +78,11 @@ export function OnboardingFlow() {
     setBusy(true);
     setError(null);
     try {
+      // Request notification permission if not already granted
+      const support = getNotificationSupport();
+      if (support.status === "permission-required" || support.status === "supported") {
+        await requestNotificationPermission();
+      }
       const result = await subscribeToPush(token);
       if (result.ok) {
         setEnabled(true);

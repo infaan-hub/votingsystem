@@ -31,6 +31,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [supportNote, setSupportNote] = useState<string | null>(null);
 
   // Shown only when this device genuinely cannot receive sign-in codes yet
@@ -51,15 +52,32 @@ function LoginForm() {
    * gesture browsers require to open the dialog — then make sure this browser
    * has a push subscription ready. The login request carries it so an
    * account's first device receives its verification code on the device that
-   * is signing in.
+   * is signing in. If permission is not granted, login is blocked and the
+   * user is sent back to onboarding to enable notifications first.
    */
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const pushSubscription = await prepareNotificationDevice();
-      const result = await handleLogin({ username: identifier, password, pushSubscription });
+      // First ensure notification permission is granted before allowing login
+      const permissionResult = await prepareNotificationDevice();
+      if (!permissionResult) {
+        // Permission was not granted or not supported - block login and redirect to onboarding
+        const support = getNotificationSupport();
+        if (support.status === "permission-denied") {
+          setSupportNote("Notifications are blocked. Enable notifications for this site in your browser or system settings, then try again.");
+        } else if (support.status === "requires-home-screen-install") {
+          setSupportNote("On iPhone and iPad, NexVote must be installed to your Home Screen: tap the Share button in Safari, choose “Add to Home Screen”, then open NexVote from its icon and turn notifications on there.");
+        } else if (support.status === "unsupported") {
+          setSupportNote("This browser does not support push notifications. Please use a supported browser (Chrome, Edge, Firefox, or Samsung Internet).");
+        } else {
+          setSupportNote("Please enable notifications for this device before signing in.");
+        }
+        setLoading(false);
+        return;
+      }
+      const result = await handleLogin({ username: identifier, password, pushSubscription: permissionResult });
       if (result.status === "otp_required") {
         // Password accepted; a 6-digit code is waiting on the user's
         // notification devices. Hand the challenge to the verification step.
@@ -88,6 +106,22 @@ function LoginForm() {
       setLoading(false);
     }
   }
+
+  // After login, check notification permission and show guidance if needed
+  useEffect(() => {
+    const checkAndShowNotificationGuidance = async () => {
+      if (!user) return;
+      const support = getNotificationSupport();
+      // Show support note if permission is denied or requires home screen install
+      if (support.status === "permission-denied" || support.status === "requires-home-screen-install") {
+        setSupportNote(support.detail);
+      } else if (support.status === "supported" && !enabled) {
+        // User is logged in but notifications not enabled - show prompt
+        // This will be handled by the onboarding flow on next navigation
+      }
+    };
+    checkAndShowNotificationGuidance();
+  }, [user]);
 
   return (
     <AuthCard>
@@ -136,7 +170,7 @@ function LoginForm() {
 
       <GoogleSignInButton
         className="mt-4"
-        disabled={loading}
+        disabled={googleLoading}
         onSuccess={(user) =>
           router.push(dashboardPathFor(user.role, searchParams.get("next")))
         }
