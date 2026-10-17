@@ -34,6 +34,13 @@ import { t } from "@/config/tenant";
 /** Set to "1" by "Got it"; the badge then never comes back on this device. */
 export const INSTALL_BADGE_DISMISSAL_KEY = "nexvote-install-badge-dismissed";
 
+/**
+ * Set to "1" when the browser's install prompt ends in "dismissed". A later
+ * `beforeinstallprompt` clears it, because the browser only re-offers the
+ * prompt when it is ready to show it again.
+ */
+export const INSTALL_PROMPT_DISMISSED_KEY = "nexvote-install-prompt-dismissed";
+
 type InstallDevice = "ios" | "android" | "desktop";
 
 function readInstallBadgeDismissed(): boolean {
@@ -51,6 +58,33 @@ function writeInstallBadgeDismissed(): void {
     window.localStorage.setItem(INSTALL_BADGE_DISMISSAL_KEY, "1");
   } catch {
     /* private mode / storage disabled: the badge simply reappears later */
+  }
+}
+
+function readInstallPromptDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeInstallPromptDismissed(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, "1");
+  } catch {
+    /* private mode / storage disabled: hints simply stay generic */
+  }
+}
+
+function clearInstallPromptDismissed(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(INSTALL_PROMPT_DISMISSED_KEY);
+  } catch {
+    /* nothing to clear */
   }
 }
 
@@ -126,6 +160,9 @@ export function InstallAppProvider({ children }: { children: React.ReactNode }) 
       // Swallow Chromium's automatic mini-infobar; the badge/dialog own the
       // install call-to-action.
       event.preventDefault();
+      // A fresh offer means the browser is willing again: clear the dismissal
+      // noted from any earlier prompt so the dialog shows the live button.
+      clearInstallPromptDismissed();
       setPromptEvent(event as BeforeInstallPromptEvent);
     };
     const onInstalled = () => {
@@ -160,18 +197,23 @@ export function InstallAppProvider({ children }: { children: React.ReactNode }) 
   const promptInstall = useCallback(async (): Promise<PromptInstallResult> => {
     const event = promptEvent;
     if (!event) return "unavailable";
-    // A captured event can be prompted only once.
-    setPromptEvent(null);
     try {
       await event.prompt();
       const choice = await event.userChoice;
+      // A captured event can be prompted only once — drop it either way.
+      setPromptEvent(null);
       if (choice?.outcome === "accepted") {
         setInstalled(true);
         setDialogOpen(false);
         return "accepted";
       }
+      writeInstallPromptDismissed();
       return "dismissed";
     } catch {
+      // The browser refused the prompt (typically after an earlier dismissal):
+      // the event is spent, but a later beforeinstallprompt re-arms it.
+      setPromptEvent(null);
+      writeInstallPromptDismissed();
       return "dismissed";
     }
   }, [promptEvent]);
@@ -315,9 +357,15 @@ function InstallAppDialog() {
   const [hint, setHint] = useState<string | null>(null);
   const dialogOpen = context?.dialogOpen ?? false;
 
-  // A fresh open always starts without a stale hint.
+  // A fresh open starts without a stale hint, except when the browser's
+  // install prompt was dismissed earlier: the manual route is then shown
+  // straight away instead of demanding a dead click.
   useEffect(() => {
-    if (!dialogOpen) setHint(null);
+    if (!dialogOpen) {
+      setHint(null);
+      return;
+    }
+    setHint(readInstallPromptDismissed() ? DISMISSED_HINT : null);
   }, [dialogOpen]);
 
   if (!context) return null;

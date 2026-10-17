@@ -607,7 +607,12 @@ function CampaignsBody() {
               size="dense"
               className="w-auto"
               onClick={() => {
-                if (detail) openModeration(detail);
+                if (!detail) return;
+                // Close the detail dialog first: stacking both dialogs would
+                // put two elements with the same aria-labelledby id on screen.
+                const target = detail;
+                setDetail(null);
+                openModeration(target);
               }}
             >
               Moderate

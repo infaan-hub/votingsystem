@@ -1,13 +1,16 @@
 import { makeRoute } from "@/src/lib/api";
 import { notFoundModel } from "@/src/lib/http";
-import { prisma } from "@/src/lib/db";
+import { campaignForMedia } from "@/src/lib/campaign-access";
+import { authenticateQueryToken } from "@/src/lib/auth";
 
 export const GET = makeRoute({
   intParams: ["pk"],
   handlers: {
-    GET: async (_req, params) => {
+    GET: async (req, params, state) => {
       const pk = Number(params.pk);
-      const campaign = await prisma.campaign.findUnique({ where: { id: pk } });
+      // <img> tags cannot send headers: the staff preview token may be in the query.
+      const viewer = state.user ?? (await authenticateQueryToken(req)).user;
+      const campaign = await campaignForMedia(pk, viewer);
       if (!campaign || !campaign.imageBytes || !campaign.imageBytes.length) {
         throw notFoundModel("Campaign image");
       }

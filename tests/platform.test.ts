@@ -617,6 +617,16 @@ describe("platform: campaigns and results", () => {
     const campaign = await readJson(created);
     expect(campaign.status).toBe("PUBLISHED");
 
+    // The public feed follows the election's publication: while the election
+    // is unpublished it stays empty even for PUBLISHED campaigns.
+    const unpublishedFeed = await call(publicCampaignsGET, jsonRequest("/api/campaigns"));
+    expect(((await unpublishedFeed.json()) as unknown[]).length).toBe(0);
+
+    await prisma.election.update({
+      where: { id: seed.electionId },
+      data: { isPublished: true },
+    });
+
     const publicFeed = await call(publicCampaignsGET, jsonRequest("/api/campaigns"));
     const feed = (await publicFeed.json()) as Array<{ id: number; topic: string }>;
     expect(feed).toHaveLength(1);

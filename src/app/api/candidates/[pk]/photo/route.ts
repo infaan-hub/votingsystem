@@ -1,5 +1,6 @@
 import { makeRoute } from "@/src/lib/api";
 import { ApiError, notFoundModel } from "@/src/lib/http";
+import { legacyMediaRedirect } from "@/src/lib/media";
 import { prisma } from "@/src/lib/db";
 
 export const GET = makeRoute({
@@ -18,11 +19,8 @@ export const GET = makeRoute({
           },
         });
       }
-      if (candidate.photo) {
-        throw new ApiError(302, {
-          detail: "Candidate photo is stored outside database media.",
-        });
-      }
+      const redirect = legacyMediaRedirect(candidate.photo);
+      if (redirect) return redirect;
       throw new ApiError(404, { detail: "Not found." });
     },
   },

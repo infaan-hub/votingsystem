@@ -1446,6 +1446,20 @@ describe("VotingApiTests", () => {
     expect(rangedResponse.status).toBe(206);
     expect(rangedResponse.headers.get("Content-Range")).toMatch(/^bytes 0-3\/\d+$/);
     expect((await rangedResponse.arrayBuffer()).byteLength).toBe(4);
+    // `bytes=-N` is a suffix range: the LAST N bytes, not the first N.
+    const suffixResponse = await call(
+      candidateVideoGET,
+      jsonRequest(String(payload.campaign_video_url), {
+        headers: { Range: "bytes=-4" },
+      }),
+      { pk: String(campaignCandidate.id) },
+    );
+    expect(suffixResponse.status).toBe(206);
+    const suffixRange = suffixResponse.headers.get("Content-Range") ?? "";
+    const suffixMatch = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(suffixRange);
+    expect(suffixMatch).toBeTruthy();
+    expect(Number(suffixMatch![2]) - Number(suffixMatch![1]) + 1).toBe(4);
+    expect(Number(suffixMatch![3])).toBe(MP4_BYTES.byteLength);
     const stored = await prisma.candidate.findUnique({
       where: { id: campaignCandidate.id },
     });

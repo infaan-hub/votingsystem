@@ -1,6 +1,6 @@
 import { makeRoute } from "@/src/lib/api";
 import { ApiError, notFoundModel } from "@/src/lib/http";
-import { serveVideoBuffer } from "@/src/lib/media";
+import { legacyMediaRedirect, serveVideoBuffer } from "@/src/lib/media";
 import { prisma } from "@/src/lib/db";
 
 export const GET = makeRoute({
@@ -20,11 +20,8 @@ export const GET = makeRoute({
           req,
         );
       }
-      if (candidate.campaignVideo) {
-        throw new ApiError(302, {
-          detail: "Campaign video is stored outside database media.",
-        });
-      }
+      const redirect = legacyMediaRedirect(candidate.campaignVideo);
+      if (redirect) return redirect;
       throw new ApiError(404, { detail: "Not found." });
     },
   },

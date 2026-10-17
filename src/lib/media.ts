@@ -41,8 +41,23 @@ export function serveVideoBuffer(
     });
   }
 
-  const start = match[1] ? Number(match[1]) : 0;
-  let end = match[2] ? Number(match[2]) : size - 1;
+  let start: number;
+  let end: number;
+  if (!match[1]) {
+    // `bytes=-N` asks for the LAST N bytes (suffix range), not the first N.
+    const suffix = Number(match[2]);
+    if (!Number.isFinite(suffix) || suffix <= 0) {
+      return new Response(null, {
+        status: 416,
+        headers: { "Content-Range": `bytes */${size}` },
+      });
+    }
+    start = Math.max(0, size - suffix);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : size - 1;
+  }
   if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) {
     return new Response(null, {
       status: 416,
@@ -251,6 +266,18 @@ export type VideoProbe = {
   durationMs: number | null;
   container: "mp4" | "matroska" | "riff" | "unknown";
 };
+
+/**
+ * Legacy media columns (Candidate.photo, Election.image, …) may hold an
+ * absolute URL from before media bytes moved into the database. Those values
+ * redirect; dead relative paths fall through to the caller's 404 so a client
+ * never receives a bodiless JSON body with status 302.
+ */
+export function legacyMediaRedirect(value: string | null | undefined): Response | null {
+  const raw = (value ?? "").trim();
+  if (!/^https?:\/\//i.test(raw)) return null;
+  return new Response(null, { status: 302, headers: { Location: raw } });
+}
 
 /** Reads the real duration of a video buffer, or null when undeterminable. */
 export function probeVideo(bytes: Uint8Array): VideoProbe {

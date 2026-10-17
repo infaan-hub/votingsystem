@@ -106,6 +106,7 @@ export const GET = makeRoute({
       const campaigns = await prisma.campaign.findMany({
         where: {
           status: "PUBLISHED",
+          election: { isPublished: true },
           ...(electionId !== undefined ? { electionId } : {}),
           ...(q
             ? {

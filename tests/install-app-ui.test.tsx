@@ -12,6 +12,7 @@ import {
 
 import {
   INSTALL_BADGE_DISMISSAL_KEY,
+  INSTALL_PROMPT_DISMISSED_KEY,
   InstallAppProvider,
   InstallAppSidebarItem,
 } from "@/src/components/install-app";
@@ -153,5 +154,28 @@ describe("install app prompt", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Download app" }));
 
     expect(await within(dialog).findByText(/has not offered an install prompt/)).toBeTruthy();
+  });
+
+  it("keeps the manual route after the browser prompt is dismissed", async () => {
+    renderInstall();
+
+    const event = makePromptEvent("dismissed");
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    fireEvent.click(await screen.findByTestId("install-app-badge"));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Download app" }));
+
+    await waitFor(() => expect(event.prompt).toHaveBeenCalledTimes(1));
+    expect(await within(dialog).findByText(/Install was dismissed/)).toBeTruthy();
+    expect(window.localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY)).toBe("1");
+
+    // Reopening surfaces the manual steps straight away — no dead click.
+    fireEvent.click(within(dialog).getByRole("button", { name: "Got it" }));
+    fireEvent.click(screen.getByTestId("install-app-sidebar-item"));
+    const reopened = await screen.findByRole("dialog");
+    expect(within(reopened).getByText(/Install was dismissed/)).toBeTruthy();
   });
 });

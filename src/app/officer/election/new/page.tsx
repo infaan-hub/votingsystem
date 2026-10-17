@@ -15,6 +15,7 @@ import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
 import { useApp } from "@/src/components/AppProvider";
 import { FormAlert, apiFetch, firstError, splitError } from "../../_shared";
+import { MAX_IMAGE_BYTES } from "@/src/lib/media";
 
 type CandidateDraft = {
   key: string;
@@ -675,6 +676,7 @@ function ImageFileField({
   onChange: (file: File | null) => void;
   error?: string;
 }) {
+  const [sizeError, setSizeError] = useState<string | null>(null);
   return (
     <div className="w-full">
       <label
@@ -689,16 +691,30 @@ function ImageFileField({
           <input
             id={id}
             type="file"
-            accept="image/*"
-            onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => {
+              const next = event.target.files?.[0] ?? null;
+              if (next && next.size > MAX_IMAGE_BYTES) {
+                // The server enforces the same cap; catching it here saves a
+                // pointless upload round-trip.
+                setSizeError(
+                  `Image is too large. The limit is ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.`,
+                );
+                event.target.value = "";
+                onChange(null);
+                return;
+              }
+              setSizeError(null);
+              onChange(next);
+            }}
             className="block w-full text-[13px] text-nv-text file:mr-3 file:rounded-md file:border file:border-nv-line file:bg-nv-surface file:px-3 file:py-2 file:text-[12px] file:font-bold file:uppercase file:tracking-[0.5px] file:text-nv-ink"
           />
           <p className="mt-1.5 text-[12px] text-nv-muted">{hint}</p>
         </div>
       </div>
-      {error ? (
+      {error || sizeError ? (
         <p role="alert" className="mt-1 text-[12px] font-medium text-nv-danger">
-          {error}
+          {error || sizeError}
         </p>
       ) : null}
     </div>

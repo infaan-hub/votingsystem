@@ -1,14 +1,18 @@
 import { makeRoute } from "@/src/lib/api";
 import { notFoundModel } from "@/src/lib/http";
 import { serveVideoBuffer } from "@/src/lib/media";
-import { prisma } from "@/src/lib/db";
+import { campaignForMedia } from "@/src/lib/campaign-access";
+import { authenticateQueryToken } from "@/src/lib/auth";
 
 export const GET = makeRoute({
   intParams: ["pk"],
   handlers: {
-    GET: async (req, params) => {
+    GET: async (req, params, state) => {
       const pk = Number(params.pk);
-      const campaign = await prisma.campaign.findUnique({ where: { id: pk } });
+      // Staff previews of unpublished campaigns arrive from <video> tags, so
+      // the token may travel in the query instead of the Authorization header.
+      const viewer = state.user ?? (await authenticateQueryToken(req)).user;
+      const campaign = await campaignForMedia(pk, viewer);
       if (!campaign) throw notFoundModel("Campaign");
       if (campaign.videoBytes && campaign.videoBytes.length) {
         return serveVideoBuffer(

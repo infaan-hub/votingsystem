@@ -125,11 +125,19 @@ function ResultsBody() {
   const [selectedId, setSelectedId] = useState("");
   const [action, setAction] = useState<ResultAction | null>(null);
   const [pending, setPending] = useState(false);
+  // Clock snapshot for "voting window has ended" checks. Reading Date.now()
+  // during render is impure and rejected by the React lint rules, so it is
+  // captured in an effect whenever the selected election changes.
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
     const param = new URLSearchParams(window.location.search).get("election");
     if (param) setSelectedId(param);
   }, []);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, [selectedId]);
 
   const electionRows = elections.data ?? [];
 
@@ -172,6 +180,16 @@ function ResultsBody() {
     if (selected.status === "RESULTS_PUBLISHED") return ["unpublish"];
     return [];
   }, [selected]);
+
+  // Officer-created elections are born OPEN and stay there until closed, but
+  // the admin tally actions only unlock on CLOSED — so point out the missing
+  // step instead of showing the generic "once voting is closed" line.
+  const openPastWindow = useMemo(() => {
+    if (!selected || selected.status !== "OPEN" || !selected.voting_end_at) return false;
+    if (now === null) return false;
+    const end = new Date(selected.voting_end_at).getTime();
+    return Number.isFinite(end) && end <= now;
+  }, [selected, now]);
 
   async function runAction() {
     if (!action || !selectedId) return;
@@ -291,7 +309,9 @@ function ResultsBody() {
             <p className="text-[13px] text-nv-muted">
               {selected.status === "ARCHIVED"
                 ? "Archived elections have no further result actions."
-                : "Result actions appear once voting is closed."}
+                : openPastWindow
+                  ? "Voting has ended but the election is still OPEN. Close it from the Elections page (“Close voting”), then finalize and publish the tally here."
+                  : "Result actions appear once voting is closed."}
             </p>
           ) : null}
         </div>

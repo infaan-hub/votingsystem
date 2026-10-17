@@ -23,9 +23,10 @@ export function SearchInput({
   label?: string;
   className?: string;
 }) {
+  const inputId = React.useId();
   return (
     <div className={cn("relative w-full sm:max-w-xs", className)}>
-      <label htmlFor="table-search" className="sr-only">
+      <label htmlFor={inputId} className="sr-only">
         {label}
       </label>
       <Search
@@ -33,7 +34,7 @@ export function SearchInput({
         className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-nv-muted"
       />
       <input
-        id="table-search"
+        id={inputId}
         type="search"
         value={value}
         placeholder={placeholder}

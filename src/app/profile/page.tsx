@@ -297,7 +297,7 @@ export default function ProfilePage() {
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         className="sr-only"
         onChange={(event) => {
           const file = event.target.files?.[0];

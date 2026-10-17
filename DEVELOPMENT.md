@@ -791,3 +791,75 @@ persist exactly one row and the loser receives the normalised duplicate error.
   still evaluates the legacy academic eligibility rules. Non-academic
   eligibility, secret ballots, and multi-select submission are schema-ready but
   not yet wired into ``castVote``.
+
+---
+
+# Cycle 3 — Reliability hardening passes
+
+**Report date:** 2026-10-17
+**Scope:** a verified bug-fix pass over the shipped product, split by area
+(F1–F6) and run before new feature work. Each batch is lint-clean, type-clean
+and covered by the test suite before it is committed.
+
+## F1 — Voting correctness (``ee9f764``)
+
+- Vote-code issuance, submission validation and receipt handling hardened so a
+  ballot can neither be lost nor counted twice under retries.
+
+## F2 — Results and lifecycle (``6a1754f``)
+
+- Publication is explicit (``resultPublishedAt``); ``resultVisibility`` only
+  chooses which staff scope may preview tallies before publication.
+- Public results never carry tallies without ``includeTallies``;
+  non-published/DRAFT detail routes 404 for guests unless the caller is a
+  previewer or presents a valid private invite token.
+- Officer publish is an ``OPEN`` (past window)/``CLOSED``/``RESULTS_PUBLISHED``
+  action requiring at least one vote; admin finalize/publish is ``CLOSED``-only;
+  admin schedule and ``is_published`` edits freeze once voting starts.
+
+## F3 — Accounts and authentication (``6f6b376``)
+
+- Registration requires an email; emails and usernames are unique
+  case-insensitively across self-service, admin-created voters and Google
+  sign-in.
+- Google sign-in never silently links an existing password account; new
+  privileged accounts must already exist.
+- Password change (current password required, reuse refused) and email change
+  (password required) are supported; the profile UI gained the dialog.
+- Login/OTP limits are per client IP, count failures only, clear on success,
+  answer 429 and equalize login timing; logout consumes pending OTP challenges.
+- Image uploads are capped at 5 MB in the shared validator; the app only signs
+  out on a 401.
+
+## F4 — Media, PWA and consoles
+
+- The 5 MB image cap is now also enforced client-side; file pickers accept the
+  same ``image/jpeg,image/png,image/webp`` set the server validates.
+- Campaign media (cover, extra images, video) is public only for ``PUBLISHED``
+  campaigns on published elections. Drafts and other moderation states are
+  visible to the owner and in-scope officers via the ``Authorization`` header
+  or a ``?token=`` query, which the staff pages embed for ``<img>``/``<video>``
+  previews.
+- The public campaign feed follows ``election.isPublished``; legacy external
+  media URLs answer a real 302 and dead relative values answer 404 instead of a
+  bodiless JSON 302.
+- ``Range: bytes=-N`` suffix requests are honoured as the last N bytes (iOS and
+  Android video seeking).
+- Stacked dialogs no longer share a ``dialog-title`` id (``useId``, plus the
+  campaign detail dialog closes before moderation opens); search inputs use
+  ``useId`` instead of the fixed ``table-search`` id.
+- The PWA manifest is generated from ``config/tenant.ts``
+  (``src/app/manifest.ts``), so installed branding follows the deployment.
+- Service worker: the notification-target allowlist no longer contains ``/``
+  and matches on segment boundaries; navigations are network-first with a
+  cached offline fallback and ``/_next/static`` assets are cache-first. API and
+  Next.js RSC requests always bypass the cache.
+- Install-prompt dismissal is persisted: after a dismissed prompt the dialog
+  shows the manual browser-menu route immediately, and a later
+  ``beforeinstallprompt`` re-arms the button.
+- The admin results page points an ``OPEN`` election past its voting window at
+  the Elections "Close voting" action instead of a generic placeholder.
+- Admin election sub-resource endpoints (announcements, notices, schedule save,
+  admin candidates, push deliveries) remain API-only; they are intentionally
+  kept and covered by tests.
+

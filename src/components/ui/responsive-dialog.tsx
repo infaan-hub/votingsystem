@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/src/components/ui/button";
@@ -28,6 +28,7 @@ export function ResponsiveDialog({
   children,
   footer,
 }: ResponsiveDialogProps) {
+  const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -126,7 +127,7 @@ export function ResponsiveDialog({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
       onClick={(event) => {
         if (event.target === event.currentTarget) onOpenChangeRef.current(false);
       }}
@@ -153,7 +154,7 @@ export function ResponsiveDialog({
 
           <div className="flex items-start justify-between gap-3 p-5">
             <div>
-              <h2 id="dialog-title" className="text-fluid-lg font-semibold">
+              <h2 id={titleId} className="text-fluid-lg font-semibold">
                 {title}
               </h2>
               {description ? (

@@ -59,6 +59,27 @@ export async function authenticateRequest(req: Request): Promise<RequestState> {
   return { user: token.user, tokenKey: token.key };
 }
 
+/**
+ * Resolves a token supplied as `?token=` on a URL.
+ *
+ * `<img>` and `<video>` tags cannot send an Authorization header, so staff
+ * previews of unpublished media carry the token in the query instead. A
+ * missing or unknown token simply means anonymous here — media endpoints
+ * decide visibility and answer 404, they never throw 401 for a bad token.
+ */
+export async function authenticateQueryToken(req: Request): Promise<RequestState> {
+  const key = new URL(req.url).searchParams.get("token")?.trim();
+  if (!key) return { user: null, tokenKey: null };
+
+  const token = await prisma.token.findUnique({
+    where: { key },
+    include: { user: { include: USER_INCLUDE } },
+  });
+
+  if (!token || !token.user.isActive) return { user: null, tokenKey: null };
+  return { user: token.user, tokenKey: token.key };
+}
+
 export function requireStateUser(state: RequestState): UserWithRelations {
   if (!state.user) throw unauthenticated();
   return state.user;

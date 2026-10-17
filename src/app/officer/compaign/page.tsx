@@ -530,7 +530,7 @@ function CampaignBody() {
           <FileField
             id="campaign-image"
             label="Cover image"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             hint={`Optional. Up to ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB — JPG, PNG or WebP.`}
             error={firstError(fieldErrors, "image")}
             onChange={(file) => setForm((current) => ({ ...current, image: file }))}
@@ -540,7 +540,7 @@ function CampaignBody() {
             <FileField
               id="campaign-image2"
               label="Extra image 1 (optional)"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               hint={`Gallery image. Up to ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.${
                 editing ? " Replaces the current first extra image if one exists." : ""
               }`}
@@ -550,7 +550,7 @@ function CampaignBody() {
             <FileField
               id="campaign-image3"
               label="Extra image 2 (optional)"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               hint={`Gallery image. Up to ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.${
                 editing ? " Replaces the current second extra image if one exists." : ""
               }`}
@@ -639,6 +639,12 @@ function CampaignCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  // Unpublished campaign media is only served to its owner and to officers in
+  // scope, and <img> tags cannot send the Authorization header — the token
+  // rides in the query for those previews.
+  const { token } = useApp();
+  const withToken = (url: string) =>
+    token ? `${url}${url.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}` : url;
   const gallery = campaign.image_urls ?? [];
   // The cover renders as the card's main visual — only show the rest as thumbs.
   const extras = campaign.image_url
@@ -649,7 +655,7 @@ function CampaignCard({
       <div className="flex items-start gap-4">
         {campaign.image_url ? (
           <img
-            src={campaign.image_url}
+            src={withToken(campaign.image_url)}
             alt=""
             className="h-16 w-16 shrink-0 rounded-nv-md object-cover"
           />
@@ -697,7 +703,7 @@ function CampaignCard({
           {extras.map((url) => (
             <img
               key={url}
-              src={url}
+              src={withToken(url)}
               alt=""
               className="h-12 w-12 rounded-nv-md border border-nv-line object-cover"
             />
