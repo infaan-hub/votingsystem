@@ -18,6 +18,20 @@ export const LEGAL_TRANSITIONS: Record<string, string[]> = {
   ARCHIVED: [],
 };
 
+/**
+ * Resolves an election handle (numeric id or public slug) to a published
+ * election, so the ballot, code and cast routes agree on what they address.
+ */
+export async function findPublishedElection(handle: string): Promise<Election | null> {
+  const raw = (handle ?? "").trim();
+  if (!raw) return null;
+  return prisma.election.findFirst({
+    where: /^\d+$/.test(raw)
+      ? { id: Number(raw), isPublished: true }
+      : { slug: raw, isPublished: true },
+  });
+}
+
 export async function uniqueElectionSlug(base: string, excludeId?: number): Promise<string> {
   const root = slugify(base);
   const existing = await prisma.election.findMany({

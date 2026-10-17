@@ -1,11 +1,10 @@
 import { prisma } from "@/src/lib/db";
-import { ValidationError, pythonTextCompare } from "@/src/lib/validation";
-import { electionStatus, isVotingOpen, voterGroupLabel } from "@/src/lib/serializers";
+import { pythonTextCompare } from "@/src/lib/validation";
+import { electionStatus, voterGroupLabel } from "@/src/lib/serializers";
 import { DEFAULT_TIME_ZONE, formatDateTime, secondsUntil } from "@/src/lib/time";
 import type { UserWithRelations } from "@/src/lib/auth";
 import type {
   Announcement,
-  Candidate,
   Department,
   Election,
   Position,
@@ -20,7 +19,14 @@ type PositionRow = Position & {
   section: (Section & { department: Department | null }) | null;
 };
 
-function eligibleUsersWhere(position: PositionRow) {
+/**
+ * The scalar subset of a position that decides who may vote on it. Casting
+ * loads only the position row, so eligibility takes this shape instead of the
+ * fully hydrated PositionRow.
+ */
+export type PositionScope = Pick<Position, "voterGroup" | "departmentId" | "sectionId">;
+
+function eligibleUsersWhere(position: PositionScope) {
   const where: Record<string, unknown> = {
     isActive: true,
     role: { in: VOTING_ROLES },
@@ -48,7 +54,10 @@ export async function eligibleUserIdsForPosition(position: PositionRow): Promise
   return users.map((user) => user.id);
 }
 
-export function isUserEligible(position: PositionRow, user: UserWithRelations | User): boolean {
+export function isUserEligible(
+  position: PositionScope,
+  user: UserWithRelations | User,
+): boolean {
   if (!user || !("isActive" in user) || !user.isActive) return false;
   if (user.role === "admin") return false;
   if (
@@ -107,70 +116,6 @@ export function resultsVisible(election: Election, user?: UserWithRelations | nu
   // Legacy fallback: honor the old allowLiveResults flag when resultVisibility
   // is unrecognized. This keeps pre-migration elections working.
   return election.allowLiveResults || user.role === "admin" || user.role === "officer";
-}
-
-export async function castVote(voter: UserWithRelations, candidate: Candidate) {
-  const [election, position] = await Promise.all([
-    prisma.election.findUnique({ where: { id: candidate.electionId } }),
-    prisma.position.findUnique({
-      where: { id: candidate.positionId },
-      include: { department: true, section: { include: { department: true } } },
-    }),
-  ]);
-
-  if (!election || !position) {
-    throw ValidationError.fromMessage(
-      "A vote must be linked to a valid election position.",
-    );
-  }
-
-  if (!candidate.approved) {
-    throw ValidationError.fromDict({
-      candidate: "This candidate is not approved for voting yet.",
-    });
-  }
-
-  if (!isVotingOpen(election)) {
-    throw ValidationError.fromDict({
-      election: "Voting is not currently open for this election.",
-    });
-  }
-
-  if (!isUserEligible(position, voter)) {
-    throw ValidationError.fromDict({
-      voter: "You are not eligible to vote for this department or section position.",
-    });
-  }
-
-  const existing = await prisma.vote.findFirst({
-    where: { voterId: voter.id, electionId: election.id, positionId: position.id },
-  });
-  if (existing) {
-    throw ValidationError.fromDict({
-      __all__: "You have already voted for this position in this election.",
-    });
-  }
-
-  try {
-    // The (voterId, electionId, positionId) unique constraint is the
-    // authoritative duplicate guard: two concurrent submissions cannot both
-    // persist, so the loser surfaces here as a P2002 uniqueness violation.
-    return await prisma.vote.create({
-      data: {
-        voterId: voter.id,
-        candidateId: candidate.id,
-        electionId: election.id,
-        positionId: position.id,
-      },
-    });
-  } catch (error) {
-    if (isUniqueConstraintViolation(error)) {
-      throw ValidationError.fromDict({
-        __all__: "You have already voted for this position in this election.",
-      });
-    }
-    throw error;
-  }
 }
 
 export function isUniqueConstraintViolation(error: unknown): boolean {

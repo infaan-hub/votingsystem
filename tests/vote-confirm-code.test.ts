@@ -575,7 +575,7 @@ describe("POST /api/elections/[pk]/vote (code verification)", () => {
     expect(await prisma.vote.count()).toBe(0);
   });
 
-  it("keeps the legacy path: a voter with no device votes without a code", async () => {
+  it("keeps the legacy path: a voter with no device confirms with their password", async () => {
     const { election, position1, candidate1 } = await makeElection();
     const { token } = await makeVoter();
 
@@ -583,13 +583,32 @@ describe("POST /api/elections/[pk]/vote (code verification)", () => {
       votePOST,
       voteRequest(election.id, token, {
         selections: selectionsFor(position1.id, candidate1.id),
-        reauth: { password: "irrelevant" },
+        reauth: { password: "Pass1234!" },
       }),
       { pk: String(election.id) },
     );
     expect(response.status).toBe(201);
     expect(await prisma.vote.count()).toBe(1);
     expect(await prisma.voteConfirmCode.count()).toBe(0);
+  });
+
+  it("rejects a wrong password on the legacy path", async () => {
+    const { election, position1, candidate1 } = await makeElection();
+    const { token } = await makeVoter();
+
+    const response = await call(
+      votePOST,
+      voteRequest(election.id, token, {
+        selections: selectionsFor(position1.id, candidate1.id),
+        reauth: { password: "not-the-password" },
+      }),
+      { pk: String(election.id) },
+    );
+    expect(response.status).toBe(400);
+    const body = await readJson(response);
+    expect(String(body.detail)).toContain("password");
+    expect(body.password_required).toBe(true);
+    expect(await prisma.vote.count()).toBe(0);
   });
 });
 

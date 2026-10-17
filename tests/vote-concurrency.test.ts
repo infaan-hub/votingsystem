@@ -2,8 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/src/lib/db";
 import { hashPassword } from "@/src/lib/password";
 import { USER_INCLUDE } from "@/src/lib/auth";
-import { castVote } from "@/src/lib/services";
-import { ValidationError } from "@/src/lib/validation";
+import { normalizeBallotSelections, submitBallot } from "@/src/lib/vote-submit";
 import { resetDb } from "./helpers";
 
 const HOUR = 60 * 60 * 1000;
@@ -19,6 +18,8 @@ describe("ConcurrentVoteTests", () => {
       data: {
         title: "Race Election",
         slug: "race-election",
+        status: "OPEN",
+        isPublished: true,
         campaignStartAt: new Date(now - HOUR),
         campaignEndAt: new Date(now + HOUR),
         votingStartAt: new Date(now - HOUR),
@@ -29,21 +30,23 @@ describe("ConcurrentVoteTests", () => {
     const position = await prisma.position.create({
       data: { electionId: election.id, name: "President", voterGroup: "all", maxWinners: 1 },
     });
-    const candUsers = await Promise.all(
+    const candidates = await Promise.all(
       ["cand_one", "cand_two"].map((username, index) =>
-        prisma.user.create({
-          data: { username, password: hashPassword("Pass1234!"), role: "voter" },
-        }).then((user) =>
-          prisma.candidate.create({
-            data: {
-              userId: user.id,
-              electionId: election.id,
-              positionId: position.id,
-              approved: true,
-              featuredOrder: index,
-            },
-          }),
-        ),
+        prisma.user
+          .create({
+            data: { username, password: hashPassword("Pass1234!"), role: "voter" },
+          })
+          .then((user) =>
+            prisma.candidate.create({
+              data: {
+                userId: user.id,
+                electionId: election.id,
+                positionId: position.id,
+                approved: true,
+                featuredOrder: index,
+              },
+            }),
+          ),
       ),
     );
     const voter = await prisma.user.create({
@@ -53,16 +56,23 @@ describe("ConcurrentVoteTests", () => {
       where: { id: voter.id },
       include: USER_INCLUDE,
     }))!;
-    return { election, position, candidates: candUsers, voterWithRelations };
+    return { election, position, candidates, voterWithRelations };
   }
 
   it("persists exactly one vote when the same voter submits two concurrently", async () => {
-    const { candidates, voterWithRelations } = await seedRace();
+    const { election, position, candidates, voterWithRelations } = await seedRace();
     const [a, b] = candidates;
 
+    const firstEntries = await normalizeBallotSelections(election, voterWithRelations, [
+      { position_id: position.id, candidate_ids: [a.id] },
+    ]);
+    const secondEntries = await normalizeBallotSelections(election, voterWithRelations, [
+      { position_id: position.id, candidate_ids: [b.id] },
+    ]);
+
     const results = await Promise.allSettled([
-      castVote(voterWithRelations, a),
-      castVote(voterWithRelations, b),
+      submitBallot({ user: voterWithRelations, election, entries: firstEntries }),
+      submitBallot({ user: voterWithRelations, election, entries: secondEntries }),
     ]);
 
     const fulfilled = results.filter((r) => r.status === "fulfilled");
@@ -72,10 +82,30 @@ describe("ConcurrentVoteTests", () => {
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     const failure = rejected[0] as PromiseRejectedResult;
-    expect(failure.reason).toBeInstanceOf(ValidationError);
-    expect(JSON.stringify(failure.reason.errorDict)).toContain("already voted");
+    expect(JSON.stringify(failure.reason.body)).toContain("already voted");
 
     const stored = await prisma.vote.findMany({ where: { voterId: voterWithRelations.id } });
     expect(stored).toHaveLength(1);
+    expect(await prisma.voteSubmission.count()).toBe(1);
+  });
+
+  it("replays the first receipt when the SAME request is retried concurrently", async () => {
+    const { election, position, candidates, voterWithRelations } = await seedRace();
+    const [a] = candidates;
+    const entries = await normalizeBallotSelections(election, voterWithRelations, [
+      { position_id: position.id, candidate_ids: [a.id] },
+    ]);
+    const key = "concurrent-retry-key";
+
+    const results = await Promise.allSettled([
+      submitBallot({ user: voterWithRelations, election, entries, idempotencyKey: key }),
+      submitBallot({ user: voterWithRelations, election, entries, idempotencyKey: key }),
+    ]);
+
+    const receipts = results.filter((r) => r.status === "fulfilled").map((r) => r.value.receiptCode);
+    expect(receipts).toHaveLength(2);
+    expect(new Set(receipts).size).toBe(1);
+
+    expect(await prisma.vote.count({ where: { voterId: voterWithRelations.id } })).toBe(1);
   });
 });

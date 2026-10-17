@@ -1,9 +1,9 @@
 import { json, makeRoute } from "@/src/lib/api";
 import { ApiError, badRequest, notFoundModel } from "@/src/lib/http";
-import { prisma } from "@/src/lib/db";
-import { requireStateUser } from "@/src/lib/auth";
+import { findPublishedElection } from "@/src/lib/elections";
+import { isAcceptingVotes } from "@/src/lib/serializers";
 import { readPayload } from "@/src/lib/request";
-import { checkElectionEligibility } from "@/src/lib/eligibility";
+import { requireStateUser } from "@/src/lib/auth";
 import {
   OTP_RESEND_COOLDOWN_MS,
   resendVoteCode,
@@ -14,16 +14,21 @@ const FAILURE_DETAIL: Record<VoteCodeResendFailure, string> = {
   unknown_challenge: "This verification attempt could not be found. Close this dialog and try again.",
   already_used: "This code was already used. Please confirm your vote with a new code.",
   expired: "This code has expired. Please confirm your vote with a new code.",
-  max_sends: "Maximum resends reached. Close this dialog and open it again for a fresh code.",
+  locked: "Too many incorrect attempts. Request a fresh code.",
+  max_sends: "Maximum resends reached. Request a fresh code.",
   cooldown: "Please wait before requesting another code.",
   wrong_owner: "This verification attempt could not be found.",
 };
 
 /**
  * POST /api/elections/[pk]/vote/code/resend — rotates the code on the SAME
- * challenge (fresh expiry, attempt counter reset) and delivers it again.
+ * challenge (fresh expiry, same attempt budget) and delivers it again.
  * The cooldown and send-cap live on the row, so they are durable across
  * serverless invocations.
+ *
+ * Eligibility is not re-checked here: the challenge only exists because the
+ * voter passed it at issuance, and the cast route re-checks it (identifier
+ * included) before any vote is stored.
  */
 export const POST = makeRoute({
   permission: "authenticated",
@@ -31,22 +36,10 @@ export const POST = makeRoute({
     POST: async (req, params, state) => {
       const user = requireStateUser(state);
 
-      const pk = params.pk ?? "";
-      const election = await prisma.election.findFirst({
-        where: pk && /^\d+$/.test(pk)
-          ? { id: Number(pk), isPublished: true }
-          : { slug: pk, isPublished: true },
-      });
+      const election = await findPublishedElection(params.pk ?? "");
       if (!election) throw notFoundModel("Election");
-
-      const now = new Date();
-      if (election.status !== "OPEN" || election.votingStartAt > now || election.votingEndAt < now) {
+      if (!isAcceptingVotes(election)) {
         throw badRequest({ detail: "Voting is not open for this election." });
-      }
-
-      const eligibility = await checkElectionEligibility(election, user, null);
-      if (!eligibility.eligible && !eligibility.requiresIdentifier) {
-        throw new ApiError(403, { detail: eligibility.reason });
       }
 
       const payload = await readPayload(req);
@@ -67,7 +60,7 @@ export const POST = makeRoute({
         }
         throw badRequest({
           detail: FAILURE_DETAIL[result.reason],
-          // Terminal states: the client should request a brand-new challenge.
+          // Terminal states: the client should request a brand-new code.
           needs_new_code: true,
         });
       }

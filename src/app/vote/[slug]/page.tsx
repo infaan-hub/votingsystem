@@ -3,13 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  CheckCircle2,
-  Fingerprint,
-  Loader2,
-  LogIn,
-  ShieldCheck,
-} from "lucide-react";
+import { CheckCircle2, Loader2, LogIn, ShieldCheck } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
 import { BackButton } from "@/src/components/back-button";
@@ -40,27 +34,33 @@ type BallotPosition = {
   }>;
 };
 
+type BallotEligibility = {
+  eligible: boolean;
+  reason: string;
+  requires_identifier: boolean;
+  identifier_label: string;
+  identifier_verified: boolean;
+};
+
 type BallotResponse = {
   election: { id: number; slug: string; title: string; authority: string; status: string };
   positions: BallotPosition[];
   voted_position_ids: number[];
   is_voting_open: boolean;
-};
-
-type Receipt = {
-  code: string;
-  castAt: string;
+  eligibility: BallotEligibility;
+  account_has_password: boolean;
 };
 
 /** Live confirmation challenge for (voter, election). */
 type CodeChallenge = { challengeId: number; expiresAt: string; codeLength: number };
 /**
- * "loading"  = asking the server which confirmation step applies;
- * "code"     = voter verifies with the notification code (required when the
- *              pipeline can reach them);
- * "legacy"   = password/biometric step for voters with no delivery channel.
+ * "loading"    = asking the server which confirmation step applies;
+ * "identifier" = the election needs the voter's identifier first;
+ * "code"       = voter verifies with the notification code (required when the
+ *                pipeline can reach them);
+ * "legacy"     = password step for voters with no delivery channel.
  */
-type ConfirmMode = "loading" | "legacy" | "code";
+type ConfirmMode = "loading" | "identifier" | "legacy" | "code";
 type IssueOutcome = "ok" | "forbidden" | "error";
 
 /** The exact question + choices the open confirm sheet will cast. */
@@ -69,6 +69,17 @@ type PendingVote = {
   positionName: string;
   candidateIds: number[];
   candidateNames: string[];
+  /** Stable across retries, so a dropped response replays the same receipt. */
+  idempotencyKey: string;
+};
+
+type FailureData = {
+  detail?: string;
+  attempts_remaining?: number;
+  needs_new_code?: boolean;
+  code_required?: boolean;
+  identifier_required?: boolean;
+  password_required?: boolean;
 };
 
 function formatClock(totalSeconds: number): string {
@@ -90,18 +101,10 @@ export default function VotePage({ params }: { params: Promise<{ slug: string }>
     return <BallotSkeleton />;
   }
 
-  return <Ballot slug={slug} token={token} onDone={(receipt) => router.push(`/vote/${slug}/thank-you?code=${encodeURIComponent(receipt.code)}`)} />;
+  return <Ballot slug={slug} token={token} onDone={() => router.push(`/vote/${slug}/thank-you`)} />;
 }
 
-function Ballot({
-  slug,
-  token,
-  onDone,
-}: {
-  slug: string;
-  token: string;
-  onDone: (receipt: Receipt) => void;
-}) {
+function Ballot({ slug, token, onDone }: { slug: string; token: string; onDone: () => void }) {
   const { toast } = useToast();
   const [ballot, setBallot] = useState<BallotResponse | null>(null);
   const [error, setError] = useState("");
@@ -117,6 +120,7 @@ function Ballot({
   const [issueError, setIssueError] = useState("");
   const [issuing, setIssuing] = useState(false);
   const [verifyError, setVerifyError] = useState("");
+  const [identifier, setIdentifier] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -165,8 +169,9 @@ function Ballot({
   const hasVoted = (ballot?.voted_position_ids ?? []).length > 0;
 
   /** Asks the server which confirmation step applies and fetches the code. */
-  async function requestCode(): Promise<IssueOutcome> {
+  async function requestCode(fresh = false, identifierOverride?: string): Promise<IssueOutcome> {
     if (!ballot) return "error";
+    const effectiveIdentifier = (identifierOverride ?? identifier).trim();
     setIssuing(true);
     setIssueError("");
     try {
@@ -176,7 +181,10 @@ function Ballot({
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          ...(effectiveIdentifier ? { identifier: effectiveIdentifier } : {}),
+          ...(fresh ? { fresh: true } : {}),
+        }),
       });
       const data = (await response.json().catch(() => ({}))) as {
         detail?: string;
@@ -184,8 +192,16 @@ function Ballot({
         code_length?: number;
         challenge_id?: number;
         expires_at?: string;
+        identifier_required?: boolean;
       };
       if (!response.ok) {
+        if (data.identifier_required) {
+          // The election needs this voter's identifier (missing or not
+          // matching): keep the sheet open on the identifier step.
+          setConfirmMode("identifier");
+          setIssueError(data.detail ?? "Enter your identifier to continue.");
+          return "ok";
+        }
         if (response.status === 403) {
           // Not allowed to vote in this election — never open the dialog.
           setError(data.detail ?? "You are not allowed to vote in this election.");
@@ -232,6 +248,7 @@ function Ballot({
         .map((id) => byId.get(id))
         .filter((candidate) => candidate !== undefined)
         .map((candidate) => candidate.user.full_name || candidate.user.username),
+      idempotencyKey: crypto.randomUUID(),
     });
     setError("");
     setVerifyError("");
@@ -239,6 +256,10 @@ function Ballot({
     setChallenge(null);
     setConfirming(true);
     setConfirmMode("loading");
+    if (ballot.eligibility.requires_identifier && !identifier.trim()) {
+      setConfirmMode("identifier");
+      return;
+    }
     const outcome = await requestCode();
     if (outcome === "forbidden") {
       setConfirming(false);
@@ -249,7 +270,19 @@ function Ballot({
     }
   }
 
-  /** Rotates the code; terminal states (expired/used) fall back to a fresh challenge. */
+  /** The voter confirmed the identifier: verify it and continue to the code. */
+  async function continueWithIdentifier() {
+    setConfirmMode("loading");
+    const outcome = await requestCode(false, identifier);
+    if (outcome === "forbidden") {
+      setConfirming(false);
+      setConfirmMode("legacy");
+    } else if (outcome === "error") {
+      setConfirmMode("identifier");
+    }
+  }
+
+  /** Rotates the code; terminal states (expired/used/locked) get a fresh one. */
   async function resendCode() {
     if (!ballot || !challenge) return;
     setVerifyError("");
@@ -289,7 +322,9 @@ function Ballot({
         return;
       }
       if (data.needs_new_code) {
-        const outcome = await requestCode();
+        // The old challenge is dead (locked / used / expired / out of sends):
+        // ask the server for a genuinely fresh code.
+        const outcome = await requestCode(true);
         if (outcome === "forbidden") {
           setConfirming(false);
           setConfirmMode("legacy");
@@ -311,35 +346,31 @@ function Ballot({
     if (!ballot || !pending) return;
     setSubmitting(true);
     try {
-      // Idempotency key so a retried or dropped request is not double-counted.
-      const idempotencyKey = crypto.randomUUID();
       const response = await fetch(`/api/elections/${ballot.election.id}/vote/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
-          "Idempotency-Key": idempotencyKey,
+          "Idempotency-Key": pending.idempotencyKey,
         },
         body: JSON.stringify({
           // Exactly the question the voter tapped — nothing else is required.
           selections: [
             { position_id: pending.positionId, candidate_ids: pending.candidateIds },
           ],
+          ...(identifier.trim() ? { identifier: identifier.trim() } : {}),
           ...extraBody,
         }),
       });
 
-      const data = (await response.json().catch(() => ({}))) as {
+      const data = (await response.json().catch(() => ({}))) as FailureData & {
         receipt_code?: string;
         cast_at?: string;
-        detail?: string;
-        attempts_remaining?: number;
-        needs_new_code?: boolean;
       };
 
       if (!response.ok) {
         const failure = new Error(data.detail ?? "Your vote could not be recorded.");
-        (failure as Error & { data?: typeof data }).data = data;
+        (failure as Error & { data?: FailureData }).data = data;
         throw failure;
       }
 
@@ -347,26 +378,28 @@ function Ballot({
       setPending(null);
       // One verified vote is the whole ballot: finish with the receipt
       // instead of asking the voter to answer every remaining question.
-      onDone({
-        code: data.receipt_code ?? "—",
-        castAt: data.cast_at ?? new Date().toISOString(),
-      });
+      onDone();
     } catch (submitError) {
       const message =
         submitError instanceof Error
           ? submitError.message
           : "Your vote could not be recorded. Please try again.";
-      const failureData = (submitError as { data?: { attempts_remaining?: number } }).data;
+      const failureData = (submitError as { data?: FailureData }).data;
 
-      if (confirmMode === "code") {
-        // Keep the dialog open so the voter can correct the code or request
-        // a fresh one — closing would throw away their typed ballot state.
-        const remaining = failureData?.attempts_remaining;
-        setVerifyError(
-          typeof remaining === "number" && remaining > 0
-            ? `${message} (${remaining} attempt${remaining === 1 ? "" : "s"} left)`
-            : message,
-        );
+      // Failures the voter can fix inside the open sheet (wrong/short code,
+      // missing identifier, wrong password) keep it open; terminal ones close.
+      const fixableInSheet = Boolean(
+        failureData &&
+          (failureData.identifier_required ||
+            failureData.password_required ||
+            failureData.code_required ||
+            failureData.needs_new_code ||
+            typeof failureData.attempts_remaining === "number"),
+      );
+
+      if (fixableInSheet) {
+        if (failureData?.identifier_required) setConfirmMode("identifier");
+        setVerifyError(message);
       } else {
         setError(message);
         setConfirming(false);
@@ -377,9 +410,9 @@ function Ballot({
     }
   }
 
-  /** Legacy confirmation step: password (or a client-side biometric gate). */
+  /** Legacy confirmation step: the account password, verified server-side. */
   const submit = (password: string) =>
-    submitBallot({ reauth: password ? { password } : { biometric: true } });
+    submitBallot(password ? { reauth: { password } } : { reauth: {} });
 
   /** Code confirmation step: the challenge is consumed server-side. */
   const submitWithCode = (code: string) => {
@@ -427,6 +460,9 @@ function Ballot({
 
   if (!ballot) return <BallotSkeleton />;
 
+  const eligibility = ballot.eligibility;
+  const blockedByEligibility = !eligibility.eligible && !eligibility.requires_identifier;
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       {/* ---------------- Header ---------------- */}
@@ -466,6 +502,21 @@ function Ballot({
             Voting is not open for this election right now.
           </CardContent>
         </Card>
+      ) : blockedByEligibility ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-nv-surface">
+              <ShieldCheck className="h-7 w-7 text-nv-muted" aria-hidden="true" />
+            </span>
+            <h2 className="text-fluid-lg text-nv-ink">You cannot vote in this election</h2>
+            <p className="max-w-sm text-[13px] text-nv-muted">
+              {eligibility.reason || "Your account is not eligible for this election."}
+            </p>
+            <Button asChild variant="outline" size="dense" className="w-auto">
+              <Link href={`/elections/${ballot.election.slug}`}>Back to election</Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : hasVoted ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
@@ -478,7 +529,7 @@ function Ballot({
               election needs.
             </p>
             <Button asChild variant="outline" size="dense" className="w-auto">
-              <Link href={`/elections/${ballot.election.slug}`}>Back to election</Link>
+              <Link href={`/vote/${ballot.election.slug}/thank-you`}>View your receipt</Link>
             </Button>
           </CardContent>
         </Card>
@@ -628,6 +679,11 @@ function Ballot({
         issueError={issueError}
         issuing={issuing}
         verifyError={verifyError}
+        identifier={identifier}
+        identifierLabel={eligibility.identifier_label}
+        hasPassword={ballot.account_has_password}
+        onIdentifierChange={setIdentifier}
+        onIdentifierContinue={() => void continueWithIdentifier()}
         onRequestCode={() => void requestCode()}
         onResend={() => void resendCode()}
         onVerify={submitWithCode}
@@ -647,6 +703,11 @@ function ConfirmSheet({
   issueError,
   issuing,
   verifyError,
+  identifier,
+  identifierLabel,
+  hasPassword,
+  onIdentifierChange,
+  onIdentifierContinue,
   onRequestCode,
   onResend,
   onVerify,
@@ -661,13 +722,17 @@ function ConfirmSheet({
   issueError: string;
   issuing: boolean;
   verifyError: string;
+  identifier: string;
+  identifierLabel: string;
+  hasPassword: boolean;
+  onIdentifierChange: (value: string) => void;
+  onIdentifierContinue: () => void;
   onRequestCode: () => void;
   onResend: () => void;
   onVerify: (code: string) => void;
   onConfirm: (password: string) => void;
 }) {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [digits, setDigits] = useState<string[]>(() => Array(OTP_LENGTH).fill(""));
   const [now, setNow] = useState(() => Date.now());
   const [resendCooldownUntil, setResendCooldownUntil] = useState(0);
@@ -675,7 +740,6 @@ function ConfirmSheet({
   useEffect(() => {
     if (open) {
       setPassword("");
-      setError("");
       setDigits(Array(OTP_LENGTH).fill(""));
       // Mirrors the server cooldown that started when the code was issued.
       setResendCooldownUntil(Date.now() + OTP_RESEND_COOLDOWN_MS);
@@ -708,27 +772,6 @@ function ConfirmSheet({
   const codeLength = challenge?.codeLength ?? OTP_LENGTH;
   const complete = digits.length === codeLength && digits.every((digit) => digit !== "");
 
-  // WebAuthn is offered when the platform supports it; otherwise the password
-  // path remains available so the step is never a dead end. (Legacy voters
-  // only — notification-enabled voters verify with their code instead.)
-  const supportsBiometrics =
-    typeof window !== "undefined" && "PublicKeyCredential" in window;
-
-  async function onBiometric() {
-    try {
-      await navigator.credentials.get({
-        publicKey: {
-          challenge: crypto.getRandomValues(new Uint8Array(32)),
-          timeout: 60000,
-          userVerification: "required",
-        },
-      });
-      onConfirm("");
-    } catch {
-      setError("Biometric check failed. Use your password instead.");
-    }
-  }
-
   const subjectLine = subject ? (
     <p className="text-[13px] text-nv-muted">
       You are voting for{" "}
@@ -748,6 +791,20 @@ function ConfirmSheet({
           <Button disabled>
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             Preparing…
+          </Button>
+        ) : mode === "identifier" ? (
+          <Button
+            onClick={onIdentifierContinue}
+            disabled={submitting || issuing || identifier.trim().length === 0}
+          >
+            {issuing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Checking…
+              </>
+            ) : (
+              "Continue"
+            )}
           </Button>
         ) : mode === "code" ? (
           <Button
@@ -784,6 +841,40 @@ function ConfirmSheet({
             <Loader2 className="h-6 w-6 animate-spin text-nv-primary" aria-hidden="true" />
             <p className="text-[13px] text-nv-muted">Preparing secure verification…</p>
           </div>
+        </div>
+      ) : mode === "identifier" ? (
+        <div className="space-y-4">
+          {subjectLine}
+
+          <p className="text-[13px] text-nv-ink">
+            This election confirms voters with their {identifierLabel.toLowerCase()}. Enter
+            yours to continue.
+          </p>
+
+          <Input
+            label={identifierLabel}
+            value={identifier}
+            onChange={(event) => onIdentifierChange(event.target.value)}
+            autoComplete="off"
+          />
+
+          {issueError ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 px-3 py-2.5 text-[12px] text-nv-danger"
+            >
+              {issueError}
+            </p>
+          ) : null}
+
+          {verifyError ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 px-3 py-2.5 text-[12px] text-nv-danger"
+            >
+              {verifyError}
+            </p>
+          ) : null}
         </div>
       ) : mode === "code" ? (
         <div className="space-y-4">
@@ -870,25 +961,27 @@ function ConfirmSheet({
         <div className="space-y-4">
           {subjectLine}
 
-          {supportsBiometrics ? (
-            <Button variant="dark" onClick={onBiometric} disabled={submitting}>
-              <Fingerprint className="h-4 w-4" aria-hidden="true" />
-              Use biometrics
-            </Button>
-          ) : null}
+          {hasPassword ? (
+            <Input
+              label="Confirm with your password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+            />
+          ) : (
+            <p className="text-[13px] text-nv-muted">
+              Confirm this vote with your account.
+            </p>
+          )}
 
-          <Input
-            label="Confirm with your password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-          />
-
-          {error ? (
-            <p role="alert" className="text-[12px] text-nv-danger">
-              {error}
+          {verifyError ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 px-3 py-2.5 text-[12px] text-nv-danger"
+            >
+              {verifyError}
             </p>
           ) : null}
         </div>
@@ -908,5 +1001,3 @@ function BallotSkeleton() {
     </div>
   );
 }
-
-export type { Receipt };

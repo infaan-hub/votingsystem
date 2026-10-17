@@ -28,7 +28,8 @@ import { GET as electionStatsGET } from "@/src/app/api/elections/[pk]/stats/rout
 import { GET as candidatePhotoGET } from "@/src/app/api/candidates/[pk]/photo/route";
 import { PATCH as meProfilePATCH } from "@/src/app/api/users/me/route";
 import { GET as candidateVideoGET } from "@/src/app/api/candidates/[pk]/campaign-video/route";
-import { POST as votesPOST } from "@/src/app/api/votes/route";
+import { USER_INCLUDE } from "@/src/lib/auth";
+import { normalizeBallotSelections, submitBallot } from "@/src/lib/vote-submit";
 import { POST as adminVotersPOST } from "@/src/app/api/admin/voters/route";
 import { GET as adminUsersGET } from "@/src/app/api/admin/users/route";
 import { PATCH as adminUserPATCH, DELETE as adminUserDELETE } from "@/src/app/api/admin/users/[user_id]/route";
@@ -90,6 +91,7 @@ async function seedApi() {
       votingStartAt: new Date(now - 2 * HOUR),
       votingEndAt: new Date(now + 4 * HOUR),
       allowLiveResults: true,
+      status: "OPEN",
     },
   });
   const hiddenElection = await prisma.election.create({
@@ -103,6 +105,7 @@ async function seedApi() {
       votingEndAt: new Date(now + HOUR),
       allowLiveResults: false,
       resultVisibility: "hidden",
+      status: "OPEN",
     },
   });
   const position = await prisma.position.create({
@@ -1167,7 +1170,7 @@ describe("VotingApiTests", () => {
   });
 
   it("serves the ballot and accepts votes", async () => {
-    const { election, candidate, candidateUser, voter, voterToken } = await seedApi();
+    const { election, candidate, voter, voterToken } = await seedApi();
 
     const ballotResponse = await call(
       electionBallotGET,
@@ -1179,31 +1182,22 @@ describe("VotingApiTests", () => {
     expect(ballot.is_voting_open).toBe(true);
     expect((ballot.positions as Array<{ name: string }>)[0].name).toBe("President");
 
-    const voteResponse = await call(
-      votesPOST,
-      jsonRequest("/api/votes/", {
-        method: "POST",
-        token: voterToken,
-        body: { candidate_id: candidate.id },
-      }),
-    );
-    expect(voteResponse.status).toBe(201);
-    expect((await readJson(voteResponse)).candidate).toBe(
-      `${candidateUser.firstName} ${candidateUser.lastName}`,
-    );
+    // Cast through the real submission service: multi-row handling, receipts
+    // and the duplicate guard are the same code the vote endpoint runs.
+    const voterRow = (await prisma.user.findUniqueOrThrow({
+      where: { id: voter.id },
+      include: USER_INCLUDE,
+    }))!;
+    const positionId = (ballot.positions as Array<{ id: number }>)[0].id;
+    const entries = await normalizeBallotSelections(election, voterRow, [
+      { position_id: positionId, candidate_ids: [candidate.id] },
+    ]);
+    const cast = await submitBallot({ user: voterRow, election, entries });
+    expect(cast.receiptCode).toHaveLength(24);
 
-    const secondVoteResponse = await call(
-      votesPOST,
-      jsonRequest("/api/votes/", {
-        method: "POST",
-        token: voterToken,
-        body: { candidate_id: candidate.id },
-      }),
-    );
-    expect(secondVoteResponse.status).toBe(400);
-    expect(JSON.stringify(await readJson(secondVoteResponse)).toLowerCase()).toContain(
-      "already voted",
-    );
+    await expect(
+      submitBallot({ user: voterRow, election, entries }),
+    ).rejects.toMatchObject({ status: 400 });
 
     const campaignsResponse = await call(
       electionCampaignsGET,

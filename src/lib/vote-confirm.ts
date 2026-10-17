@@ -67,10 +67,16 @@ export type VoteCodeIssueResult =
  * Issues (or reuses) the confirmation code for this voter in this election.
  * A live challenge is returned as-is — reopening the confirm sheet never
  * spams a second notification.
+ *
+ * `fresh: true` asks for a genuinely new code: a live challenge that can
+ * still send is rotated, while a locked or send-exhausted one is replaced by
+ * a brand-new challenge (so a voter is never stuck waiting on a dead code).
+ * The durable per-window issuance cap still bounds abuse.
  */
 export async function issueVoteCode(
   userId: number,
   election: Election,
+  options: { fresh?: boolean } = {},
 ): Promise<VoteCodeIssueResult> {
   const now = Date.now();
 
@@ -80,12 +86,36 @@ export async function issueVoteCode(
       electionId: election.id,
       consumedAt: null,
       expiresAt: { gte: new Date(now) },
-      // A locked challenge (attempt cap reached) is dead — never hand it back.
-      attempts: { lt: MAX_VOTE_CODE_ATTEMPTS },
     },
     orderBy: { id: "desc" },
   });
-  if (live) {
+
+  if (!options.fresh) {
+    // A locked challenge (attempt cap reached) is dead — never hand it back.
+    if (live && live.attempts < MAX_VOTE_CODE_ATTEMPTS) {
+      return {
+        ok: true,
+        challengeId: live.id,
+        expiresAt: live.expiresAt,
+        created: false,
+        sendCount: live.sendCount,
+      };
+    }
+  } else if (live && live.attempts < MAX_VOTE_CODE_ATTEMPTS && live.sendCount < MAX_VOTE_CODE_SENDS) {
+    // Still usable: rotate the code when the cooldown allows, otherwise hand
+    // back the live challenge (its code is still in the voter's notifications).
+    if (now - live.lastSentAt.getTime() >= OTP_RESEND_COOLDOWN_MS) {
+      const rotated = await resendVoteCode(live.id, userId, election);
+      if (rotated.ok) {
+        return {
+          ok: true,
+          challengeId: rotated.challengeId,
+          expiresAt: rotated.expiresAt,
+          created: true,
+          sendCount: rotated.sendCount,
+        };
+      }
+    }
     return {
       ok: true,
       challengeId: live.id,
@@ -131,6 +161,7 @@ export type VoteCodeResendFailure =
   | "unknown_challenge"
   | "already_used"
   | "expired"
+  | "locked"
   | "max_sends"
   | "cooldown"
   | "wrong_owner";
@@ -139,7 +170,11 @@ export type VoteCodeResendResult =
   | { ok: true; challengeId: number; expiresAt: Date; sendCount: number }
   | { ok: false; reason: VoteCodeResendFailure };
 
-/** Rotates the code on the SAME challenge (fresh expiry, attempts reset). */
+/**
+ * Rotates the code on the SAME challenge (fresh expiry). The attempt counter
+ * deliberately does NOT reset: resends must not multiply the guesses a
+ * challenge allows.
+ */
 export async function resendVoteCode(
   challengeId: number,
   userId: number,
@@ -151,6 +186,7 @@ export async function resendVoteCode(
   }
   if (challenge.consumedAt) return { ok: false, reason: "already_used" };
   if (challenge.expiresAt.getTime() < Date.now()) return { ok: false, reason: "expired" };
+  if (challenge.attempts >= MAX_VOTE_CODE_ATTEMPTS) return { ok: false, reason: "locked" };
   if (challenge.sendCount >= MAX_VOTE_CODE_SENDS) return { ok: false, reason: "max_sends" };
   if (Date.now() - challenge.lastSentAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
     return { ok: false, reason: "cooldown" };
@@ -164,7 +200,6 @@ export async function resendVoteCode(
     data: {
       codeHash: hashOtpCode(code),
       expiresAt,
-      attempts: 0,
       sendCount,
       lastSentAt: new Date(),
     },

@@ -1,18 +1,23 @@
 import { json, makeRoute } from "@/src/lib/api";
-import { badRequest, fieldErrors, notFoundModel } from "@/src/lib/http";
-import { Collector, intField } from "@/src/lib/fields";
-import { prisma } from "@/src/lib/db";
-import { readPayload } from "@/src/lib/request";
-import { requireStateUser } from "@/src/lib/auth";
+import { ApiError, badRequest, notFoundModel } from "@/src/lib/http";
+import { findPublishedElection } from "@/src/lib/elections";
 import { checkElectionEligibility } from "@/src/lib/eligibility";
-import { isUniqueConstraintViolation } from "@/src/lib/services";
-import { serializeElectionList } from "@/src/lib/serializers";
+import { isAcceptingVotes, serializeElectionList } from "@/src/lib/serializers";
+import { readPayload } from "@/src/lib/request";
+import { requireStateUser, type UserWithRelations } from "@/src/lib/auth";
+import { verifyPassword } from "@/src/lib/password";
+import {
+  assertNoExistingVotes,
+  lookupIdempotentReplay,
+  normalizeBallotSelections,
+  submitBallot,
+} from "@/src/lib/vote-submit";
 import {
   consumeVoteCode,
   voteCodeRequired,
   type VoteCodeVerifyFailure,
 } from "@/src/lib/vote-confirm";
-import crypto from "node:crypto";
+import type { Election } from "@/src/generated/prisma/client";
 
 const CODE_DETAIL: Record<VoteCodeVerifyFailure, string> = {
   unknown_challenge: "This verification code is not valid. Please try again.",
@@ -23,206 +28,142 @@ const CODE_DETAIL: Record<VoteCodeVerifyFailure, string> = {
 };
 
 /**
+ * The confirmation step, checked LAST so a rejected ballot never burns a valid
+ * code. Voters the notification pipeline can reach confirm with the code from
+ * their devices; everyone else confirms with their account password (checked
+ * server-side — a missing password on Google-only accounts is the one case
+ * where possession of the session is the whole proof).
+ */
+async function verifyConfirmation(
+  election: Election,
+  user: UserWithRelations,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  if (await voteCodeRequired(user.id)) {
+    const confirm = (payload.confirm_code ?? {}) as Record<string, unknown>;
+    const challengeId = Number(confirm.challenge_id);
+    const code = typeof confirm.code === "string" ? confirm.code.trim() : "";
+    if (!Number.isInteger(challengeId) || challengeId <= 0 || !code) {
+      throw badRequest({
+        detail: "Enter the verification code from your notifications to confirm your vote.",
+        code_required: true,
+      });
+    }
+
+    const verification = await consumeVoteCode(challengeId, code, user.id, election.id);
+    if (!verification.ok) {
+      throw badRequest({
+        detail: CODE_DETAIL[verification.reason],
+        attempts_remaining:
+          verification.reason === "wrong_code" ? verification.attemptsRemaining : 0,
+        needs_new_code: verification.reason !== "wrong_code",
+      });
+    }
+    return;
+  }
+
+  if (!user.password) return;
+
+  const reauth = (payload.reauth ?? {}) as Record<string, unknown>;
+  const password = typeof reauth.password === "string" ? reauth.password : "";
+  if (!password) {
+    throw badRequest({
+      detail: "Enter your account password to confirm your vote.",
+      password_required: true,
+    });
+  }
+  if (!verifyPassword(password, user.password)) {
+    throw badRequest({
+      detail: "That password is not correct.",
+      password_required: true,
+    });
+  }
+}
+
+/**
  * Casts a ballot for the authenticated voter.
  *
  * Body: `{ selections: [{ position_id, candidate_ids: number[] }],
- *          confirm_code?: { challenge_id, code }, reauth?: {...} }`
+ *          identifier?, confirm_code?: { challenge_id, code },
+ *          reauth?: { password } }`
  *
- * Integrity rules enforced here:
- *  - the election must exist, be published, and be open for voting;
- *  - when the voter can be notified (VAPID + subscribed device), a valid
- *    `confirm_code` — issued to this voter for THIS election, unexpired and
- *    single-use — is mandatory; the legacy `reauth` field only travels the
- *    fallback path for voters with no delivery channel;
- *  - every candidate must belong to the election and the question it is
- *    submitted for (cross-election / cross-question selections are rejected);
- *  - the number of selections cannot exceed the question's limit;
- *  - the one-vote-per-question guarantee comes from the database unique
- *    constraint, so two concurrent submissions cannot both persist;
- *  - a `Idempotency-Key` header makes a retried request replay the original
- *    receipt instead of casting a second ballot.
+ * Integrity rules enforced here, in order:
+ *  - the election must exist, be published, and be open for voting (status
+ *    OPEN inside its window — the same predicate the ballot uses);
+ *  - eligibility is checked on EVERY path, including identifier-based
+ *    methods: the voter must supply the matching identifier when the election
+ *    asks for one, and list/capacity/role rules always apply;
+ *  - every question and option must belong to this election, and the voter
+ *    must be eligible for that specific question (department/section/group);
+ *  - a `Idempotency-Key` header replays the original receipt instead of
+ *    casting a second ballot;
+ *  - one submission per (voter, election, question) is enforced by a database
+ *    unique constraint, so concurrent submissions cannot both persist;
+ *  - the confirmation code / password is consumed last and only after the
+ *    ballot would otherwise be accepted.
  */
 export const POST = makeRoute({
   permission: "authenticated",
   handlers: {
     POST: async (req, params, state) => {
       const user = requireStateUser(state);
-      const pk = params.pk ?? "";
-      const election = await prisma.election.findFirst({
-        where: pk && /^\d+$/.test(pk) ? { id: Number(pk), isPublished: true } : { slug: pk, isPublished: true },
-      });
-      if (!election) throw notFoundModel("Election");
 
-      const now = new Date();
-      if (election.status !== "OPEN" || election.votingStartAt > now || election.votingEndAt < now) {
-        throw fieldErrors({ election: "Voting is not open for this election." });
+      const election = await findPublishedElection(params.pk ?? "");
+      if (!election) throw notFoundModel("Election");
+      if (!isAcceptingVotes(election)) {
+        throw badRequest({ detail: "Voting is not open for this election." });
       }
 
       const payload = await readPayload(req);
-      const rawSelections = Array.isArray(payload.selections) ? payload.selections : [];
-      if (rawSelections.length === 0) {
-        throw fieldErrors({ selections: "Submit at least one selection." });
+      const identifier = typeof payload.identifier === "string" ? payload.identifier.trim() : "";
+
+      // 1. Election-level eligibility — never skipped, whatever the
+      //    confirmation channel turns out to be.
+      const eligibility = await checkElectionEligibility(election, user, identifier);
+      if (!eligibility.eligible) {
+        throw badRequest({
+          detail: eligibility.reason,
+          identifier_required: eligibility.requiresIdentifier,
+          identifier_label: eligibility.identifierLabel,
+        });
       }
 
-      // Validate every selection against the election and its own question.
-      const rows: Array<{ positionId: number; candidateId: number }> = [];
-      const perPosition = new Map<number, number[]>();
+      // 2. Selections: real questions, real options, per-question eligibility.
+      const entries = await normalizeBallotSelections(election, user, payload.selections);
 
-      for (const entry of rawSelections) {
-        const record = (entry ?? {}) as Record<string, unknown>;
-        const c = new Collector();
-        const positionId = intField(c, { position_id: record.position_id }, "position_id")!;
-        const ids = Array.isArray(record.candidate_ids) ? record.candidate_ids : [];
-        const candidateIds = ids.map((value) => Number(value)).filter((value) => Number.isInteger(value));
-        c.throwIfAny();
-
-        const position = await prisma.position.findFirst({
-          where: { id: positionId, electionId: election.id },
-        });
-        if (!position) {
-          throw fieldErrors({ selections: `Question ${positionId} is not part of this election.` });
-        }
-        if (candidateIds.length === 0) {
-          throw fieldErrors({ selections: `No option selected for "${position.name}".` });
-        }
-        if (candidateIds.length > Math.max(1, position.maxSelections)) {
-          throw fieldErrors({
-            selections: `"${position.name}" allows at most ${position.maxSelections} selection(s).`,
-          });
-        }
-        if (new Set(candidateIds).size !== candidateIds.length) {
-          throw fieldErrors({ selections: `Duplicate selection for "${position.name}".` });
-        }
-
-        // Reject candidates that belong to a different election or question.
-        const valid = await prisma.candidate.findMany({
-          where: {
-            id: { in: candidateIds },
-            electionId: election.id,
-            positionId: position.id,
-            approved: true,
-          },
-          select: { id: true },
-        });
-        if (valid.length !== candidateIds.length) {
-          throw fieldErrors({
-            selections: `One or more options in "${position.name}" are not valid for that question.`,
-          });
-        }
-
-        perPosition.set(positionId, candidateIds);
-        for (const candidateId of candidateIds) rows.push({ positionId, candidateId });
-      }
-
-      // Idempotent replay: a retried request returns the first receipt rather
-      // than recording a second ballot.
-      const idempotencyKey = req.headers.get("Idempotency-Key");
+      // 3. Retry replay, then the (indexed, non-race-safe) duplicate pre-check.
+      const idempotencyKey = (req.headers.get("Idempotency-Key") ?? "").trim() || null;
       if (idempotencyKey) {
-        const replay = await prisma.vote.findFirst({
-          where: {
-            voterId: user.id,
-            electionId: election.id,
-            idempotencyKey,
-          },
-          orderBy: { createdAt: "asc" },
-        });
-        if (replay) {
+        const replay = await lookupIdempotentReplay(user.id, election.id, entries, idempotencyKey);
+        if (replay.kind === "conflict") {
+          throw new ApiError(409, {
+            detail: "This retry key was already used with different selections.",
+          });
+        }
+        if (replay.kind === "match") {
           return json({
             receipt_code: replay.receiptCode,
-            cast_at: replay.createdAt,
+            cast_at: replay.castAt,
             election: serializeElectionList(election),
             replayed: true,
           });
         }
       }
+      await assertNoExistingVotes(user.id, election.id, entries);
 
-      // Already-voted questions are reported as duplicates, matching the single
-      // message used everywhere else for this failure.
-      const alreadyVoted = await prisma.vote.findMany({
-        where: {
-          voterId: user.id,
-          electionId: election.id,
-          positionId: { in: [...perPosition.keys()] },
+      // 4. Confirmation, then the transaction (replays a race winner too).
+      await verifyConfirmation(election, user, payload);
+      const result = await submitBallot({ user, election, entries, idempotencyKey });
+
+      return json(
+        {
+          receipt_code: result.receiptCode,
+          cast_at: result.castAt,
+          election: serializeElectionList(election),
+          replayed: result.replayed,
         },
-        select: { positionId: true },
-      });
-      if (alreadyVoted.length > 0) {
-        throw fieldErrors({ __all__: "You have already voted for this position in this election." });
-      }
-
-      // Vote confirmation code — required exactly when the notification
-      // pipeline can reach this voter (the same predicate that gates
-      // issuance), so notification-enabled voters verify with the code from
-      // their devices instead of password/biometrics, while everyone else
-      // keeps the legacy `reauth` path untouched. Checked LAST so a rejected
-      // ballot never burns a valid code.
-      if (await voteCodeRequired(user.id)) {
-        const confirm = (payload.confirm_code ?? {}) as Record<string, unknown>;
-        const challengeId = Number(confirm.challenge_id);
-        const code = typeof confirm.code === "string" ? confirm.code.trim() : "";
-        if (!Number.isInteger(challengeId) || challengeId <= 0 || !code) {
-          throw badRequest({
-            detail: "Enter the verification code from your notifications to confirm your vote.",
-            code_required: true,
-          });
-        }
-
-        // Allowed-to-vote is re-checked at consumption, not only at issuance.
-        const eligibility = await checkElectionEligibility(election, user, null);
-        if (!eligibility.eligible && !eligibility.requiresIdentifier) {
-          throw badRequest({ detail: eligibility.reason });
-        }
-
-        const verification = await consumeVoteCode(challengeId, code, user.id, election.id);
-        if (!verification.ok) {
-          throw badRequest({
-            detail: CODE_DETAIL[verification.reason],
-            attempts_remaining:
-              verification.reason === "wrong_code" ? verification.attemptsRemaining : 0,
-            needs_new_code: verification.reason !== "wrong_code",
-          });
-        }
-      }
-
-      const receiptCode = crypto.randomBytes(12).toString("hex").toUpperCase();
-      const keyToStore = idempotencyKey;
-
-      try {
-        const created = await prisma.$transaction(async (tx) => {
-          const votes = [];
-          for (const row of rows) {
-            votes.push(
-              await tx.vote.create({
-                data: {
-                  voterId: user.id,
-                  electionId: election.id,
-                  positionId: row.positionId,
-                  candidateId: row.candidateId,
-                  receiptCode,
-                  idempotencyKey: keyToStore,
-                },
-              }),
-            );
-          }
-          return votes;
-        });
-
-        return json(
-          {
-            receipt_code: receiptCode,
-            cast_at: created[0]?.createdAt ?? new Date(),
-            election: serializeElectionList(election),
-          },
-          201,
-        );
-      } catch (error) {
-        // The unique constraint is the authoritative duplicate guard, so a race
-        // loser surfaces here rather than at the pre-check above.
-        if (isUniqueConstraintViolation(error)) {
-          throw fieldErrors({ __all__: "You have already voted for this position in this election." });
-        }
-        throw error;
-      }
+        result.replayed ? 200 : 201,
+      );
     },
   },
 });

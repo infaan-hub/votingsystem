@@ -142,6 +142,7 @@ model User {
   pushSubscriptions  PushSubscription[] @relation("UserPushSubscriptions")
   otpChallenges      OtpChallenge[]     @relation("UserOtpChallenges")
   voteConfirmCodes   VoteConfirmCode[]  @relation("UserVoteConfirmCodes")
+  voteSubmissions    VoteSubmission[]
 
   @@index([role])
 }
@@ -209,6 +210,7 @@ model PushDelivery {
   acceptedAt     DateTime?
   createdAt      DateTime           @default(now())
 
+  @@unique([notificationId, subscriptionId])
   @@index([status, nextAttemptAt])
   @@index([notificationId])
 }
@@ -349,6 +351,7 @@ model Election {
   electionVoters ElectionVoter[]
   officerAssignments OfficerAssignment[]
   voteConfirmCodes VoteConfirmCode[]
+  voteSubmissions VoteSubmission[]
 
   @@index([categoryId])
   @@index([organizationId])
@@ -384,6 +387,7 @@ model Position {
   votes          Vote[]
   ballotOptions  BallotOption[]
   ratingCategories RatingCategory[]
+  voteSubmissions VoteSubmission[]
 
   @@unique([electionId, name, departmentId, sectionId])
   @@index([electionId])
@@ -573,6 +577,36 @@ model OpinionVote {
 // intentionally preserves the working single-select candidate flow.
 // ---------------------------------------------------------------------------
 
+/// One ballot submission = one voter answering one question. A question's
+/// choices (multi-select) all live in this row's `votes`, while the unique
+/// (voterId, electionId, positionId) key is the race-safe duplicate guard.
+/// `idempotencyKey` replays a dropped response instead of casting again.
+model VoteSubmission {
+  id             Int      @id @default(autoincrement())
+  voterId        Int
+  electionId     Int
+  positionId     Int
+  /// Client-supplied retry key; matched on replay, never trusted for content.
+  idempotencyKey String?
+  /// SHA-256 of the normalized selections, so a key reused with different
+  /// content is rejected instead of silently replayed.
+  selectionsHash String   @default("")
+  /// Verification code returned to the voter. Not derived from any ballot
+  /// content, so it cannot be used to infer a choice.
+  receiptCode    String
+  createdAt      DateTime @default(now())
+
+  voter    User     @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  election Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+
+  @@unique([voterId, electionId, positionId])
+  @@index([voterId, electionId, idempotencyKey])
+  @@index([electionId])
+  @@index([voterId])
+}
+
 model Vote {
   id         Int      @id @default(autoincrement())
   voterId    Int
@@ -585,25 +619,25 @@ model Vote {
   /// Verification code returned to the voter. Not derived from any ballot
   /// content, so it cannot be used to infer a choice.
   receiptCode    String   @default("")
-  /// Client-supplied retry key. Nullable so the unique constraint only applies
-  /// to keys that were actually sent; Postgres treats NULLs as distinct, so
-  /// ordinary votes never collide with each other.
-  idempotencyKey String?
+  /// Submission this row belongs to. Null only for rows created before
+  /// submissions existed (they are still honored by the duplicate pre-check).
+  submissionId Int?
   createdAt  DateTime @default(now())
 
-  voter        User         @relation(fields: [voterId], references: [id], onDelete: Cascade)
-  election     Election     @relation(fields: [electionId], references: [id], onDelete: Cascade)
-  position     Position     @relation(fields: [positionId], references: [id], onDelete: Cascade)
-  candidate    Candidate?   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  voter        User          @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  election     Election      @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  position     Position      @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  candidate    Candidate?    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   ballotOption BallotOption? @relation(fields: [ballotOptionId], references: [id], onDelete: Cascade)
+  submission   VoteSubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
-  @@unique([voterId, electionId, positionId])
-  @@unique([idempotencyKey])
+  @@index([voterId, electionId, positionId])
   @@index([electionId])
   @@index([positionId])
   @@index([candidateId])
   @@index([ballotOptionId])
   @@index([voterId, electionId])
+  @@index([submissionId])
 }
 
 model Announcement {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/src/lib/db";
-import { buildPositionRanking, castVote } from "@/src/lib/services";
-import { ValidationError } from "@/src/lib/validation";
+import { buildPositionRanking } from "@/src/lib/services";
+import { normalizeBallotSelections, submitBallot } from "@/src/lib/vote-submit";
 import { hashPassword } from "@/src/lib/password";
 import { USER_INCLUDE } from "@/src/lib/auth";
 import { resetDb } from "./helpers";
@@ -22,6 +22,8 @@ async function seedWorkflow() {
       title: "Campus Leaders 2026",
       slug: "campus-leaders-2026",
       description: "Department and class leadership elections.",
+      status: "OPEN",
+      isPublished: true,
       campaignStartAt: new Date(now - 2 * DAY),
       campaignEndAt: new Date(now + DAY),
       votingStartAt: new Date(now - HOUR),
@@ -99,32 +101,17 @@ async function seedWorkflow() {
     where: { id: voter.id },
     include: USER_INCLUDE,
   }))!;
-  const candidateRow = (await prisma.candidate.findUniqueOrThrow({
-    where: { id: candidate.id },
-    include: {
-      user: { include: USER_INCLUDE },
-      department: true,
-      section: { include: { department: true } },
-    },
-  }))!;
-  const otherCandidateRow = (await prisma.candidate.findUniqueOrThrow({
-    where: { id: otherCandidate.id },
-    include: {
-      user: { include: USER_INCLUDE },
-      department: true,
-      section: { include: { department: true } },
-    },
-  }))!;
   const positionRow = (await prisma.position.findUniqueOrThrow({
     where: { id: position.id },
     include: { department: true, section: { include: { department: true } } },
   }))!;
 
   return {
+    election,
     candidateUser,
     voterWithRelations,
-    candidateRow,
-    otherCandidateRow,
+    candidate,
+    otherCandidate,
     positionRow,
   };
 }
@@ -133,19 +120,36 @@ describe("VotingWorkflowTests", () => {
   beforeEach(resetDb);
 
   it("allows a user to vote only once per position", async () => {
-    const { voterWithRelations, candidateRow, otherCandidateRow, positionRow } =
+    const { election, voterWithRelations, candidate, otherCandidate, positionRow } =
       await seedWorkflow();
 
-    const vote = await castVote(voterWithRelations, candidateRow);
-    expect(vote.positionId).toBe(positionRow.id);
+    const entries = await normalizeBallotSelections(election, voterWithRelations, [
+      { position_id: positionRow.id, candidate_ids: [candidate.id] },
+    ]);
+    const result = await submitBallot({
+      user: voterWithRelations,
+      election,
+      entries,
+    });
+    expect(result.replayed).toBe(false);
+    expect(result.receiptCode).toHaveLength(24);
 
-    await expect(castVote(voterWithRelations, otherCandidateRow)).rejects.toBeInstanceOf(
-      ValidationError,
-    );
+    // The same question cannot be answered twice — a submission for the other
+    // option in that question is rejected.
+    const retryEntries = await normalizeBallotSelections(election, voterWithRelations, [
+      { position_id: positionRow.id, candidate_ids: [otherCandidate.id] },
+    ]);
+    await expect(
+      submitBallot({ user: voterWithRelations, election, entries: retryEntries }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    const stored = await prisma.vote.findMany({ where: { voterId: voterWithRelations.id } });
+    expect(stored).toHaveLength(1);
+    expect(await prisma.voteSubmission.count()).toBe(1);
   });
 
   it("orders candidate rankings by vote count", async () => {
-    const { candidateUser, voterWithRelations, candidateRow, positionRow } =
+    const { election, candidateUser, voterWithRelations, candidate, positionRow } =
       await seedWorkflow();
 
     const secondVoter = await prisma.user.create({
@@ -155,8 +159,8 @@ describe("VotingWorkflowTests", () => {
         firstName: "Mariam",
         lastName: "Yusuf",
         role: "voter",
-        departmentId: candidateRow.departmentId,
-        sectionId: candidateRow.sectionId,
+        departmentId: candidate.departmentId,
+        sectionId: candidate.sectionId,
       },
     });
     const secondVoterWithRelations = (await prisma.user.findUniqueOrThrow({
@@ -164,8 +168,14 @@ describe("VotingWorkflowTests", () => {
       include: USER_INCLUDE,
     }))!;
 
-    await castVote(voterWithRelations, candidateRow);
-    await castVote(secondVoterWithRelations, candidateRow);
+    const entries = await normalizeBallotSelections(election, voterWithRelations, [
+      { position_id: positionRow.id, candidate_ids: [candidate.id] },
+    ]);
+    await submitBallot({ user: voterWithRelations, election, entries });
+    const secondEntries = await normalizeBallotSelections(election, secondVoterWithRelations, [
+      { position_id: positionRow.id, candidate_ids: [candidate.id] },
+    ]);
+    await submitBallot({ user: secondVoterWithRelations, election, entries: secondEntries });
 
     const ranking = await buildPositionRanking(positionRow);
     expect(ranking[0].candidate_name).toBe(`${candidateUser.firstName} ${candidateUser.lastName}`);

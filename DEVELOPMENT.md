@@ -201,7 +201,9 @@ token is a opaque key stored in the `Token` table, one per user.
 | Method | Path | Notes |
 | --- | --- | --- |
 | POST | `/api/elections/[pk]/vote` | Cast a ballot through the election flow (the UI path) |
-| POST | `/api/votes` | Legacy one-candidate shorthand for the same `castVote` service |
+| POST | `/api/elections/[pk]/vote/code` | Issue the notification confirmation code |
+| POST | `/api/elections/[pk]/vote/code/resend` | Rotate a live code (cooldown + per-challenge send cap) |
+| GET | `/api/elections/[pk]/receipt` | The signed-in voter's own receipt codes for one election |
 
 ### 4.5 Candidate campaign management
 
@@ -601,7 +603,8 @@ multi-category election platform without breaking the working API contract.
 - ``src/lib/password.ts``, ``src/lib/tokens.ts`` — ``crypto.randomInt`` replaces
   modulo arithmetic, removing bias from token and salt generation.
 - ``src/lib/services.ts``, ``serializers.ts`` — results and eligibility.
-- ``src/app/api/votes/route.ts`` — duplicate-vote error normalisation.
+- ``src/lib/vote-submit.ts`` — selection validation, per-question eligibility,
+  the ``VoteSubmission`` duplicate guard, and idempotent receipt replay.
 
 **New API routes**
 - ``src/app/api/categories/route.ts`` + ``admin/categories/`` (+ ``[pk]``) — CRUD
@@ -767,12 +770,12 @@ persist exactly one row and the loser receives the normalised duplicate error.
 1. ``/dashboard`` and ``/admin`` link to four pages from the original dashboard
    that were not rebuilt: ``admin/users``, ``admin/announcements``,
    ``admin/settings``. Their underlying API routes still exist and function.
-2. The voting screen shows a button adjacent to each position rather than a
-   ballot surface covering all positions, while still calling ``POST /api/votes``
-   per selection.
+2. A ballot submission completes the voter's participation: after one verified
+   vote the ``/vote`` screen locks. In a multi-question election each voter can
+   therefore answer one question with that submission.
 3. No password reset flow.
-4. Rate limiting is in-process. It does not span multiple server instances, so
-   under concurrent load the effective limit is per instance.
+4. The login/OTP endpoints rate-limit in-process (per instance). Vote-code
+   issuance is durable per ``(voter, election)`` window in the database.
 
 ## 13. Manual configuration remaining
 

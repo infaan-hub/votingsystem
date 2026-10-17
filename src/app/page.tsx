@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import { prisma } from "@/src/lib/db";
-import { isVotingOpen, serializeElectionList } from "@/src/lib/serializers";
+import { isAcceptingVotes, serializeElectionList } from "@/src/lib/serializers";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Tile, type TileData } from "@/src/components/ui/tile";
@@ -48,7 +48,7 @@ export default async function HomePage() {
   const openElection = election ? serializeElectionList(election) : null;
   // Elections are published immediately by officers, so the window — not the
   // lifecycle status alone — decides whether voting is open right now.
-  const isOpen = Boolean(election && election.status === "OPEN" && isVotingOpen(election));
+  const isOpen = Boolean(election && isAcceptingVotes(election));
   const questionCount = election?.positions.length ?? 0;
 
   return (

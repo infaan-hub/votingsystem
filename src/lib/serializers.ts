@@ -103,6 +103,15 @@ export function isVotingOpen(election: Election, now: Date = new Date()): boolea
   return election.votingStartAt <= now && now <= election.votingEndAt;
 }
 
+/**
+ * Whether the election accepts ballots right now. Unlike the display-only
+ * window check, this includes the status gate, so the ballot, the code
+ * issuance and the cast route all agree on when voting is possible.
+ */
+export function isAcceptingVotes(election: Election, now: Date = new Date()): boolean {
+  return election.status === "OPEN" && isVotingOpen(election, now);
+}
+
 export const VOTER_GROUP_LABELS: Record<string, string> = {
   all: "All eligible voters",
   student: "Students",
@@ -330,29 +339,5 @@ export async function serializeElectionDetail(election: Election, now = new Date
     announcements: announcements.map((announcement) =>
       serializeAnnouncement(announcement, now, timeZone),
     ),
-  };
-}
-
-export function serializeVote(vote: {
-  id: number;
-  createdAt: Date;
-  candidate: CandidateRow | null;
-  ballotOption?: { label: string } | null;
-  writeInText?: string;
-  position: Position;
-  election: Election;
-}) {
-  // The selection is a candidate, a ballot option, or a write-in. The legacy
-  // `candidate` field keeps its name for contract compatibility but carries the
-  // human-readable choice label regardless of kind.
-  const choice = vote.candidate
-    ? displayName(vote.candidate.user)
-    : (vote.ballotOption?.label ?? vote.writeInText ?? "");
-  return {
-    id: vote.id,
-    candidate: choice,
-    position: vote.position.name,
-    election: vote.election.title,
-    created_at: formatDateTime(vote.createdAt, vote.election.timezone || DEFAULT_TIME_ZONE),
   };
 }
