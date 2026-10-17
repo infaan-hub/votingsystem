@@ -121,6 +121,7 @@ export const POST = makeRoute({
         otp_required: false,
         token: token.key,
         user: serializeUserSummary(user),
+        must_change_password: user.mustChangePassword,
       });
     },
   },

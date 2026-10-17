@@ -97,7 +97,7 @@ export async function validateUser(
   }
 
   const role = user.role ?? "";
-  const validRoles = ["voter", "officer", "admin"];
+  const validRoles = ["voter", "officer", "admin", "candidate"];
   if (role && !validRoles.includes(role)) {
     errors.role = [`Value '${role}' is not a valid choice.`];
   }

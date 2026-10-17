@@ -65,6 +65,7 @@ export function serializeUserSummary(user: UserWithRelations) {
     staff_id: user.staffId,
     phone_number: user.phoneNumber || null,
     auth_provider: user.authProvider,
+    must_change_password: user.mustChangePassword,
     // `?v=` is the photoVersion so a replaced photo busts browser caches without
     // needing the (excluded) photo bytes on the auth path.
     photo_url:

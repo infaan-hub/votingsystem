@@ -121,6 +121,7 @@ model User {
   photoContentType   String    @default("")
   photoFilename      String    @default("")
   photoVersion       Int       @default(0)
+  mustChangePassword Boolean   @default(false)
 
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)

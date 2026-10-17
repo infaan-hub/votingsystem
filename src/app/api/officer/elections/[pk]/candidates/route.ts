@@ -7,7 +7,7 @@ import { prisma } from "@/src/lib/db";
 import { requireStateOfficer } from "@/src/lib/auth";
 import { requireManagedElection } from "@/src/lib/officer";
 import { positionIdByNameIexact } from "@/src/lib/queries";
-import { unusablePassword } from "@/src/lib/password";
+import { hashPassword } from "@/src/lib/password";
 import { readPayload } from "@/src/lib/request";
 import {
   ValidationError,
@@ -39,6 +39,7 @@ export const POST = makeRoute({
       const c = new Collector();
       const positionName = strField(c, payload, "position_name", { maxLength: 120 });
       const fullName = strField(c, payload, "full_name", { maxLength: 160 });
+      const password = strField(c, payload, "password", { required: false, allowBlank: true, maxLength: 128 });
       const description = strField(c, payload, "description", {
         required: false,
         allowBlank: true,
@@ -82,6 +83,9 @@ export const POST = makeRoute({
       const cleanPositionName = positionName.trim();
       const cleanFullName = fullName.trim();
       const cleanDescription = description.trim();
+      const cleanPassword = password.trim();
+      const generatedPassword = cleanPassword ? null : randomBytes(9).toString("base64url");
+      const candidatePassword = cleanPassword || generatedPassword!;
       if (!cleanPositionName) {
         throw new ApiError(400, { position_name: "Position is required." });
       }
@@ -127,7 +131,7 @@ export const POST = makeRoute({
             await validateUser({
               username,
               email: "",
-              role: "voter",
+              role: "candidate",
               departmentId: position.departmentId,
               sectionId: position.sectionId,
               sectionDepartmentId: null,
@@ -140,8 +144,8 @@ export const POST = makeRoute({
           const user: User = await tx.user.create({
             data: {
               username,
-              password: unusablePassword(),
-              role: "voter",
+              password: hashPassword(candidatePassword),
+              role: "candidate",
               firstName,
               lastName,
               departmentId: position.departmentId,
@@ -149,6 +153,7 @@ export const POST = makeRoute({
               isSuperuser: false,
               isStaff: false,
               isActive: true,
+              mustChangePassword: true,
             },
           });
 
@@ -230,9 +235,12 @@ export const POST = makeRoute({
           position_id: candidate.position.id,
           position_name: candidate.position.name,
           full_name: cleanFullName,
+          username: candidate.user.username,
           description: candidate.manifesto,
           has_photo: Boolean(candidate.photoBytes?.length),
           extra_images: extraBytes.length,
+          must_change_password: true,
+          ...(generatedPassword ? { generated_password: generatedPassword } : {}),
         },
         201,
       );

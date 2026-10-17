@@ -15,7 +15,7 @@ export type RequestState = {
   tokenKey: string | null;
 };
 
-export const ROLES = ["voter", "officer", "admin"] as const;
+export const ROLES = ["voter", "officer", "admin", "candidate"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const USER_INCLUDE = {
@@ -53,6 +53,7 @@ export const USER_SELECT = {
   photoContentType: true,
   photoFilename: true,
   photoVersion: true,
+  mustChangePassword: true,
   department: true,
   section: { include: { department: true } },
 } as const;
