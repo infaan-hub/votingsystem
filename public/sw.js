@@ -141,10 +141,18 @@ self.addEventListener("push", (event) => {
       : "NexVote";
   const body =
     typeof payload.body === "string" ? payload.body.trim().slice(0, 1000) : "";
+  const notificationId =
+    typeof payload.notificationId === "number"
+      ? payload.notificationId
+      : typeof payload.data?.notificationId === "number"
+        ? payload.data.notificationId
+        : null;
   const tag =
     typeof payload.tag === "string" && payload.tag
       ? payload.tag.slice(0, 80)
-      : "nexvote";
+      : notificationId !== null
+        ? `nexvote-${notificationId}`
+        : "nexvote";
   const icon =
     typeof payload.icon === "string" && payload.icon ? payload.icon : "/icon.svg";
   const badge = typeof payload.badge === "string" && payload.badge ? payload.badge : "/icon-maskable.svg";
@@ -156,8 +164,10 @@ self.addEventListener("push", (event) => {
       tag,
       icon,
       badge,
-      data: { url },
-      renotify: false,
+      data: { url, notificationId },
+      // Re-notify so a new notification that happens to share a tag still
+      // buzzes/vibrates instead of silently replacing the previous one.
+      renotify: true,
     }),
   );
 });
@@ -187,6 +197,28 @@ self.addEventListener("notificationclick", (event) => {
         }
       }
       await self.clients.openWindow(target);
+    })(),
+  );
+});
+
+self.addEventListener("pushsubscriptionchange", (event) => {
+  // The browser rotated or invalidated this device's push subscription. Try
+  // to recreate it from the previous options and re-register with the server
+  // so alerts and login codes keep reaching this device.
+  event.waitUntil(
+    (async () => {
+      try {
+        const options = event.oldSubscription?.options ?? { userVisibleOnly: true };
+        const newSubscription = await self.registration.pushManager.subscribe(options);
+        await fetch("/api/notifications/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newSubscription),
+          credentials: "include",
+        });
+      } catch {
+        /* Best-effort: a later page load re-registers the device. */
+      }
     })(),
   );
 });

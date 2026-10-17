@@ -86,6 +86,8 @@ export function InAppNotifier() {
       // Already surfaced in this browser — another tab beat us to it.
       if (cursor !== null && row.id <= cursor) return;
       writeNotificationCursor(userId, row.id);
+      const claimed = readNotificationCursor(userId);
+      if (claimed !== null && row.id < claimed) return;
       toast({
         title: row.title,
         description: row.body || undefined,
