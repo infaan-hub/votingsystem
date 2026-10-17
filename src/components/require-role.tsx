@@ -9,7 +9,7 @@ import { useApp } from "@/src/components/AppProvider";
 import { Button } from "@/src/components/ui/button";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
-type GuardRole = "admin" | "officer" | "user";
+type GuardRole = "admin" | "officer" | "candidate" | "user";
 
 /**
  * Client-side role gate.
@@ -38,7 +38,9 @@ export function RequireRole({
       ? user.role === "admin"
       : role === "officer"
         ? user.role === "officer" || user.role === "admin"
-        : true);
+        : role === "candidate"
+          ? user.role === "candidate"
+          : true);
 
   useEffect(() => {
     // While the session is still resolving, wait rather than bouncing a

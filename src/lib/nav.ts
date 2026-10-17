@@ -58,6 +58,23 @@ export const VOTER_NAV: NavGroup[] = [
   },
 ];
 
+/** Candidate self-service navigation. */
+export const CANDIDATE_NAV: NavGroup[] = [
+  {
+    label: "Candidate",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/elections", label: "Elections", icon: Vote },
+      { href: "/candidates/me", label: "My candidacy", icon: UserRound },
+      { href: "/results", label: "Results", icon: PieChart },
+    ],
+  },
+  {
+    label: "Account",
+    items: [{ href: "/profile", label: "Profile", icon: UserRound }],
+  },
+];
+
 /** Election-officer navigation. */
 export const OFFICER_NAV: NavGroup[] = [
   {
@@ -111,11 +128,12 @@ export const ADMIN_NAV: NavGroup[] = [
   },
 ];
 
-export type ShellRole = "public" | "voter" | "officer" | "admin";
+export type ShellRole = "public" | "voter" | "candidate" | "officer" | "admin";
 
 export function shellRoleFor(role: string | null | undefined): ShellRole {
   if (role === "admin") return "admin";
   if (role === "officer") return "officer";
+  if (role === "candidate") return "candidate";
   if (role) return "voter";
   return "public";
 }
@@ -137,6 +155,14 @@ export function bottomNavFor(shell: ShellRole): NavItem[] {
         { href: "/officer/election", label: "Election", icon: Vote },
         { href: "/officer/compaign", label: "Campaigns", icon: Megaphone },
         { href: "/officer/results", label: "Results", icon: PieChart },
+        { href: "/profile", label: "Profile", icon: UserRound },
+      ];
+    case "candidate":
+      return [
+        { href: "/dashboard", label: "Home", icon: LayoutDashboard, exact: true },
+        { href: "/elections", label: "Elections", icon: Vote },
+        { href: "/candidates/me", label: "Candidacy", icon: UserRound },
+        { href: "/results", label: "Results", icon: PieChart },
         { href: "/profile", label: "Profile", icon: UserRound },
       ];
     case "voter":
@@ -164,6 +190,8 @@ export function navGroupsFor(shell: ShellRole): NavGroup[] {
       return ADMIN_NAV;
     case "officer":
       return OFFICER_NAV;
+    case "candidate":
+      return CANDIDATE_NAV;
     case "voter":
       return VOTER_NAV;
     default:
@@ -178,6 +206,8 @@ export function roleLabel(role: string | null | undefined): string | null {
       return "Administrator";
     case "officer":
       return "Election officer";
+    case "candidate":
+      return "Candidate";
     case "voter":
       return "Voter";
     default:

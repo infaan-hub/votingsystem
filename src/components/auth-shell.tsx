@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { BrandLogo } from "@/src/components/brand-logo";
 import { cn } from "@/src/lib/utils";
 import tenant, { t } from "@/config/tenant";
@@ -44,6 +46,15 @@ export function AuthShell({
   if (!showBrand) {
     return (
       <div className="app-shell flex min-h-dvh w-full flex-col bg-white pb-safe">
+        <div className="px-4 pt-4 sm:px-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-sm font-medium text-nv-muted transition-colors hover:text-nv-primary"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back
+          </Link>
+        </div>
         {/* flex-1 + justify-center keeps the card vertically centred on a
             phone (Android and iOS) while the page still scrolls from the top
             when the content is taller than the viewport. */}
@@ -58,7 +69,18 @@ export function AuthShell({
     <div className="app-shell flex min-h-dvh w-full flex-col bg-white pb-safe md:flex-row md:items-stretch">
       <AuthBrandHeader />
       <div className="flex flex-1 items-center justify-center px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-10 max-[360px]:px-3">
-        <div className="w-full max-w-[480px] min-w-0">{children}</div>
+        <div className="w-full max-w-[480px] min-w-0">
+          <div className="mb-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 text-sm font-medium text-nv-muted transition-colors hover:text-nv-primary"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Back
+            </Link>
+          </div>
+          {children}
+        </div>
       </div>
     </div>
   );

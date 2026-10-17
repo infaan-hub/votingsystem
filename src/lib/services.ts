@@ -12,7 +12,7 @@ import type {
   User,
 } from "@/src/generated/prisma/client";
 
-export const VOTING_ROLES = ["voter", "officer"];
+export const VOTING_ROLES = ["voter", "officer", "candidate"];
 
 type PositionRow = Position & {
   department: Department | null;
