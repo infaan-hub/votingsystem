@@ -154,7 +154,6 @@ export default function RegisterPage() {
 
           <Input
             label="Full name"
-            placeholder="e.g. Amara Njeri"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
             icon={<User className="h-4 w-4" aria-hidden="true" />}
@@ -164,7 +163,6 @@ export default function RegisterPage() {
 
           <Input
             label={t.idLabel}
-            placeholder={t.idPlaceholder}
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}

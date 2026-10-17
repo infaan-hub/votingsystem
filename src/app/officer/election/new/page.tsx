@@ -614,7 +614,6 @@ function CandidateCard({
             label="Full name"
             value={row.fullName}
             onChange={(event) => onPatch({ fullName: event.target.value })}
-            placeholder="e.g. Amina Yusuf"
             maxLength={160}
             required
             invalid={Boolean(firstError(fieldErrors, `candidate_${index}_full_name`))}
@@ -636,7 +635,6 @@ function CandidateCard({
             label="Username (optional)"
             value={row.username}
             onChange={(event) => onPatch({ username: event.target.value })}
-            placeholder="Leave blank to auto-generate"
             maxLength={150}
           />
           <Input

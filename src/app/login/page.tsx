@@ -20,7 +20,7 @@ import {
   getNotificationSupport,
   prepareNotificationDevice,
 } from "@/src/lib/notifications/client";
-import { t } from "@/config/tenant";
+
 
 function LoginForm() {
   const router = useRouter();
@@ -105,7 +105,6 @@ function LoginForm() {
 
         <Input
           label="Username"
-          placeholder={t.idPlaceholder}
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
           icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}
