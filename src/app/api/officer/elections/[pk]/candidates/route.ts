@@ -39,6 +39,7 @@ export const POST = makeRoute({
       const c = new Collector();
       const positionName = strField(c, payload, "position_name", { maxLength: 120 });
       const fullName = strField(c, payload, "full_name", { maxLength: 160 });
+      const username = strField(c, payload, "username", { required: false, allowBlank: true, maxLength: 150 });
       const password = strField(c, payload, "password", { required: false, allowBlank: true, maxLength: 128 });
       const description = strField(c, payload, "description", {
         required: false,
@@ -83,6 +84,7 @@ export const POST = makeRoute({
       const cleanPositionName = positionName.trim();
       const cleanFullName = fullName.trim();
       const cleanDescription = description.trim();
+      const cleanUsername = username.trim();
       const cleanPassword = password.trim();
       const generatedPassword = cleanPassword ? null : randomBytes(9).toString("base64url");
       const candidatePassword = cleanPassword || generatedPassword!;
@@ -126,7 +128,7 @@ export const POST = makeRoute({
           }
 
           const base = slugify(cleanFullName).slice(0, 28) || "cand";
-          const username = `${base}-${randomBytes(3).toString("hex")}`;
+          const username = cleanUsername || `${base}-${randomBytes(3).toString("hex")}`;
           try {
             await validateUser({
               username,

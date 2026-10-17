@@ -20,6 +20,8 @@ import { MAX_IMAGE_BYTES } from "@/src/lib/media";
 type CandidateDraft = {
   key: string;
   fullName: string;
+  username: string;
+  password: string;
   seat: string;
   description: string;
   photo: File | null;
@@ -41,6 +43,8 @@ function newDraft(): CandidateDraft {
   return {
     key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     fullName: "",
+    username: "",
+    password: "",
     seat: "",
     description: "",
     photo: null,
@@ -217,6 +221,8 @@ export default function OfficerNewElectionPage() {
         const candidateForm = new FormData();
         candidateForm.append("position_name", row.seat.trim());
         candidateForm.append("full_name", row.fullName.trim());
+        if (row.username.trim()) candidateForm.append("username", row.username.trim());
+        if (row.password.trim()) candidateForm.append("password", row.password.trim());
         candidateForm.append("description", row.description.trim());
         if (row.photo) candidateForm.append("photo", row.photo);
         if (row.image2) candidateForm.append("image2", row.image2);
@@ -623,6 +629,23 @@ function CandidateCard({
             required
             invalid={Boolean(firstError(fieldErrors, `candidate_${index}_seat`))}
             error={firstError(fieldErrors, `candidate_${index}_seat`)}
+          />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Input
+            label="Username (optional)"
+            value={row.username}
+            onChange={(event) => onPatch({ username: event.target.value })}
+            placeholder="Leave blank to auto-generate"
+            maxLength={150}
+          />
+          <Input
+            label="Password (optional)"
+            type="password"
+            value={row.password}
+            onChange={(event) => onPatch({ password: event.target.value })}
+            placeholder="Leave blank to auto-generate"
+            maxLength={128}
           />
         </div>
         <Textarea
