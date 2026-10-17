@@ -32,14 +32,7 @@ export default async function CategoryDetailPage({
       <PageHero
         backHref="/categories"
         backLabel="Back to categories"
-        avatar={
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/20 text-2xl" aria-hidden="true">
-            {category.icon || "📋"}
-          </span>
-        }
         title={category.name}
-        description={category.description || undefined}
-        meta={`${elections.length} published election${elections.length === 1 ? "" : "s"}`}
         className="-mt-6"
       />
 

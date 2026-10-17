@@ -34,7 +34,6 @@ export function ElectionCard({ election, className }: { election: ElectionCardDa
             <StatusBadge status={election.status} className="shrink-0" />
           </div>
           <CardDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span aria-hidden="true">{election.categoryIcon || "📋"}</span>
             {election.categoryName || "General"}
             {election.organizationName ? (
               <>
