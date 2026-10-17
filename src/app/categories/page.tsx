@@ -17,7 +17,6 @@ export default async function CategoriesPage() {
       <PageHero
         eyebrow="Categories"
         title="Election categories"
-        description="Categories define the rules an election follows. Nine are provided out of the box; administrators can create their own."
         className="-mt-6"
       />
 
@@ -32,22 +31,11 @@ export default async function CategoriesPage() {
           {categories.map((category) => (
             <Link key={category.id} href={`/categories/${category.slug}`}>
               <Card className="h-full transition-shadow hover:shadow-panel">
-                <CardHeader className="pb-2">
+                <CardHeader>
                   <CardTitle className="text-fluid-lg">
                     {category.name}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="nums-tabular text-sm font-medium">
-                    {category._count?.elections ?? 0} election
-                    {(category._count?.elections ?? 0) === 1 ? "" : "s"}
-                  </p>
-                  {category.description ? (
-                    <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">
-                      {category.description}
-                    </p>
-                  ) : null}
-                </CardContent>
               </Card>
             </Link>
           ))}
