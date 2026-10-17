@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronRight, RotateCw, Vote } from "lucide-react";
 
 import { StatusBadge } from "@/src/components/status-badge";
@@ -235,12 +236,12 @@ export default function ElectionsPage() {
               >
                 {election.image_url ? (
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-nv-bg">
-                    <img
+                    <Image
                       src={election.image_url}
                       alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className="h-full w-full object-cover"
+                      fill
+                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      className="object-cover"
                     />
                   </div>
                 ) : (

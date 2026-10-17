@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Clapperboard, RotateCw, Vote } from "lucide-react";
 
 import { useApp } from "@/src/components/AppProvider";
@@ -65,6 +66,14 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
 
 function DashboardContent() {
   const { user, token } = useApp();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === "candidate") router.replace("/candidates/me");
+    else if (user.role === "officer") router.replace("/officer/dashboard");
+    else if (user.role === "admin") router.replace("/admin/dashboard");
+  }, [user, router]);
 
   const [elections, setElections] = useState<PublicElection[] | null>(null);
   const [electionsError, setElectionsError] = useState("");

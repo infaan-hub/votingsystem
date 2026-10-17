@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    localPatterns: [{ pathname: "/api/**" }, { pathname: "/media/**" }],
+  },
   poweredByHeader: false,
   skipTrailingSlashRedirect: true,
   experimental: {

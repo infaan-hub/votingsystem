@@ -16,6 +16,7 @@ export const GET = makeRoute({
         return new Response(Buffer.from(candidate.photoBytes), {
           headers: {
             "Content-Type": candidate.photoContentType || "image/jpeg",
+            "Cache-Control": "public, max-age=300",
           },
         });
       }
