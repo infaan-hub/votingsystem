@@ -65,10 +65,11 @@ export function serializeUserSummary(user: UserWithRelations) {
     staff_id: user.staffId,
     phone_number: user.phoneNumber || null,
     auth_provider: user.authProvider,
-    // `?v=` is the byte length so a replaced photo busts browser caches.
+    // `?v=` is the photoVersion so a replaced photo busts browser caches without
+    // needing the (excluded) photo bytes on the auth path.
     photo_url:
-      user.photoBytes && user.photoBytes.length
-        ? `/api/users/${user.id}/photo/?v=${user.photoBytes.length}`
+      user.photoContentType
+        ? `/api/users/${user.id}/photo/?v=${user.photoVersion}`
         : null,
   };
 }

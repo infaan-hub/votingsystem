@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   skipTrailingSlashRedirect: true,
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   serverExternalPackages: ["pg"],
   outputFileTracingIncludes: {
     "/api/**": ["./src/generated/**"],

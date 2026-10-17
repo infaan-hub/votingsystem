@@ -46,6 +46,7 @@ export const PUT = makeRoute({
           photoBytes: bytes ? Buffer.from(bytes) : null,
           photoContentType: contentType,
           photoFilename: filename,
+          photoVersion: { increment: 1 },
         },
         include: USER_INCLUDE,
       });

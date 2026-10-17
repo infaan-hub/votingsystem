@@ -120,6 +120,7 @@ model User {
   photoBytes         Bytes?
   photoContentType   String    @default("")
   photoFilename      String    @default("")
+  photoVersion       Int       @default(0)
 
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   section    Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
@@ -170,6 +171,7 @@ model Notification {
 
   @@index([recipientId, readAt])
   @@index([recipientId, createdAt(sort: Desc)])
+  @@index([recipientId, id])
 }
 
 /// One browser/device Push API subscription for a user.
@@ -358,6 +360,7 @@ model Election {
   @@index([status])
   /// Hot path: the landing page lists published elections by opening time.
   @@index([isPublished, votingStartAt])
+  @@index([status, isPublished, votingEndAt])
 }
 
 model Position {

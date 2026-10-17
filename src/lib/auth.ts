@@ -4,7 +4,8 @@ import type { Department, Section, User } from "@/src/generated/prisma/client";
 
 export type SectionWithDepartment = Section & { department: Department | null };
 
-export type UserWithRelations = User & {
+export type UserWithRelations = Omit<User, "photoBytes"> & {
+  photoBytes?: Uint8Array | null;
   department: Department | null;
   section: SectionWithDepartment | null;
 };
@@ -18,6 +19,40 @@ export const ROLES = ["voter", "officer", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const USER_INCLUDE = {
+  department: true,
+  section: { include: { department: true } },
+} as const;
+
+/**
+ * Auth hot path: load every scalar column except the (potentially large)
+ * profile-photo bytes. The photo is served separately through
+ * /api/users/:id/photo and the client caches it by photoVersion, so there is
+ * no need to pull the bytes on every authenticated request.
+ */
+export const USER_SELECT = {
+  id: true,
+  password: true,
+  lastLogin: true,
+  isSuperuser: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  isStaff: true,
+  isActive: true,
+  dateJoined: true,
+  role: true,
+  departmentId: true,
+  sectionId: true,
+  registrationNumber: true,
+  staffId: true,
+  phoneNumber: true,
+  googleId: true,
+  authProvider: true,
+  photo: true,
+  photoContentType: true,
+  photoFilename: true,
+  photoVersion: true,
   department: true,
   section: { include: { department: true } },
 } as const;
@@ -50,7 +85,7 @@ export async function authenticateRequest(req: Request): Promise<RequestState> {
 
   const token = await prisma.token.findUnique({
     where: { key },
-    include: { user: { include: USER_INCLUDE } },
+    include: { user: { select: USER_SELECT } },
   });
 
   if (!token) throw invalidToken();
@@ -73,7 +108,7 @@ export async function authenticateQueryToken(req: Request): Promise<RequestState
 
   const token = await prisma.token.findUnique({
     where: { key },
-    include: { user: { include: USER_INCLUDE } },
+    include: { user: { select: USER_SELECT } },
   });
 
   if (!token || !token.user.isActive) return { user: null, tokenKey: null };

@@ -64,40 +64,20 @@ export function multipartRequest(
 }
 
 export async function resetDb(): Promise<void> {
-  await prisma.$transaction(
-    [
-      prisma.pushDelivery.deleteMany(),
-      prisma.notification.deleteMany(),
-      prisma.pushSubscription.deleteMany(),
-      prisma.opinionVote.deleteMany(),
-      prisma.opinion.deleteMany(),
-      prisma.candidateRating.deleteMany(),
-      prisma.ratingCategory.deleteMany(),
-      prisma.campaignImage.deleteMany(),
-      prisma.campaign.deleteMany(),
-      prisma.electionVoter.deleteMany(),
-      prisma.officerAssignment.deleteMany(),
-      prisma.contactMessage.deleteMany(),
-      prisma.auditLog.deleteMany(),
-      prisma.candidateImage.deleteMany(),
-      prisma.vote.deleteMany(),
-      prisma.ballotOption.deleteMany(),
-      prisma.announcement.deleteMany(),
-      prisma.candidate.deleteMany(),
-      prisma.position.deleteMany(),
-      prisma.token.deleteMany(),
-      prisma.otpChallenge.deleteMany(),
-      prisma.voteConfirmCode.deleteMany(),
-      prisma.user.deleteMany(),
-      prisma.election.deleteMany(),
-      prisma.electionCategory.deleteMany(),
-      prisma.organization.deleteMany(),
-      prisma.section.deleteMany(),
-      prisma.department.deleteMany(),
-      prisma.party.deleteMany(),
-    ],
-    { timeout: 60000, maxWait: 60000 },
-  );
+  // Single TRUNCATE pass is dramatically faster than per-table deleteMany
+  // loops and resets identity sequences so tests start from id 1.
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    DECLARE r RECORD;
+    BEGIN
+      FOR r IN (
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'
+      ) LOOP
+        EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
+      END LOOP;
+    END $$;
+  `);
 }
 
 export async function createTokenFor(userId: number): Promise<string> {
