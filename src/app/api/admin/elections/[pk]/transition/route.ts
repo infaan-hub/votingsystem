@@ -3,8 +3,7 @@ import { fieldErrors, notFoundModel } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { serializeElectionAdmin } from "@/src/app/api/admin/elections/route";
-import { LEGAL_TRANSITIONS } from "@/src/lib/elections";
-import { notifyElectionStatusChange } from "@/src/lib/notifications/events";
+import { transitionElection } from "@/src/lib/elections";
 
 const route = makeRoute({
   permission: "admin",
@@ -22,27 +21,11 @@ const route = makeRoute({
       const target = typeof payload.status === "string" ? payload.status : "";
       if (!target) throw fieldErrors({ status: "This field is required." });
 
-      // One state machine for every entry point (shared with the transition
-      // helper below and in src/lib/elections.ts).
-      const allowed = LEGAL_TRANSITIONS[election.status] ?? [];
-      if (!allowed.includes(target)) {
-        throw fieldErrors({
-          status: `Cannot transition from ${election.status} to ${target}. Allowed: ${allowed.join(", ") || "none"}.`,
-        });
-      }
-
-      const updates: Record<string, unknown> = { status: target };
-      if (target === "ARCHIVED") updates.archivedAt = new Date();
-
-      const updated = await prisma.election.update({
-        where: { id: pk },
-        data: updates,
-        include: { category: true, organization: true },
-      });
-
-      // Fire lifecycle notifications only after the transition committed.
-      // The helper compares persisted previous → new status and never throws.
-      await notifyElectionStatusChange(election.status, updated);
+      // The shared state machine re-checks legality, the voting window for
+      // OPEN, publishability for PUBLISHED, stamps resultPublishedAt when
+      // results are published, and fires the lifecycle notifications — one
+      // implementation for every entry point.
+      const updated = await transitionElection(election, target);
 
       return json(serializeElectionAdmin(updated));
     },

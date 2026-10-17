@@ -14,7 +14,7 @@ export const GET = makeRoute({
       });
       if (!election) throw notFoundModel("Election");
       if (!resultsVisible(election, state.user)) {
-        throw forbidden("Results are hidden until the election closes.");
+        throw forbidden("Results are not published yet.");
       }
       return json({
         election: serializeElectionList(election),

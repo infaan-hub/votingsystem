@@ -6,10 +6,9 @@ import { readPayload, type Payload } from "@/src/lib/request";
 import { requireStateAdmin } from "@/src/lib/auth";
 import { recordAudit, clientIp } from "@/src/lib/audit";
 import { notify } from "@/src/lib/notifications/notify";
-import { serializeElectionList } from "@/src/lib/serializers";
+import { serializeElectionAdmin as serializeElectionAdminDetail } from "@/src/lib/elections";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { slugify } from "@/src/lib/slug";
-import { formatDateTime } from "@/src/lib/time";
 import type { Election } from "@/src/generated/prisma/client";
 
 const ELIGIBILITY_POLICIES = ["registered", "org_members", "voter_list", "invite_only", "open", "legacy_academic"] as const;
@@ -31,20 +30,13 @@ async function uniqueSlug(base: string): Promise<string> {
 }
 
 export function serializeElectionAdmin(election: Election) {
+  // One shared field set for every console; delegating keeps the two admin
+  // payloads from drifting. `status` stays the lifecycle enum here because the
+  // admin screens switch on it (the shared serializer puts it in
+  // `lifecycle_status` and keeps the clock-based `status`).
   return {
-    ...serializeElectionList(election),
-    slug: election.slug,
+    ...serializeElectionAdminDetail(election),
     status: election.status,
-    eligibility_policy: election.eligibilityPolicy,
-    result_visibility: election.resultVisibility,
-    secret_ballot: election.secretBallot,
-    timezone: election.timezone,
-    allow_admins_to_vote: election.allowAdminsToVote,
-    is_published: election.isPublished,
-    registration_start_at: formatDateTime(election.registrationStartAt, election.timezone),
-    registration_end_at: formatDateTime(election.registrationEndAt, election.timezone),
-    category_id: election.categoryId,
-    organization_id: election.organizationId,
   };
 }
 

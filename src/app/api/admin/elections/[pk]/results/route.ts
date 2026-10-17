@@ -32,17 +32,30 @@ export const POST = makeRoute({
             action: "Results can only be finalized after the election has been closed.",
           });
         }
-        updates.resultFinalizedAt = new Date();
+        if (!election.resultFinalizedAt) updates.resultFinalizedAt = new Date();
       } else if (action === "publish") {
-        if (!election.resultFinalizedAt && election.status !== "CLOSED") {
-          throw fieldErrors({ action: "Finalize the results before publishing them." });
+        if (election.status !== "CLOSED" && election.status !== "RESULTS_PUBLISHED") {
+          throw fieldErrors({ action: "Close the election before publishing its results." });
         }
+        if (election.resultPublishedAt) {
+          // Already published: idempotent, and never re-notifies.
+          return json(serializeElectionAdmin(election));
+        }
+        updates.resultFinalizedAt = election.resultFinalizedAt ?? new Date();
         updates.resultPublishedAt = new Date();
         updates.status = "RESULTS_PUBLISHED";
         updates.isPublished = true;
       } else {
+        if (election.status !== "RESULTS_PUBLISHED") {
+          throw fieldErrors({ action: "Only published results can be unpublished." });
+        }
         updates.resultPublishedAt = null;
         updates.status = "CLOSED";
+      }
+
+      if (!Object.keys(updates).length) {
+        // Repeated finalize is a no-op; return the stored state.
+        return json(serializeElectionAdmin(election));
       }
 
       const updated = await prisma.election.update({ where: { id: pk }, data: updates });

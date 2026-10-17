@@ -141,7 +141,7 @@ export const PATCH = makeRoute({
       // election is public; retries of an unchanged schedule stay silent.
       await notifyElectionRescheduled(previousSchedule, saved);
 
-      return json(await serializeElectionDetail(saved));
+      return json(await serializeElectionDetail(saved, new Date(), { includeTallies: true }));
     },
   },
 });

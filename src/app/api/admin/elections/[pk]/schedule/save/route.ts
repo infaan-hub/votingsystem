@@ -95,7 +95,7 @@ export const POST = makeRoute({
         where: { id: election.id },
         data: updates,
       });
-      return json(await serializeElectionDetail(saved));
+      return json(await serializeElectionDetail(saved, new Date(), { includeTallies: true }));
     },
   },
 });

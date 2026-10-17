@@ -13,7 +13,7 @@ export const GET = makeRoute({
       });
       if (!election) throw notFoundModel("Election");
       if (!resultsVisible(election, state.user)) {
-        throw forbidden("Live statistics are not visible right now.");
+        throw forbidden("Statistics are not published yet.");
       }
       return json(await buildElectionStats(election));
     },

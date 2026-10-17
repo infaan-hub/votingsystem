@@ -4,7 +4,7 @@ import { requireStateOfficer } from "@/src/lib/auth";
 import { requireManagedElection } from "@/src/lib/officer";
 import { serializeElectionAdmin, uniqueElectionSlug } from "@/src/lib/elections";
 import { electionImagePath, serializePosition } from "@/src/lib/serializers";
-import { secondsUntil } from "@/src/lib/time";
+import { isValidTimeZone, secondsUntil } from "@/src/lib/time";
 import { fieldErrors } from "@/src/lib/http";
 import { Collector, strField, dateTimeField, choiceField, intField } from "@/src/lib/fields";
 import { readPayload, type Payload } from "@/src/lib/request";
@@ -72,7 +72,9 @@ const route = makeRoute({
           ...serializeElectionAdmin(election),
           image_url: electionImagePath(election) || null,
         },
-        positions: await Promise.all(positions.map((position) => serializePosition(position))),
+        positions: await Promise.all(
+          positions.map((position) => serializePosition(position, { includeTallies: true })),
+        ),
         counts: {
           positions: countOf(positionCounts),
           candidates: countOf(candidateCounts),
@@ -237,7 +239,12 @@ const route = makeRoute({
       if (maxVoters !== undefined || capacityMode !== undefined) {
         updates.maxVoters = finalMode === "open" ? null : (finalMax ?? null);
       }
-      if (timezone !== undefined) updates.timezone = timezone || "UTC";
+      if (timezone !== undefined) {
+        if (!isValidTimeZone(timezone || "UTC")) {
+          throw fieldErrors({ timezone: "Use an IANA timezone name like Africa/Lagos." });
+        }
+        updates.timezone = timezone || "UTC";
+      }
       if (categoryId !== undefined) updates.categoryId = categoryId;
 
       if (!Object.keys(updates).length) {

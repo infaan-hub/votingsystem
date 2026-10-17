@@ -74,6 +74,16 @@ export function parseDateTime(value: unknown): Date | null {
   return check;
 }
 
+/** Whether the runtime accepts `timeZone` as an IANA zone name. */
+export function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Renders the zone's UTC offset at `date` as `+HH:MM` / `-HH:MM`. */
 function offsetLabel(timeZone: string, date: Date): string {
   const name =

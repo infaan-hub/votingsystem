@@ -10,6 +10,7 @@ import { notifyOfficerRevoked } from "@/src/lib/notifications/events";
 import { serializeElectionAdmin } from "@/src/app/api/admin/elections/route";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { slugify } from "@/src/lib/slug";
+import { isValidTimeZone } from "@/src/lib/time";
 
 const ELIGIBILITY_POLICIES = ["registered", "org_members", "voter_list", "invite_only", "open", "legacy_academic"] as const;
 const RESULT_VISIBILITY = ["hidden", "admin_only", "officers", "live", "published", "public"] as const;
@@ -68,6 +69,37 @@ const route = makeRoute({
       const allowAdminsToVote = has("allow_admins_to_vote") ? boolField(c, payload, "allow_admins_to_vote", { required: false }) : undefined;
       const isPublished = has("is_published") ? boolField(c, payload, "is_published", { required: false }) : undefined;
       c.throwIfAny();
+
+      // A running or finished election's schedule is frozen: widening the
+      // window mid-vote, or flipping the public flag on a live election, would
+      // silently disenfranchise voters.
+      const scheduleTouched =
+        campaignStart !== undefined ||
+        campaignEnd !== undefined ||
+        votingStart !== undefined ||
+        votingEnd !== undefined;
+      if (["OPEN", "CLOSED", "RESULTS_PUBLISHED", "ARCHIVED"].includes(existing.status)) {
+        const frozen: Record<string, string> = {};
+        if (scheduleTouched) {
+          frozen.voting_start_at = "The voting schedule is frozen once voting has started.";
+        }
+        if (isPublished !== undefined) {
+          frozen.is_published = "Publish state follows the lifecycle and cannot be changed here.";
+        }
+        if (Object.keys(frozen).length) throw fieldErrors(frozen);
+      }
+
+      if (timezone !== undefined && !isValidTimeZone(timezone || "UTC")) {
+        throw fieldErrors({ timezone: "Use an IANA timezone name like Africa/Lagos." });
+      }
+
+      if (typeof categoryId === "number") {
+        const category = await prisma.electionCategory.findUnique({
+          where: { id: categoryId },
+          select: { id: true },
+        });
+        if (!category) throw fieldErrors({ category_id: "This category does not exist." });
+      }
 
       if (title !== undefined && !title) throw fieldErrors({ title: "This field may not be blank." });
 
@@ -134,12 +166,7 @@ const route = makeRoute({
       // field: legacy or seeded elections can legitimately overlap the
       // campaign and voting windows, and a title, flag or operator edit
       // must not be refused for a violation this request didn't create.
-      const timesChanged =
-        campaignStart !== undefined ||
-        campaignEnd !== undefined ||
-        votingStart !== undefined ||
-        votingEnd !== undefined;
-      if (timesChanged) {
+      if (scheduleTouched) {
         const finalCS = (updates.campaignStartAt as Date) ?? existing.campaignStartAt;
         const finalCE = (updates.campaignEndAt as Date) ?? existing.campaignEndAt;
         const finalVS = (updates.votingStartAt as Date) ?? existing.votingStartAt;

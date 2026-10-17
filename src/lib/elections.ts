@@ -185,7 +185,9 @@ export async function transitionElection(
 
   const updates: Record<string, unknown> = { status: target };
   if (target === "ARCHIVED") updates.archivedAt = now;
-  if (target === "OPEN") updates.isPublished = true;
+  // Publishing (and opening) puts the election back on the public surface even
+  // if it was hidden while in draft.
+  if (target === "PUBLISHED" || target === "OPEN") updates.isPublished = true;
   if (target === "CLOSED") updates.resultFinalizedAt = election.resultFinalizedAt ?? now;
   if (target === "RESULTS_PUBLISHED") updates.resultPublishedAt = now;
 

@@ -34,8 +34,15 @@ export const POST = makeRoute({
       const action = choiceField(c, payload, "action", RESULT_ACTIONS)!;
       c.throwIfAny();
 
-      if (election.status === "ARCHIVED") {
-        throw fieldErrors({ action: "Archived elections can no longer publish results." });
+      // Publish is for elections whose voting has run: still OPEN but past its
+      // window (the standard officer flow), CLOSED, or already published.
+      // Draft and pre-voting states have nothing to publish yet.
+      if (
+        election.status !== "OPEN" &&
+        election.status !== "CLOSED" &&
+        election.status !== "RESULTS_PUBLISHED"
+      ) {
+        throw fieldErrors({ action: "Results can only be published once voting has finished." });
       }
 
       const now = new Date();

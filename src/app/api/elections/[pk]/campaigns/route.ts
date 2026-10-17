@@ -2,11 +2,11 @@ import { json, makeRoute } from "@/src/lib/api";
 import { notFoundModel } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
 import { serializeElectionList, serializePosition } from "@/src/lib/serializers";
+import { resultsVisible } from "@/src/lib/services";
 
 export const GET = makeRoute({
-  intParams: ["pk"],
   handlers: {
-    GET: async (_req, params) => {
+    GET: async (_req, params, state) => {
       const pk = Number(params.pk);
       const election = await prisma.election.findFirst({
         where: { id: pk, isPublished: true },
@@ -19,7 +19,13 @@ export const GET = makeRoute({
       });
       return json({
         election: serializeElectionList(election),
-        positions: await Promise.all(positions.map((position) => serializePosition(position))),
+        positions: await Promise.all(
+          positions.map((position) =>
+            serializePosition(position, {
+              includeTallies: resultsVisible(election, state.user),
+            }),
+          ),
+        ),
       });
     },
   },

@@ -59,6 +59,8 @@ type ElectionAdminDetail = {
   lifecycle_status: string;
   eligibility_policy: string | null;
   result_visibility: string | null;
+  /** ISO instant the tally was published (null = not published yet). */
+  result_published_at: string | null;
   secret_ballot: boolean;
   timezone: string | null;
   visibility: string;
@@ -128,8 +130,8 @@ const VOTER_ID_LABELS: Record<string, string> = {
 const RESULT_VISIBILITY_LABELS: Record<string, string> = {
   public: "Public",
   published: "Published",
-  live: "Live during voting",
-  hidden: "Hidden until finalized",
+  live: "Live for staff during voting",
+  hidden: "No preview until published",
   admin_only: "Administrators only",
   officers: "Election officers only",
 };
@@ -158,11 +160,9 @@ function windowLabel(from: string | null, to: string | null): string {
 }
 
 function resultsAreShown(detail: ElectionAdminDetail): boolean {
-  if (detail.lifecycle_status === "RESULTS_PUBLISHED") return true;
-  return (
-    detail.lifecycle_status === "CLOSED" &&
-    ["live", "published", "public"].includes(detail.result_visibility ?? "")
-  );
+  // Publication is the only switch: a closed election whose tally was never
+  // published shows nothing, whatever the preview policy was.
+  return Boolean(detail.result_published_at);
 }
 
 function defaultVotingSteps(): string[] {

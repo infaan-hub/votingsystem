@@ -224,7 +224,11 @@ function sortCandidates<
   });
 }
 
-function serializePositionRow(position: PositionRow, candidates: CandidateWithCounts[]) {
+function serializePositionRow(
+  position: PositionRow,
+  candidates: CandidateWithCounts[],
+  includeTallies: boolean,
+) {
   return {
     id: position.id,
     name: position.name,
@@ -237,8 +241,10 @@ function serializePositionRow(position: PositionRow, candidates: CandidateWithCo
     ballot_type: position.ballotType,
     max_selections: position.maxSelections,
     allow_write_in: position.allowWriteIn,
+    // `vote_total` stays in the payload for consumers that always read it, but
+    // reads zero unless the caller proved they may see tallies.
     candidates: sortCandidates(candidates).map((candidate) =>
-      serializeCandidate(candidate, candidate._count.votes),
+      serializeCandidate(candidate, includeTallies ? candidate._count.votes : 0),
     ),
   };
 }
@@ -251,13 +257,21 @@ const CANDIDATE_INCLUDE = {
   _count: { select: { votes: true } },
 } as const;
 
-export async function serializePosition(position: PositionRow) {
+/**
+ * One position with its approved candidates. Tallies are only serialized when
+ * the caller has proven they may see them: public surfaces (ballot, campaign
+ * pages, election detail before publication) always read zero.
+ */
+export async function serializePosition(
+  position: PositionRow,
+  options: { includeTallies?: boolean } = {},
+) {
   const candidates = await prisma.candidate.findMany({
     where: { positionId: position.id, approved: true },
     include: CANDIDATE_INCLUDE,
   });
 
-  return serializePositionRow(position, candidates);
+  return serializePositionRow(position, candidates, options.includeTallies === true);
 }
 
 export function serializeAnnouncement(
@@ -304,7 +318,11 @@ export function serializeElectionList(election: Election, now = new Date()) {
   };
 }
 
-export async function serializeElectionDetail(election: Election, now = new Date()) {
+export async function serializeElectionDetail(
+  election: Election,
+  now = new Date(),
+  options: { includeTallies?: boolean } = {},
+) {
   // One round-trip for every candidate in the election instead of one query
   // per position (the old N+1 shape).
   const [positions, announcements, candidates] = await Promise.all([
@@ -334,7 +352,11 @@ export async function serializeElectionDetail(election: Election, now = new Date
   return {
     ...serializeElectionList(election, now),
     positions: positions.map((position) =>
-      serializePositionRow(position, byPosition.get(position.id) ?? []),
+      serializePositionRow(
+        position,
+        byPosition.get(position.id) ?? [],
+        options.includeTallies === true,
+      ),
     ),
     announcements: announcements.map((announcement) =>
       serializeAnnouncement(announcement, now, timeZone),

@@ -6,8 +6,10 @@ import { serializeElectionList } from "@/src/lib/serializers";
 export const GET = makeRoute({
   handlers: {
     GET: async (_req, _params, state) => {
+      // Archived elections are records, not listings: they drop out of the
+      // public directory (their published cards stay reachable by direct link).
       const elections = await prisma.election.findMany({
-        where: { isPublished: true },
+        where: { isPublished: true, status: { not: "ARCHIVED" } },
         orderBy: { votingStartAt: "asc" },
       });
       // `has_voted` is per-caller: anonymous requests simply get false.

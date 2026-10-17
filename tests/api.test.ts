@@ -248,6 +248,13 @@ describe("VotingApiTests", () => {
     const campaigns = await readJson(campaignsResponse);
     expect((campaigns.positions as Array<{ name: string }>)[0].name).toBe(position.name);
 
+    // Tallies are only readable once the results are explicitly published;
+    // the caller here is anonymous, so publishing must flip the answer.
+    await prisma.election.update({
+      where: { id: election.id },
+      data: { resultPublishedAt: new Date() },
+    });
+
     const statsResponse = await call(
       electionStatsGET,
       jsonRequest(`/api/elections/${election.id}/stats/`),
@@ -378,7 +385,7 @@ describe("VotingApiTests", () => {
     );
     expect(response.status).toBe(403);
     expect((await readJson(response)).detail).toBe(
-      "Results are hidden until the election closes.",
+      "Results are not published yet.",
     );
   });
 
@@ -1208,7 +1215,24 @@ describe("VotingApiTests", () => {
     const positions = campaigns.positions as Array<{
       candidates: Array<{ vote_total: number }>;
     }>;
-    expect(positions[0].candidates[0].vote_total).toBe(1);
+    // Public surfaces never expose a tally before publication.
+    expect(positions[0].candidates[0].vote_total).toBe(0);
+
+    await prisma.election.update({
+      where: { id: election.id },
+      data: { resultPublishedAt: new Date() },
+    });
+    const publishedCampaigns = await readJson(
+      await call(
+        electionCampaignsGET,
+        jsonRequest(`/api/elections/${election.id}/campaigns/`),
+        { pk: String(election.id) },
+      ),
+    );
+    const publishedPositions = publishedCampaigns.positions as Array<{
+      candidates: Array<{ vote_total: number }>;
+    }>;
+    expect(publishedPositions[0].candidates[0].vote_total).toBe(1);
     expect(voter.id).toBeTruthy();
   });
 
@@ -1221,7 +1245,7 @@ describe("VotingApiTests", () => {
     );
     expect(response.status).toBe(403);
     expect((await readJson(response)).detail).toBe(
-      "Live statistics are not visible right now.",
+      "Statistics are not published yet.",
     );
   });
 

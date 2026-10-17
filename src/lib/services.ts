@@ -99,23 +99,28 @@ export async function visibleAnnouncements(
   });
 }
 
+/**
+ * Whether the caller may see tallies. Explicit publication is the only public
+ * gate: an unpublished tally must never reach voters, however liberal the
+ * preview policy is. Before publication `resultVisibility` decides which staff
+ * roles may preview the running numbers — "live"/"public" are preview scopes,
+ * not voter features — and the legacy `allowLiveResults` flag covers rows from
+ * before the policy column existed.
+ */
 export function resultsVisible(election: Election, user?: UserWithRelations | null): boolean {
-  const status = electionStatus(election);
-  const policy = election.resultVisibility;
-
-  // Final states always publish to everyone.
-  if (status === "ended") return true;
-  if (policy === "public" || policy === "published") return true;
-  if (policy === "live") return true; // live aggregate during voting
-  if (policy === "hidden") return false;
-
+  if (election.resultPublishedAt !== null) return true;
   if (!user) return false;
-  if (policy === "admin_only") return user.role === "admin";
-  if (policy === "officers") return user.role === "admin" || user.role === "officer";
+  if (user.role === "admin") return true;
+  if (user.role !== "officer") return false;
 
-  // Legacy fallback: honor the old allowLiveResults flag when resultVisibility
-  // is unrecognized. This keeps pre-migration elections working.
-  return election.allowLiveResults || user.role === "admin" || user.role === "officer";
+  const policy = election.resultVisibility;
+  if (policy === "hidden" || policy === "admin_only") return false;
+  if (policy === "officers" || policy === "live" || policy === "public" || policy === "published") {
+    return true;
+  }
+
+  // Legacy fallback for pre-migration rows with an unrecognized policy.
+  return election.allowLiveResults;
 }
 
 export function isUniqueConstraintViolation(error: unknown): boolean {
@@ -161,8 +166,13 @@ export async function buildPositionRanking(position: PositionRow): Promise<Ranki
     return pythonTextCompare(a.user.username, b.user.username);
   });
 
+  // A seat is only won with at least one vote: a zero-turnout slate must not
+  // advertise a winner.
   const winnerIds = new Set(
-    candidates.slice(0, Math.max(position.maxWinners, 0)).map((candidate) => candidate.id),
+    candidates
+      .filter((candidate) => candidate._count.votes > 0)
+      .slice(0, Math.max(position.maxWinners, 0))
+      .map((candidate) => candidate.id),
   );
 
   const results: RankingEntry[] = [];

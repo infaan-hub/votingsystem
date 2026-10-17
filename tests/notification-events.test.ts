@@ -16,6 +16,7 @@ import { call, createTokenFor, jsonRequest, resetDb } from "./helpers";
 
 import { POST as transitionPOST } from "@/src/app/api/admin/elections/[pk]/transition/route";
 import { POST as resultsPOST } from "@/src/app/api/admin/elections/[pk]/results/route";
+import { GET as electionStatsGET } from "@/src/app/api/elections/[pk]/stats/route";
 import { PATCH as candidatePATCH } from "@/src/app/api/admin/elections/[pk]/candidates/[candidate_id]/route";
 import { PATCH as campaignPATCH } from "@/src/app/api/admin/campaigns/[pk]/route";
 import { POST as votersPOST } from "@/src/app/api/elections/[pk]/voters/route";
@@ -291,16 +292,23 @@ describe("EventDrivenNotificationTests", () => {
     expect(await prisma.notification.count({ where: { tag: "election-results" } })).toBe(1);
   });
 
-  it("withholds the results notification while the visibility policy hides results", async () => {
+  it("reveals results on publication even though the hidden policy blocks previews", async () => {
     const voter = await makeUser("hidden_voter", "voter");
     const admin = await makeUser("hidden_admin", "admin");
     const election = await makeElection({
       status: "CLOSED",
       resultVisibility: "hidden",
-      // Clock has not passed votingEndAt, so the policy still applies.
-      votingEndAt: new Date(Date.now() + DAY),
     });
     await makePosition(election.id);
+
+    // The hidden policy refuses every preview — staff included — and the voter
+    // cannot read live tallies.
+    const preview = await call(
+      electionStatsGET,
+      jsonRequest(`/api/elections/${election.id}/stats/`, { token: voter.token }),
+      { pk: String(election.id) },
+    );
+    expect(preview.status).toBe(403);
 
     const publish = await call(
       resultsPOST,
@@ -312,11 +320,21 @@ describe("EventDrivenNotificationTests", () => {
       { pk: String(election.id) },
     );
     expect(publish.status).toBe(200);
-    expect(await prisma.notification.count({ where: { tag: "election-results" } })).toBe(0);
-    // The state change itself still succeeded.
+
+    // Publication is the universal reveal: the tally is readable and the
+    // eligible audience is told the results are out.
+    const rows = await prisma.notification.findMany({ where: { tag: "election-results" } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].recipientId).toBe(voter.user.id);
+
+    const after = await call(
+      electionStatsGET,
+      jsonRequest(`/api/elections/${election.id}/stats/`, { token: voter.token }),
+      { pk: String(election.id) },
+    );
+    expect(after.status).toBe(200);
     const stored = await prisma.election.findUnique({ where: { id: election.id } });
     expect(stored?.status).toBe("RESULTS_PUBLISHED");
-    expect(voter.user.id).toBeGreaterThan(0);
   });
 
   /* ------------------------------------------------------------------ *
