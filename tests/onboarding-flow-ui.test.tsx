@@ -93,7 +93,7 @@ describe("OnboardingPage", () => {
     // Check if the flow succeeded - look for "Notifications are on" text
     // If not found, the test will fail gracefully
     try {
-      const successElement = await screen.findByText("Notifications are on", { timeout: 3000 });
+      const successElement = await screen.findByText("Notifications are on", );
       // Flow succeeded - user can continue
       fireEvent.click(screen.getByRole("button", { name: /^Continue to / }));
       expect(nav.replace).toHaveBeenCalledWith("/dashboard");

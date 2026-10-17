@@ -33,6 +33,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [supportNote, setSupportNote] = useState<string | null>(null);
+  const { user, token } = useApp();
+  const [enabled, setEnabled] = useState(false);
 
   // Shown only when this device genuinely cannot receive sign-in codes yet
   // (blocked permission or an iPhone that needs the Home Screen install).
@@ -121,7 +123,7 @@ function LoginForm() {
       }
     };
     checkAndShowNotificationGuidance();
-  }, [user]);
+  }, [user, enabled]);
 
   return (
     <AuthCard>

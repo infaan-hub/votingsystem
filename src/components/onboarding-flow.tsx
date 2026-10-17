@@ -19,6 +19,7 @@ import {
   getNotificationSupport,
   hasPushSubscription,
   subscribeToPush,
+  requestNotificationPermission,
 } from "@/src/lib/notifications/client";
 import { markOnboardingComplete } from "@/src/lib/onboarding";
 import type { NotificationSupport } from "@/src/lib/notifications/types";
