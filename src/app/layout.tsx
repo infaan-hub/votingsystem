@@ -17,7 +17,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: `${tenant.name} — ${tenant.tagline}`,
+    default: tenant.name,
     template: `%s · ${tenant.name}`,
   },
   description: tenant.tagline,

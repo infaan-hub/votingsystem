@@ -9,7 +9,7 @@ import tenant from "@/config/tenant";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${tenant.name} — ${tenant.tagline}`,
+    name: tenant.name,
     short_name: tenant.shortName,
     description: tenant.tagline,
     start_url: "/",
