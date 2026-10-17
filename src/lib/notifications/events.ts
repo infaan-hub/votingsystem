@@ -639,14 +639,13 @@ export type ReminderRunSummary = {
 /**
  * "Voting ends soon" / "Voting opens soon" reminders.
  *
- * Callable from any authenticated job (manual trigger, uptime monitor, or a
- * once-daily platform cron — the hosting plan here only allows daily crons, so
- * no schedule is configured in vercel.json). Every run re-reads persisted
- * election state, so an election that already closed, was archived or was
- * rescheduled is skipped, and the idempotency key (built from the actual
- * schedule instant) dedupes repeat runs of the same window. The notification's
- * own createdAt is the real send time — nothing here claims a reminder fired
- * "on schedule".
+ * Driven by `scheduleElectionReminders()` on authenticated read paths: the
+ * hosting plan only allows daily crons, so there is no scheduler to rely on.
+ * Every run re-reads persisted election state, so an election that already
+ * closed, was archived or was rescheduled is skipped, and the idempotency key
+ * (built from the actual schedule instant) dedupes repeat runs of the same
+ * window. The notification's own createdAt is the real send time — nothing
+ * here claims a reminder fired "on schedule".
  */
 export async function runElectionReminders(now: Date = new Date()): Promise<ReminderRunSummary> {
   const summary: ReminderRunSummary = {
@@ -719,4 +718,24 @@ export async function runElectionReminders(now: Date = new Date()): Promise<Remi
   }
 
   return summary;
+}
+
+/** Minimum gap between opportunistic reminder sweeps on one server instance. */
+const REMINDER_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
+let lastReminderSweep = 0;
+
+/**
+ * Fire-and-forget trigger for the reminder sweep, called from read paths.
+ *
+ * The hosting plan only allows daily crons, so reminders cannot be scheduled
+ * externally. Instead a throttled, non-blocking sweep rides requests that were
+ * going to happen anyway; the sweep itself is idempotent per reminder window,
+ * so a cold start that sweeps again only costs two indexed queries. Failures
+ * are swallowed: a notification list request must never fail because of it.
+ */
+export function scheduleElectionReminders(): void {
+  const now = Date.now();
+  if (now - lastReminderSweep < REMINDER_SWEEP_INTERVAL_MS) return;
+  lastReminderSweep = now;
+  void runElectionReminders().catch(() => undefined);
 }

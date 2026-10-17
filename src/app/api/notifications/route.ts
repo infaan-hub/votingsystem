@@ -5,6 +5,7 @@ import { prisma } from "@/src/lib/db";
 import { readPayload } from "@/src/lib/request";
 import { requireStateUser } from "@/src/lib/auth";
 import { notify, schedulePushRetry } from "@/src/lib/notifications/notify";
+import { scheduleElectionReminders } from "@/src/lib/notifications/events";
 import { serializeNotification } from "@/src/lib/notifications/serialize";
 import { safeTargetUrl } from "@/src/lib/notifications/safe-url";
 
@@ -120,6 +121,7 @@ const route = makeRoute({
       const unreadOnly = url.searchParams.get("unread") === "1";
 
       schedulePushRetry();
+      scheduleElectionReminders();
 
       const notifications = await prisma.notification.findMany({
         where: { recipientId: user.id, ...(unreadOnly ? { readAt: null } : {}) },

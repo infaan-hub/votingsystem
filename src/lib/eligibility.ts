@@ -9,6 +9,7 @@ export const BALLOT_ROLES = ["voter", "officer"];
 /** Policies that only admit people on the officer's eligibility list. */
 export const LIST_BASED_POLICIES = new Set(["voter_list", "org_members", "invite_only"]);
 
+/** How a voter proves identity at the ballot; shared by the officer API. */
 export const VOTER_ID_METHODS = [
   "account",
   "email",
@@ -18,7 +19,6 @@ export const VOTER_ID_METHODS = [
   "student_id",
   "custom",
 ] as const;
-export type VoterIdMethod = (typeof VOTER_ID_METHODS)[number];
 
 export const CAPACITY_MODES = ["restricted", "open"] as const;
 

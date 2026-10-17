@@ -16,8 +16,3 @@ export function safeTargetUrl(raw: unknown): string | null {
   if (/[\\\u0000-\u001f]/.test(trimmed)) return null;
   return trimmed;
 }
-
-/** The URL a service worker should open for a stored notification. */
-export function clickTargetUrl(targetUrl: string): string {
-  return targetUrl.startsWith("/") ? targetUrl : "/";
-}

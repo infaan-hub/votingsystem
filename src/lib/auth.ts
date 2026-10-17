@@ -9,11 +9,6 @@ export type UserWithRelations = User & {
   section: SectionWithDepartment | null;
 };
 
-export type AuthContext = {
-  user: UserWithRelations;
-  tokenKey: string | null;
-};
-
 export type RequestState = {
   user: UserWithRelations | null;
   tokenKey: string | null;
@@ -21,8 +16,6 @@ export type RequestState = {
 
 export const ROLES = ["voter", "officer", "admin"] as const;
 export type Role = (typeof ROLES)[number];
-
-export const AUTH_PROVIDERS = ["local", "google"] as const;
 
 export const USER_INCLUDE = {
   department: true,
@@ -82,27 +75,10 @@ export function isOfficerRole(role: string): boolean {
   return role === "officer" || role === "admin";
 }
 
-/** Every account that is not an administrator is a normal user / voter. */
-export function isVoterRole(role: string): boolean {
-  return !isOfficerRole(role);
-}
-
 export function requireStateOfficer(state: RequestState): UserWithRelations {
   const user = requireStateUser(state);
   if (!isOfficerRole(user.role)) {
     throw forbidden("Election officer access is required.");
   }
   return user;
-}
-
-export async function requireAuth(req: Request): Promise<AuthContext> {
-  const state = await authenticateRequest(req);
-  if (!state.user) throw unauthenticated();
-  return { user: state.user, tokenKey: state.tokenKey };
-}
-
-export async function requireAdmin(req: Request): Promise<AuthContext> {
-  const context = await requireAuth(req);
-  if (context.user.role !== "admin") throw forbidden();
-  return context;
 }

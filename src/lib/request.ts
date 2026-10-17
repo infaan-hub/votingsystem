@@ -85,10 +85,6 @@ function pythonTypeName(value: unknown): string {
   return "NoneType";
 }
 
-export function rawValue(payload: Payload, key: string): unknown {
-  return payload[key];
-}
-
 export function hasKey(payload: Payload, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(payload, key);
 }
@@ -101,28 +97,6 @@ export function stringValue(payload: Payload, key: string): string {
   return "";
 }
 
-export function requiredString(
-  payload: Payload,
-  key: string,
-  options: { allowBlank?: boolean } = {},
-): string {
-  if (!hasKey(payload, key)) {
-    throw fieldErrors({ [key]: "This field is required." });
-  }
-  const raw = payload[key];
-  if (raw === null) {
-    throw fieldErrors({ [key]: "This field may not be null." });
-  }
-  if (typeof raw === "object") {
-    throw fieldErrors({ [key]: "Not a valid string." });
-  }
-  const value = stringValue(payload, key);
-  if (!options.allowBlank && !value) {
-    throw fieldErrors({ [key]: "This field may not be blank." });
-  }
-  return value;
-}
-
 export function optionalString(payload: Payload, key: string): string | undefined {
   if (!hasKey(payload, key)) return undefined;
   const raw = payload[key];
@@ -133,69 +107,4 @@ export function optionalString(payload: Payload, key: string): string | undefine
     throw fieldErrors({ [key]: "Not a valid string." });
   }
   return stringValue(payload, key);
-}
-
-export function optionalBoolean(payload: Payload, key: string): boolean | undefined {
-  if (!hasKey(payload, key)) return undefined;
-  if (payload[key] === null) {
-    throw fieldErrors({ [key]: "Must be a valid boolean." });
-  }
-  return toBoolean(payload[key], key);
-}
-
-export function toBoolean(value: unknown, key = "value"): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") {
-    if (value === 1) return true;
-    if (value === 0) return false;
-  }
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["t", "y", "yes", "true", "on", "1"].includes(normalized)) return true;
-    if (["f", "n", "no", "false", "off", "0"].includes(normalized)) return false;
-  }
-  throw fieldErrors({ [key]: "Must be a valid boolean." });
-}
-
-export function fileValue(payload: Payload, key: string): File | null | undefined {
-  if (!hasKey(payload, key)) return undefined;
-  const value = payload[key];
-  if (value === null || value === undefined || value === "") return null;
-  if (value instanceof File) return value;
-  if (value instanceof Blob) return new File([value], key);
-  return undefined;
-}
-
-export function checkMaxLength(value: string, key: string, max: number): string {
-  if (value.length > max) {
-    throw fieldErrors({
-      [key]: `Ensure this field has no more than ${max} characters.`,
-    });
-  }
-  return value;
-}
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export function checkEmail(value: string, key = "email"): string {
-  if (value && !EMAIL_PATTERN.test(value)) {
-    throw fieldErrors({ [key]: "Enter a valid email address." });
-  }
-  return value;
-}
-
-export function checkMinLength(value: string, key: string, min: number): string {
-  if (value.length < min) {
-    throw fieldErrors({
-      [key]: `Ensure this field has at least ${min} characters.`,
-    });
-  }
-  return value;
-}
-
-export function checkChoice(value: string, key: string, choices: readonly string[]): string {
-  if (!choices.includes(value)) {
-    throw fieldErrors({ [key]: `"${value}" is not a valid choice.` });
-  }
-  return value;
 }

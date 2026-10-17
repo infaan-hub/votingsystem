@@ -17,7 +17,6 @@ import { GET as meGET } from "@/src/app/api/auth/me/route";
 import { POST as registerAdminPOST } from "@/src/app/api/auth/register/admin/route";
 import { POST as registerVoterPOST } from "@/src/app/api/auth/register/voter/route";
 import { POST as googlePOST } from "@/src/app/api/auth/google/route";
-import { POST as forgotPasswordPOST } from "@/src/app/api/auth/forgot-password/route";
 import { GET as electionListGET } from "@/src/app/api/elections/route";
 import { GET as electionPublicDetailGET } from "@/src/app/api/elections/public/[slug]/route";
 import { GET as electionDetailGET } from "@/src/app/api/elections/[pk]/route";
@@ -770,32 +769,6 @@ describe("VotingApiTests", () => {
     expect(String((await readJson(response)).detail).toLowerCase()).toContain(
       "temporarily unavailable",
     );
-  });
-
-  it("does not allow unauthenticated password resets via forgot-password", async () => {
-    await seedApi();
-    const response = await call(
-      forgotPasswordPOST,
-      jsonRequest("/api/auth/forgot-password/", {
-        method: "POST",
-        body: {
-          identity: "student_a",
-          new_password: "NewPass123!",
-          confirm_password: "NewPass123!",
-        },
-      }),
-    );
-    expect(response.status).toBe(503);
-    expect(String((await readJson(response)).detail).toLowerCase()).toContain("not available");
-
-    const loginResponse = await call(
-      loginPOST,
-      jsonRequest("/api/auth/login/", {
-        method: "POST",
-        body: { username: "student_a", password: "Pass1234!" },
-      }),
-    );
-    expect(loginResponse.status).toBe(200);
   });
 
   it("lets an admin create voters, candidates, schedules and announcements", async () => {

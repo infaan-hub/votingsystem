@@ -4,7 +4,6 @@ import * as React from "react";
 import { ResponsiveDialog } from "@/src/components/ui/responsive-dialog";
 import { Button } from "@/src/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { cn } from "@/src/lib/utils";
 
 export type DialogProps = {
   open: boolean;
@@ -101,9 +100,4 @@ export function AlertDialog({
       {children}
     </ResponsiveDialog>
   );
-}
-
-/** Convenience wrapper: a labelled section inside a dialog body. */
-export function DialogSection({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn("py-2", className)}>{children}</div>;
 }

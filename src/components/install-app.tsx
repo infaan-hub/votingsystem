@@ -34,9 +34,9 @@ import { t } from "@/config/tenant";
 /** Set to "1" by "Got it"; the badge then never comes back on this device. */
 export const INSTALL_BADGE_DISMISSAL_KEY = "nexvote-install-badge-dismissed";
 
-export type InstallDevice = "ios" | "android" | "desktop";
+type InstallDevice = "ios" | "android" | "desktop";
 
-export function readInstallBadgeDismissed(): boolean {
+function readInstallBadgeDismissed(): boolean {
   if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(INSTALL_BADGE_DISMISSAL_KEY) === "1";
@@ -45,7 +45,7 @@ export function readInstallBadgeDismissed(): boolean {
   }
 }
 
-export function writeInstallBadgeDismissed(): void {
+function writeInstallBadgeDismissed(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(INSTALL_BADGE_DISMISSAL_KEY, "1");
@@ -55,7 +55,7 @@ export function writeInstallBadgeDismissed(): void {
 }
 
 /** Device bucket used to pick the installation copy. */
-export function detectInstallDevice(): InstallDevice {
+function detectInstallDevice(): InstallDevice {
   if (typeof window === "undefined") return "desktop";
   const ua = navigator.userAgent || "";
   // iPadOS 13+ reports as Macintosh but exposes touch points.
@@ -66,7 +66,7 @@ export function detectInstallDevice(): InstallDevice {
 }
 
 /** True while the page runs as an installed app (any standalone-ish mode). */
-export function isStandaloneDisplay(): boolean {
+function isStandaloneDisplay(): boolean {
   if (typeof window === "undefined") return false;
   if ((navigator as unknown as { standalone?: boolean }).standalone === true) return true;
   const matches = (query: string) => window.matchMedia?.(query)?.matches === true;
@@ -82,7 +82,7 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-export type PromptInstallResult = "accepted" | "dismissed" | "unavailable";
+type PromptInstallResult = "accepted" | "dismissed" | "unavailable";
 
 type InstallAppContextValue = {
   /** The app already runs installed: hide every install affordance. */
@@ -101,7 +101,7 @@ type InstallAppContextValue = {
 
 const InstallAppContext = createContext<InstallAppContextValue | null>(null);
 
-export function useInstallApp(): InstallAppContextValue | null {
+function useInstallApp(): InstallAppContextValue | null {
   return useContext(InstallAppContext);
 }
 

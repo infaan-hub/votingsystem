@@ -143,14 +143,6 @@ export async function notify(input: NotifyInput): Promise<NotifyOutcome> {
   return outcome;
 }
 
-/** Notify many users with the same content and a shared idempotency prefix. */
-export async function notifyUsers(
-  recipientIds: number[],
-  content: Omit<NotifyInput, "recipientIds">,
-): Promise<NotifyOutcome> {
-  return notify({ ...content, recipientIds });
-}
-
 /**
  * Kicks the opportunistic outbox drain. Safe to call from read paths; never
  * throws (delivery problems must not break list endpoints).

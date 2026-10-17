@@ -455,11 +455,3 @@ export async function buildElectionResultCard(election: Election) {
     totals: { votes: totalVotes, candidates: candidates.length },
   };
 }
-
-export async function serializeStatsEvent(election: Election, now = new Date()) {
-  const [stats, winners] = await Promise.all([
-    buildElectionStats(election, now),
-    buildWinnerAnnouncement(election),
-  ]);
-  return JSON.stringify({ stats, winners });
-}

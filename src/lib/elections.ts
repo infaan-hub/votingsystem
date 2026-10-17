@@ -1,5 +1,5 @@
 import { prisma } from "@/src/lib/db";
-import { fieldErrors, notFoundModel } from "@/src/lib/http";
+import { fieldErrors } from "@/src/lib/http";
 import { slugify } from "@/src/lib/slug";
 import { serializeElectionList } from "@/src/lib/serializers";
 import { formatDateTime } from "@/src/lib/time";
@@ -17,9 +17,6 @@ export const LEGAL_TRANSITIONS: Record<string, string[]> = {
   RESULTS_PUBLISHED: ["ARCHIVED"],
   ARCHIVED: [],
 };
-
-/** Statuses in which voting can actually accept ballots. */
-export const VOTING_STATES = new Set(["READY", "OPEN"]);
 
 export async function uniqueElectionSlug(base: string, excludeId?: number): Promise<string> {
   const root = slugify(base);
@@ -189,16 +186,4 @@ export async function transitionElection(
   await notifyElectionStatusChange(election.status, updated);
 
   return updated;
-}
-
-/** True when ballots may be accepted right now (lifecycle + wall clock). */
-export function votingIsOpen(election: Election, now = new Date()): boolean {
-  if (!election.isPublished) return false;
-  if (election.status !== "OPEN") return false;
-  return election.votingStartAt <= now && now <= election.votingEndAt;
-}
-
-/** 404 helper shared by dynamic election routes. */
-export function electionNotFound(): never {
-  throw notFoundModel("Election");
 }

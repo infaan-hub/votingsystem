@@ -6,23 +6,6 @@ import { prisma } from "@/src/lib/db";
  * lowercase and fail with 42703).
  */
 
-export async function userIdByUsernameIexact(
-  username: string,
-  excludeId?: number,
-): Promise<number | null> {
-  const rows =
-    excludeId === undefined
-      ? await prisma.$queryRaw<Array<{ id: number }>>`
-        SELECT "id" FROM "User"
-        WHERE UPPER("username") = UPPER(${username})
-        LIMIT 1`
-      : await prisma.$queryRaw<Array<{ id: number }>>`
-        SELECT "id" FROM "User"
-        WHERE UPPER("username") = UPPER(${username}) AND "id" <> ${excludeId}
-        LIMIT 1`;
-  return rows[0]?.id ?? null;
-}
-
 export async function userIdByEmailIexact(
   email: string,
   excludeId?: number,

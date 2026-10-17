@@ -35,7 +35,7 @@ export function authHeaders(token: string): Record<string, string> {
   return token ? { Authorization: `Token ${token}` } : {};
 }
 
-export class ApiCallError extends Error {
+class ApiCallError extends Error {
   readonly status: number;
   readonly body: unknown;
 

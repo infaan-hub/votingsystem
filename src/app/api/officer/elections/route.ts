@@ -10,18 +10,9 @@ import { readPayload, type Payload } from "@/src/lib/request";
 import { isUniqueConstraintViolation } from "@/src/lib/services";
 import { slugify } from "@/src/lib/slug";
 import { notifyVotersAdded } from "@/src/lib/notifications/events";
+import { CAPACITY_MODES, VOTER_ID_METHODS } from "@/src/lib/eligibility";
 import type { Election } from "@/src/generated/prisma/client";
 
-const VOTER_ID_METHODS = [
-  "account",
-  "email",
-  "phone",
-  "membership",
-  "employee",
-  "student_id",
-  "custom",
-] as const;
-const CAPACITY_MODES = ["open", "restricted"] as const;
 const MAX_ALLOWED_VOTERS = 500;
 
 async function uniqueSlug(base: string): Promise<string> {

@@ -16,17 +16,7 @@ import {
   notifyElectionRemoved,
   notifyElectionRescheduled,
 } from "@/src/lib/notifications/events";
-
-const VOTER_ID_METHODS = [
-  "account",
-  "email",
-  "phone",
-  "membership",
-  "employee",
-  "student_id",
-  "custom",
-] as const;
-const CAPACITY_MODES = ["open", "restricted"] as const;
+import { CAPACITY_MODES, VOTER_ID_METHODS } from "@/src/lib/eligibility";
 
 /** Statuses whose schedule and rules officers may still change. */
 const EDITABLE_STATUSES = new Set(["DRAFT", "PUBLISHED", "NOMINATIONS", "READY"]);

@@ -61,8 +61,6 @@ export function serveVideoBuffer(
   });
 }
 
-export type MediaProblem = { field: string; message: string };
-
 const TEXT = new TextDecoder("latin1");
 
 function ascii(bytes: Uint8Array, offset: number, length: number): string {

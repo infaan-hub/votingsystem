@@ -99,7 +99,6 @@ general-purpose path end to end.
 | `/login` | Hero splash + login sheet; lands on the role dashboard |
 | `/register` | Registration, and OTP when `features.phoneVerification` is on |
 | `/onboarding` | First-run flow for new accounts (notification permission) and the product intro for visitors |
-| `/explore`, `/feed` | Redirect to the elections list |
 | `/candidates/[id]` | Candidate detail — Posts / Info / People's Opinion, rating |
 | `/vote/[slug]` | E-voting ballot with watermark and sticky cast-vote CTA |
 | `/vote/[slug]/thank-you` | Thank-you screen with verification code |
@@ -110,8 +109,8 @@ general-purpose path end to end.
 | `/admin`, `/admin/messages` | Administration |
 
 Legacy URL spellings resolve through permanent redirects configured in
-`next.config.ts` (`/voter/dashboad` → `/voter/dashboard`, `/voter/compain` →
-`/voter/campaign`, and so on). Both trailing-slash and non-trailing-slash URLs
+`next.config.ts` (`/home` → `/`, `/explore` and `/feed` → `/elections`,
+`/election` → `/elections`). Both trailing-slash and non-trailing-slash URLs
 work (`skipTrailingSlashRedirect: true`).
 
 ## Voting pipeline

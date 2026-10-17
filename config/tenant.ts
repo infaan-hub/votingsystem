@@ -20,22 +20,9 @@ export type TenantConfig = {
   tagline: string;
   /** Absolute or root-relative path to the tenant logo. */
   logo: string;
-  /** Path to the ballot-box illustration used on the splash/welcome screens. */
-  ballotMark: string;
-  /**
-   * Palette override. Any value omitted falls back to the NexVote defaults in
-   * `globals.css`, so a tenant can restyle without duplicating the whole set.
-   */
-  colors: {
-    primary: string;
-    primary600: string;
-    primary100: string;
-    navy: string;
-  };
   /** Brand colours injected into the PWA manifest and status bar. */
   themeColor: string;
-  /** Supported UI locales, BCP-47 tags. The first entry is the default. */
-  locales: string[];
+  /** BCP-47 tag of the default UI language. */
   defaultLocale: string;
   /** Writing direction of the default locale. */
   direction: "ltr" | "rtl";
@@ -46,13 +33,8 @@ export type TenantConfig = {
    */
   idType: {
     label: string;
-    shortLabel: string;
     /** Placeholder, e.g. "AB-1234567" — illustrative only, never a real format. */
     placeholder: string;
-    /** Regex the identifier must satisfy; null disables the check. */
-    pattern: string | null;
-    /** Message shown when the identifier does not match the pattern. */
-    invalidMessage: string;
     /** Whether the identifier is required to complete a profile. */
     required: boolean;
   };
@@ -64,24 +46,13 @@ export type TenantConfig = {
     region: string;
     /** e.g. "Constituency", "Ward", "Branch", "Department" */
     constituency: string;
-    /** Plural forms used in headings and empty states. */
-    regionPlural: string;
+    /** Plural form used in headings and empty states. */
     constituencyPlural: string;
-  };
-  /** Vocabulary for groups on the ballot. */
-  groups: {
-    /** e.g. "Party", "Slate", "Group", "Ticket" */
-    singular: string;
-    plural: string;
-    /** Whether groups are shown at all (some ballots are non-partisan). */
-    enabled: boolean;
   };
   /** Feature switches for the whole product. */
   features: {
     /** Require a one-time code sent to a phone number at registration. */
     phoneVerification: boolean;
-    /** Live head-to-head counts while voting is open. */
-    liveResults: boolean;
   };
   /** Contact + legal surfaces rendered in the footer. */
   authority: {
@@ -103,39 +74,21 @@ const tenant: TenantConfig = {
   shortName: "NexVote",
   tagline: "Secure voting for every organisation",
   logo: "/nexvote_logo.jpeg",
-  ballotMark: "/ballot-mark.svg",
-  colors: {
-    primary: "#BB182E",
-    primary600: "#991426",
-    primary100: "#FBEBEE",
-    navy: "#242124",
-  },
   themeColor: "#FFFFFF",
-  locales: ["en"],
   defaultLocale: "en",
   direction: "ltr",
   idType: {
     label: "Username",
-    shortLabel: "Username",
     placeholder: "e.g. alice",
-    pattern: null,
-    invalidMessage: "Enter a valid username.",
     required: true,
   },
   geography: {
     region: "Region",
     constituency: "Constituency",
-    regionPlural: "Regions",
     constituencyPlural: "Constituencies",
-  },
-  groups: {
-    singular: "Party",
-    plural: "Parties",
-    enabled: true,
   },
   features: {
     phoneVerification: false,
-    liveResults: true,
   },
   authority: {
     name: "Electoral Office",
@@ -150,17 +103,8 @@ export default tenant;
 /** Convenience accessors so screens never reach into the raw object. */
 export const t = {
   name: tenant.name,
-  shortName: tenant.shortName,
-  tagline: tenant.tagline,
   region: tenant.geography.region,
   constituency: tenant.geography.constituency,
-  regionPlural: tenant.geography.regionPlural,
-  constituencyPlural: tenant.geography.constituencyPlural,
-  party: tenant.groups.singular,
-  partyPlural: tenant.groups.plural,
-  groupsEnabled: tenant.groups.enabled,
   idLabel: tenant.idType.label,
-  idShortLabel: tenant.idType.shortLabel,
   idPlaceholder: tenant.idType.placeholder,
-  locales: tenant.locales,
 };

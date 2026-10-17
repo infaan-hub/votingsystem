@@ -28,14 +28,6 @@ export function notFoundModel(objectName: string): ApiError {
   });
 }
 
-export function methodNotAllowed(method: string, allow: string): ApiError {
-  return new ApiError(
-    400 + 5,
-    { detail: `Method "${method}" not allowed.` },
-    { Allow: allow },
-  );
-}
-
 export function unauthenticated(
   detail = "Authentication credentials were not provided.",
 ): ApiError {
@@ -78,10 +70,6 @@ export function fieldErrors(
     body[key] = Array.isArray(value) ? value : [value];
   }
   return new ApiError(400, body);
-}
-
-export function forbiddenBody(detail: string): ApiError {
-  return new ApiError(403, { detail });
 }
 
 /**

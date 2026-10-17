@@ -103,10 +103,6 @@ export function isVotingOpen(election: Election, now: Date = new Date()): boolea
   return election.votingStartAt <= now && now <= election.votingEndAt;
 }
 
-export function isCampaignLive(election: Election, now: Date = new Date()): boolean {
-  return election.campaignStartAt <= now && now <= election.campaignEndAt;
-}
-
 export const VOTER_GROUP_LABELS: Record<string, string> = {
   all: "All eligible voters",
   student: "Students",

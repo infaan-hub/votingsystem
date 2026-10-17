@@ -8,9 +8,9 @@ import { Avatar } from "@/src/components/ui/avatar";
 import { cn } from "@/src/lib/utils";
 import type { NavItem } from "@/src/lib/nav";
 
-export type BottomNavItem = NavItem;
+type BottomNavItem = NavItem;
 
-export const DEFAULT_BOTTOM_NAV: BottomNavItem[] = [
+const DEFAULT_BOTTOM_NAV: BottomNavItem[] = [
   { href: "/", label: "Home", icon: Home, exact: true },
   { href: "/elections", label: "Elections", icon: Vote },
 ];
@@ -71,6 +71,3 @@ export function BottomNav({ items }: { items?: BottomNavItem[] }) {
     </nav>
   );
 }
-
-/** Ballot entry point used inside the Feed tab on the bottom nav. */
-export const VoteTabIcon = Vote;

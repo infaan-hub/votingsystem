@@ -16,7 +16,7 @@
  */
 
 export const IN_APP_NOTIFICATION_EVENT = "nexvote:notifications";
-export const NOTIFICATION_CURSOR_KEY = "nexvote-notif-cursor";
+const NOTIFICATION_CURSOR_KEY = "nexvote-notif-cursor";
 
 function storageKey(userId: number): string {
   return `${NOTIFICATION_CURSOR_KEY}-u${userId}`;

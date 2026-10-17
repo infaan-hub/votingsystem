@@ -70,9 +70,9 @@ browser
                       └─ prisma  src/lib/db.ts
 ```
 
-`makeRoute()` is the single entry point for every route except
-`stats-stream`. It accepts an `intParams` list to coerce route segments to
-integers, and a `handlers` map keyed by HTTP method. Errors thrown as
+`makeRoute()` is the single entry point for every route. It accepts an
+`intParams` list to coerce route segments to integers, and a `handlers` map
+keyed by HTTP method. Errors thrown as
 `ApiError` are converted to the correct status code and JSON body; anything
 else becomes a 500 with a generic detail string.
 
@@ -80,13 +80,13 @@ else becomes a 500 with a generic detail string.
 
 ```
 src/
-  app/                    pages (16) and API routes (29)
-  components/             10 shared React components
-  lib/                    17 modules — auth, db, validation, serialization
+  app/                    pages (39) and API routes (74)
+  components/             57 shared React components
+  lib/                    43 modules - auth, db, validation, serialization
   generated/prisma/       Prisma client (gitignored, rebuilt on build)
-tests/                    2 integration suites + helpers + setup
+tests/                    33 Vitest suites + helpers + setup
 prisma/                   schema, seed, migration
-scripts/                  4 operational scripts
+scripts/                  operational scripts (13)
 ```
 
 `src/lib` modules and their roles:
@@ -191,21 +191,17 @@ token is a opaque key stored in the `Token` table, one per user.
 | GET | `/api/elections/[pk]/ballot` | Ballot structure |
 | GET | `/api/elections/[pk]/results` | Final results |
 | GET | `/api/elections/[pk]/stats` | Current statistics |
-| GET, POST, PUT, PATCH, DELETE | `/api/elections/[pk]/stats-stream` | SSE live stats stream |
 | GET | `/api/elections/[pk]/campaigns` | Campaign list |
 | GET | `/api/elections/[pk]/image` | Election image |
 | GET | `/api/candidates/[pk]/photo` | Candidate photo |
 | GET | `/api/candidates/[pk]/campaign-video` | Campaign video |
 
-`stats-stream` deliberately accepts every HTTP method and returns an HTML
-404 rather than a JSON error. This mirrors the original backend's
-behaviour for that endpoint.
-
 ### 4.4 Voting
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| POST | `/api/votes` | Cast a ballot |
+| POST | `/api/elections/[pk]/vote` | Cast a ballot through the election flow (the UI path) |
+| POST | `/api/votes` | Legacy one-candidate shorthand for the same `castVote` service |
 
 ### 4.5 Candidate campaign management
 
@@ -513,21 +509,24 @@ All four gates pass on `main` at `048ba4a`:
    case needed a 600-second timeout. Worth investigating the ESLint config
    scope.
 
-5. **`stats-stream` polls every 5 seconds.** Each connected client holds a
-   loop that re-queries the database on an interval. With many concurrent
-   viewers this will need a push-based approach or caching.
+5. **Real-time updates ride notification events, not per-election streams.**
+   Each browser keeps one SSE stream (the leader tab) that fans out to its
+   other tabs; screens refresh on those events, on tab focus, and via a slow
+   safety poll. The hosting platform caps serverless SSE duration, so the
+   client reconnects with backoff and the poll covers the gaps.
 
-6. **Route directory misspellings are permanent.** `compain`, `dashboad`,
-   and `compaindetails` are load-bearing. Renaming them breaks bookmarks;
-   if they are ever cleaned up, permanent redirects must be added.
+6. **Route directory misspellings are permanent.** `compaigns` and
+   `admin/compaigns` are load-bearing despite the extra `i`. Renaming them
+   breaks bookmarks and in-app links; permanent redirects would have to land
+   first.
 
 7. **`Announcement.electionId` nullable.** Intentional, but it means
    institution-wide notices cannot be scoped or filtered by election in a
    single query.
 
-8. **Password reset flow is unverified end-to-end.**
-   `/api/auth/forgot-password` exists, but no email delivery mechanism is
-   configured, so the flow cannot complete in production as it stands.
+8. **No self-service password reset.** No mail service is configured, so no
+   reset endpoint exists; the only route to a new password is an admin doing
+   it from the console for a user it has already verified.
 
 9. **Single-region deployment.** Vercel is pinned to `iad1` to sit near the
    Neon branch. Users outside that region will see higher latency.
@@ -538,9 +537,10 @@ All four gates pass on `main` at `048ba4a`:
 
 **Before first production use**
 
-- Add rate limiting to `/api/auth/login` and `/api/auth/forgot-password`.
-- Complete or explicitly disable the password reset flow; an endpoint that
-  cannot deliver mail is a dead end for users.
+- Add rate limiting to `/api/auth/login` and the OTP endpoints.
+- Add a mail provider before advertising password self-service; today resets
+  are admin-only on purpose, because the endpoint that would need to deliver
+  a reset link cannot send mail.
 - Add a health-check-backed readiness probe that verifies database
   connectivity, not just process liveness.
 
@@ -550,8 +550,8 @@ All four gates pass on `main` at `048ba4a`:
   grow.
 - Add a CI workflow that provisions a throwaway `_test` database and runs
   the suite on every push.
-- Cache `stats-stream` queries or move to a push mechanism if live results
-  are used during peak voting.
+- Add `Cache-Control` headers or a revalidate window to the public read
+  endpoints if elections see traffic spikes.
 
 **When schema changes are needed**
 
