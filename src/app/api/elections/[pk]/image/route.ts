@@ -17,6 +17,7 @@ export const GET = makeRoute({
         return new Response(Buffer.from(bytes), {
           headers: {
             "Content-Type": election.imageContentType || "image/jpeg",
+        "Cache-Control": "public, max-age=300",
           },
         });
       }
