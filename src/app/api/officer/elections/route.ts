@@ -214,6 +214,18 @@ const route = makeRoute({
       });
       const maxVoters = intField(c, payload, "max_voters", { required: false });
       const timezone = strField(c, payload, "timezone", { required: false, maxLength: 60 }) || "UTC";
+      // Optional explore category: the home page tiles and the /categories
+      // pages list elections through this link. Blank/null means "no category".
+      const rawCategory = payload.category_id;
+      let categoryId: number | null = null;
+      if (rawCategory !== undefined && rawCategory !== null && String(rawCategory).trim() !== "") {
+        const parsed = Number(rawCategory);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+          c.field("category_id", "Select a valid category.");
+        } else {
+          categoryId = parsed;
+        }
+      }
       c.throwIfAny();
 
       // Emails or usernames of the people allowed to vote (capacity "restricted").
@@ -254,6 +266,15 @@ const route = makeRoute({
       if (!votingStart || !votingEnd) {
         throw fieldErrors({ voting_start_at: "This field is required." });
       }
+      if (categoryId !== null) {
+        const category = await prisma.electionCategory.findFirst({
+          where: { id: categoryId, isActive: true },
+          select: { id: true },
+        });
+        if (!category) {
+          throw fieldErrors({ category_id: "This category is not available." });
+        }
+      }
       const vs = votingStart;
       const ve = votingEnd;
       const slug = await uniqueSlug(title);
@@ -272,6 +293,7 @@ const route = makeRoute({
             isPublished: true,
             createdBy: officer.id,
             timezone,
+            categoryId,
             eligibilityPolicy: capacityMode === "open" ? "open" : "voter_list",
             capacityMode: capacityMode ?? "restricted",
             maxVoters: capacityMode === "open" ? null : (maxVoters ?? null),

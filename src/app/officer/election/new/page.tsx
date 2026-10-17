@@ -10,6 +10,7 @@ import { Input } from "@/src/components/ui/input";
 import { LinkButton } from "@/src/components/ui/page-header";
 import { PageHero } from "@/src/components/page-hero";
 import { Section } from "@/src/components/ui/section";
+import { Select } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
 import { useToast } from "@/src/components/ui/toast";
 import { useApp } from "@/src/components/AppProvider";
@@ -32,6 +33,8 @@ type CreatedElection = {
   voters_added?: number;
   unmatched_voters?: string[];
 };
+
+type CategoryOption = { id: number; name: string };
 
 function newDraft(): CandidateDraft {
   return {
@@ -67,6 +70,9 @@ export default function OfficerNewElectionPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [cover, setCover] = useState<File | null>(null);
+  const [categoryId, setCategoryId] = useState("");
+  const [categories, setCategories] = useState<CategoryOption[] | null>(null);
+  const [categoriesFailed, setCategoriesFailed] = useState(false);
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [startTime, setStartTime] = useState("09:00");
   const [endDate, setEndDate] = useState(defaults.endDate);
@@ -82,6 +88,24 @@ export default function OfficerNewElectionPage() {
   const [progress, setProgress] = useState("");
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  // Categories come from the public list so the officer files the election
+  // under one of the real explore categories (the home tiles and
+  // /categories/[slug] pages read the same rows).
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    apiFetch<CategoryOption[]>(token, "/api/categories")
+      .then((rows) => {
+        if (!cancelled) setCategories(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCategoriesFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   function addAllowedVoters() {
     const parts = allowedInput
@@ -172,6 +196,7 @@ export default function OfficerNewElectionPage() {
           capacity_mode: capacityMode,
           max_voters: null,
           allowed_voters: capacityMode === "restricted" ? allowedVoters : [],
+          category_id: categoryId ? Number(categoryId) : null,
         }),
       });
 
@@ -323,6 +348,39 @@ export default function OfficerNewElectionPage() {
                 />
               </div>
             </div>
+          </Section>
+
+          <Section
+            title="Category"
+            description="File this election under one of the platform categories. It shows up on the home Explore tiles and its category page."
+          >
+            {categoriesFailed ? (
+              <p className="text-[13px] text-nv-muted">
+                Categories could not be loaded right now. You can still create the election
+                and pick a category later from Edit election.
+              </p>
+            ) : (
+              <Select
+                label="Category"
+                value={categoryId}
+                onChange={(event) => setCategoryId(event.target.value)}
+                options={(categories ?? []).map((category) => ({
+                  value: String(category.id),
+                  label: category.name,
+                }))}
+                placeholder={categories === null ? "Loading categories…" : "No category"}
+                disabled={categories === null}
+                hint={
+                  categories === null
+                    ? "Loading categories…"
+                    : categories.length === 0
+                      ? "No categories are available yet — an administrator can add them."
+                      : "Voters browse elections through these categories. You can change this later from Edit election."
+                }
+                invalid={Boolean(firstError(fieldErrors, "category_id"))}
+                error={firstError(fieldErrors, "category_id")}
+              />
+            )}
           </Section>
 
           <Section

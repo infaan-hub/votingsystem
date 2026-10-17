@@ -312,6 +312,7 @@ function OverviewSection({
                 value: <StatusBadge status={detail?.lifecycle_status ?? row.status} />,
               },
               { label: "Visibility", value: humanize(detail?.visibility ?? row.visibility) },
+              { label: "Category", value: row.category?.name ?? "No category" },
               { label: "Capacity", value: capacityValue },
               { label: "Eligibility policy", value: humanize(detail?.eligibility_policy) },
               { label: "Voter identification", value: voterIdValue },
@@ -514,11 +515,14 @@ type AdminElectionDetail = {
   capacity_mode: string;
   max_voters: number | null;
   timezone: string | null;
+  category_id: number | null;
   voting_start_at: string | null;
   voting_end_at: string | null;
 };
 
 type DetailPayload = { election: AdminElectionDetail };
+
+type CategoryRow = { id: number; name: string };
 
 function EditElectionDialog({
   row,
@@ -535,6 +539,12 @@ function EditElectionDialog({
     (authToken) => apiFetch<DetailPayload>(authToken, `/api/officer/elections/${row.id}`),
     [row.id],
   );
+  // Same public list the Add-election page uses, so a category can be changed
+  // after the fact without leaving this screen.
+  const categories = useResource<CategoryRow[]>(
+    (authToken) => apiFetch<CategoryRow[]>(authToken, "/api/categories"),
+    [],
+  );
 
   const [title, setTitle] = useState(row.title);
   const [description, setDescription] = useState("");
@@ -547,6 +557,7 @@ function EditElectionDialog({
   const [voterIdLabel, setVoterIdLabel] = useState("");
   const [capacityMode, setCapacityMode] = useState<"open" | "restricted">("restricted");
   const [maxVoters, setMaxVoters] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
@@ -568,6 +579,7 @@ function EditElectionDialog({
     setVoterIdLabel(election.voter_id_label ?? "");
     setCapacityMode(election.capacity_mode === "open" ? "open" : "restricted");
     setMaxVoters(election.max_voters != null ? String(election.max_voters) : "");
+    setCategoryId(election.category_id != null ? String(election.category_id) : "");
     setHydrated(true);
   }, [detail.data, hydrated, row.voting_start_at, row.voting_end_at]);
 
@@ -617,6 +629,7 @@ function EditElectionDialog({
           capacity_mode: capacityMode,
           max_voters:
             capacityMode === "restricted" && maxVoters.trim() ? Number(maxVoters) : null,
+          category_id: categoryId ? Number(categoryId) : null,
         }),
       });
       toast({ title: "Election updated", tone: "success" });
@@ -637,7 +650,7 @@ function EditElectionDialog({
         if (!open) onClose();
       }}
       title="Edit election"
-      description="Change the title, voting window, rules and voter settings for this election."
+      description="Change the title, category, voting window, rules and voter settings for this election."
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={saving} className="sm:w-auto">
@@ -671,6 +684,20 @@ function EditElectionDialog({
               maxLength={2000}
               invalid={Boolean(firstError(fieldErrors, "description"))}
               error={firstError(fieldErrors, "description")}
+            />
+            <Select
+              label="Category"
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
+              options={(categories.data ?? []).map((category) => ({
+                value: String(category.id),
+                label: category.name,
+              }))}
+              placeholder={categories.data === null ? "Loading categories…" : "No category"}
+              disabled={categories.data === null}
+              hint="Shown on the home Explore tiles and under its category page."
+              invalid={Boolean(firstError(fieldErrors, "category_id"))}
+              error={firstError(fieldErrors, "category_id")}
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <Input

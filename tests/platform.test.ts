@@ -14,6 +14,8 @@ import {
   GET as officerElectionsGET,
   POST as officerElectionsPOST,
 } from "@/src/app/api/officer/elections/route";
+import { PATCH as officerElectionPATCH } from "@/src/app/api/officer/elections/[pk]/route";
+import { GET as categoriesGET } from "@/src/app/api/categories/route";
 import {
   GET as votersGET,
   POST as votersPOST,
@@ -331,6 +333,122 @@ describe("platform: officer scope, voters, share links", () => {
       include: { department: true, section: { include: { department: true } } },
     });
     expect(await isEligibleToVote(row!, strangerFull!)).toBe(false);
+  });
+
+  it("files an officer election under the category the officer picks", async () => {
+    const seed = await seedPlatform();
+    const adminToken = await createTokenFor(seed.adminId);
+    const officerToken = await createTokenFor(seed.officerId);
+
+    const assigned = await call(
+      assignOfficerPOST,
+      jsonRequest("/api/admin/officers", {
+        method: "POST",
+        token: adminToken,
+        body: { username: "ReturningOfficer", email: "officer@example.test" },
+      }),
+    );
+    expect(assigned.status).toBe(201);
+
+    const [studentUnion, staffUnion] = await Promise.all([
+      prisma.electionCategory.create({
+        data: {
+          name: "Student Union",
+          slug: "student-union",
+          description: "Campus politics",
+          createdBy: seed.adminId,
+        },
+      }),
+      prisma.electionCategory.create({
+        data: {
+          name: "Staff Union",
+          slug: "staff-union",
+          description: "",
+          createdBy: seed.adminId,
+        },
+      }),
+    ]);
+
+    const now = Date.now();
+    const created = await call(
+      officerElectionsPOST,
+      jsonRequest("/api/officer/elections", {
+        method: "POST",
+        token: officerToken,
+        body: {
+          title: "Categorised Officer Election",
+          description: "Filed under a category at creation.",
+          voting_start_at: new Date(now + HOUR).toISOString(),
+          voting_end_at: new Date(now + 2 * DAY).toISOString(),
+          capacity_mode: "open",
+          category_id: studentUnion.id,
+        },
+      }),
+    );
+    expect(created.status).toBe(201);
+    const createdBody = (await created.json()) as { id: number };
+    const row = await prisma.election.findUnique({ where: { id: createdBody.id } });
+    expect(row?.categoryId).toBe(studentUnion.id);
+
+    // The explore surfaces read the same link: the public category list (the
+    // home tiles) counts the election.
+    const categories = await call(categoriesGET, jsonRequest("/api/categories"));
+    expect(categories.status).toBe(200);
+    const listed = (await categories.json()) as Array<{
+      id: number;
+      election_count: number;
+    }>;
+    expect(listed.find((category) => category.id === studentUnion.id)?.election_count).toBe(1);
+
+    // Moving or clearing the category from Edit election keeps it in sync.
+    const moved = await call(
+      officerElectionPATCH,
+      jsonRequest(`/api/officer/elections/${createdBody.id}`, {
+        method: "PATCH",
+        token: officerToken,
+        body: { category_id: staffUnion.id },
+      }),
+      { pk: String(createdBody.id) },
+    );
+    expect(moved.status).toBe(200);
+    expect(
+      (await prisma.election.findUnique({ where: { id: createdBody.id } }))?.categoryId,
+    ).toBe(staffUnion.id);
+
+    const cleared = await call(
+      officerElectionPATCH,
+      jsonRequest(`/api/officer/elections/${createdBody.id}`, {
+        method: "PATCH",
+        token: officerToken,
+        body: { category_id: null },
+      }),
+      { pk: String(createdBody.id) },
+    );
+    expect(cleared.status).toBe(200);
+    expect(
+      (await prisma.election.findUnique({ where: { id: createdBody.id } }))?.categoryId,
+    ).toBeNull();
+
+    // An unknown category is refused before anything is created.
+    const bogus = await call(
+      officerElectionsPOST,
+      jsonRequest("/api/officer/elections", {
+        method: "POST",
+        token: officerToken,
+        body: {
+          title: "Bogus Category Election",
+          voting_start_at: new Date(now + HOUR).toISOString(),
+          voting_end_at: new Date(now + 2 * DAY).toISOString(),
+          capacity_mode: "open",
+          category_id: 999999,
+        },
+      }),
+    );
+    expect(bogus.status).toBe(400);
+    expect((await readJson(bogus)).category_id).toEqual(["This category is not available."]);
+    expect(
+      await prisma.election.findFirst({ where: { title: "Bogus Category Election" } }),
+    ).toBeNull();
   });
 
   it("adds eligible voters by email or username and reports unmatched entries", async () => {

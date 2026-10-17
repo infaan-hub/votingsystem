@@ -164,7 +164,33 @@ const route = makeRoute({
       const timezone = has("timezone")
         ? strField(c, payload, "timezone", { required: false, maxLength: 60 })
         : undefined;
+      // Category is optional; null/"" clears it so the election leaves the
+      // explore tiles until another category is chosen.
+      const rawCategory = has("category_id") ? payload.category_id : undefined;
+      let categoryId: number | null | undefined;
+      if (rawCategory !== undefined) {
+        if (rawCategory === null || String(rawCategory).trim() === "") {
+          categoryId = null;
+        } else {
+          const parsed = Number(rawCategory);
+          if (!Number.isInteger(parsed) || parsed < 1) {
+            c.field("category_id", "Select a valid category.");
+          } else {
+            categoryId = parsed;
+          }
+        }
+      }
       c.throwIfAny();
+
+      if (typeof categoryId === "number") {
+        const category = await prisma.electionCategory.findFirst({
+          where: { id: categoryId, isActive: true },
+          select: { id: true },
+        });
+        if (!category) {
+          throw fieldErrors({ category_id: "This category is not available." });
+        }
+      }
 
       if (title !== undefined && !title) {
         throw fieldErrors({ title: "This field may not be blank." });
@@ -222,6 +248,7 @@ const route = makeRoute({
         updates.maxVoters = finalMode === "open" ? null : (finalMax ?? null);
       }
       if (timezone !== undefined) updates.timezone = timezone || "UTC";
+      if (categoryId !== undefined) updates.categoryId = categoryId;
 
       if (!Object.keys(updates).length) {
         return json(serializeElectionAdmin(existing));
