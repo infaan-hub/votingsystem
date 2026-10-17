@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/src/lib/utils";
 
@@ -16,6 +17,12 @@ export type TileData = {
   meta?: string | null;
   href: string;
   icon?: React.ReactNode;
+  /**
+   * Optional cover image — a real ballot image pulled from one of the
+   * category's own elections. Fitted inside the tile (object-cover) under a
+   * scrim, so card size and grid stay identical with or without it.
+   */
+  image?: string | null;
 };
 
 /** Deterministic gradient so a tile keeps its colour across renders. */
@@ -58,6 +65,26 @@ export function Tile({
         className,
       )}
     >
+      {tile.image ? (
+        /* Cover art from a real election in this category. `fill` + object-cover
+           fits it inside the fixed tile box, and the scrim keeps the white
+           label readable over any artwork. Sits under every other child (the
+           gradient classes remain as the no-image fallback). */
+        <>
+          <Image
+            src={tile.image}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 17vw, (min-width: 640px) 33vw, 50vw"
+            className="object-cover"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-black/5"
+          />
+        </>
+      ) : null}
+
       {emblem ? (
         <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20 text-lg font-bold text-white">
           {emblem}

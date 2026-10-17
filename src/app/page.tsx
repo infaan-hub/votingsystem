@@ -33,7 +33,27 @@ export default async function HomePage() {
       where: { isActive: true },
       orderBy: { name: "asc" },
       take: 6,
-      include: { _count: { select: { elections: true } } },
+      include: {
+        _count: { select: { elections: true } },
+        // Tile cover art: the newest published election in the category that
+        // actually carries a ballot image. Elections belong to exactly one
+        // category, so each tile's source is unique. Only the id is selected —
+        // the bytes stream on demand from /api/elections/[id]/image.
+        elections: {
+          where: {
+            isPublished: true,
+            // Mirrors what /api/elections/[id]/image can actually serve:
+            // stored bytes, or a legacy absolute URL it can redirect to.
+            OR: [
+              { imageBytes: { not: null } },
+              { image: { startsWith: "http" } },
+            ],
+          },
+          orderBy: { votingStartAt: "desc" },
+          take: 1,
+          select: { id: true },
+        },
+      },
     }),
   ]);
 
@@ -43,6 +63,8 @@ export default async function HomePage() {
     label: category.name,
     meta: `${category._count.elections}`,
     href: `/categories/${category.slug}`,
+    // No imaged election in the category → null keeps the gradient fallback.
+    image: category.elections[0] ? `/api/elections/${category.elections[0].id}/image/` : null,
   }));
 
   const openElection = election ? serializeElectionList(election) : null;
