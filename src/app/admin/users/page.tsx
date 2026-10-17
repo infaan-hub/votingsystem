@@ -403,7 +403,7 @@ function UsersBody() {
           if (!open) setRoleTarget(null);
         }}
         title={roleTarget ? `Change role for @${roleTarget.username}` : "Change role"}
-        description="This endpoint can set student, staff or officer. Promoting an account to administrator is not supported here."
+        description="Set this account to voter or election officer. Promoting an account to administrator is not supported here."
       >
         <div className="space-y-4 pb-2">
           <Select

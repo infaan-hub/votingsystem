@@ -533,6 +533,104 @@ describe("VotingApiTests", () => {
     expect((await readJson(cleared)).phone_number).toBe(null);
   });
 
+  it("lets a signed-in user edit their name and email but never their role", async () => {
+    const { voter } = await seedApi();
+    const token = await createTokenFor(voter.id);
+
+    // A phone number saved earlier must survive a later name-only edit.
+    const saved = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { phone_number: "+255 712 345 678" },
+      }),
+    );
+    expect(saved.status).toBe(200);
+
+    const edited = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: {
+          first_name: "Asha",
+          last_name: "Mwinyi",
+          email: "Asha.Mwinyi@Example.com",
+        },
+      }),
+    );
+    expect(edited.status).toBe(200);
+    const payload = await readJson(edited);
+    expect(payload.full_name).toBe("Asha Mwinyi");
+    expect(payload.first_name).toBe("Asha");
+    expect(payload.last_name).toBe("Mwinyi");
+    expect(payload.email).toBe("asha.mwinyi@example.com");
+    expect(payload.phone_number).toBe("+255 712 345 678");
+    expect(payload.role).toBe("voter");
+
+    const row = await prisma.user.findUnique({ where: { id: voter.id } });
+    expect(row?.firstName).toBe("Asha");
+    expect(row?.lastName).toBe("Mwinyi");
+    expect(row?.email).toBe("asha.mwinyi@example.com");
+    expect(row?.phoneNumber).toBe("+255 712 345 678");
+
+    // Role and account status are administrator-only fields.
+    const escalated = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { role: "admin" },
+      }),
+    );
+    expect(escalated.status).toBe(400);
+    expect((await readJson(escalated)).role).toEqual([
+      "You cannot change your own role. An administrator can update it for you.",
+    ]);
+    const unchanged = await prisma.user.findUnique({ where: { id: voter.id } });
+    expect(unchanged?.role).toBe("voter");
+    expect(unchanged?.isActive).toBe(true);
+  });
+
+  it("rejects a profile email another account already uses", async () => {
+    const { voter } = await seedApi();
+    const token = await createTokenFor(voter.id);
+    await prisma.user.create({
+      data: {
+        username: "email_owner",
+        password: hashPassword("Pass1234!"),
+        email: "owner@example.com",
+        role: "voter",
+      },
+    });
+
+    const duplicate = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { email: "Owner@Example.com" },
+      }),
+    );
+    expect(duplicate.status).toBe(400);
+    expect((await readJson(duplicate)).email).toEqual(["This email is already in use."]);
+
+    const invalid = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { email: "not-an-email" },
+      }),
+    );
+    expect(invalid.status).toBe(400);
+
+    // The account keeps its own address when the edit is refused.
+    const row = await prisma.user.findUnique({ where: { id: voter.id } });
+    expect(row?.email).toBe("");
+  });
+
   it("creates a voter through Google when the email is new", async () => {
     await seedApi();
     process.env.GOOGLE_OAUTH_CLIENT_ID = "google-client-id";

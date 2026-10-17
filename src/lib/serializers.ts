@@ -51,6 +51,10 @@ export function serializeUserSummary(user: UserWithRelations) {
     id: user.id,
     username: user.username,
     full_name: displayName(user),
+    // Raw parts as well as the display name, so a profile editor can prefill
+    // its fields without guessing how the full name was combined.
+    first_name: user.firstName,
+    last_name: user.lastName,
     email: user.email,
     role: user.role,
     is_active: user.isActive,

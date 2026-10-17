@@ -71,9 +71,6 @@ export default async function HomePage() {
         <Button asChild className="w-auto">
           <Link href="/elections">Browse elections</Link>
         </Button>
-        <Button asChild variant="outline" className="w-auto">
-          <Link href="/results">View results</Link>
-        </Button>
       </div>
 
       {!election ? (

@@ -103,7 +103,7 @@ general-purpose path end to end.
 | `/candidates/[id]` | Candidate detail — Posts / Info / People's Opinion, rating |
 | `/vote/[slug]` | E-voting ballot with watermark and sticky cast-vote CTA |
 | `/vote/[slug]/thank-you` | Thank-you screen with verification code |
-| `/profile` | Navy banner, favourites, activity, sign out |
+| `/profile` | Hero, self-service profile edit (name, email, photo), notifications, sign out |
 | `/elections`, `/elections/[slug]` | Election list and detail |
 | `/categories`, `/categories/[slug]` | Category browse |
 | `/privacy`, `/terms` | Legal pages |
