@@ -558,6 +558,8 @@ function EditElectionDialog({
   const [capacityMode, setCapacityMode] = useState<"open" | "restricted">("restricted");
   const [maxVoters, setMaxVoters] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
@@ -643,6 +645,27 @@ function EditElectionDialog({
     }
   }
 
+  async function uploadImage(): Promise<void> {
+    if (!imageFile || uploadingImage) return;
+    setUploadingImage(true);
+    try {
+      const form = new FormData();
+      form.append("image", imageFile);
+      await apiFetch(token, `/api/officer/elections/${row.id}/image`, {
+        method: "POST",
+        body: form,
+      });
+      toast({ title: "Election image uploaded", tone: "success" });
+      setImageFile(null);
+      onSaved();
+    } catch (error) {
+      const split = splitError(error);
+      toast({ title: split.message || "Could not upload image", tone: "warning" });
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   return (
     <Dialog
       open
@@ -685,6 +708,23 @@ function EditElectionDialog({
               invalid={Boolean(firstError(fieldErrors, "description"))}
               error={firstError(fieldErrors, "description")}
             />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-nv-ink">Election image</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-nv-muted"
+              />
+              <Button
+                variant="outline"
+                onClick={() => void uploadImage()}
+                disabled={!imageFile || uploadingImage}
+                className="w-auto"
+              >
+                {uploadingImage ? "Uploading…" : "Upload image"}
+              </Button>
+            </div>
             <Select
               label="Category"
               value={categoryId}

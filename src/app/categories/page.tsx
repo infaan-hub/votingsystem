@@ -33,10 +33,7 @@ export default async function CategoriesPage() {
             <Link key={category.id} href={`/categories/${category.slug}`}>
               <Card className="h-full transition-shadow hover:shadow-panel">
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-fluid-lg">
-                    <span className="text-2xl" aria-hidden="true">
-                      {category.icon || "📋"}
-                    </span>
+                  <CardTitle className="text-fluid-lg">
                     {category.name}
                   </CardTitle>
                 </CardHeader>
