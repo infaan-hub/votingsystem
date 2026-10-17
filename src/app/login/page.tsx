@@ -76,8 +76,14 @@ function LoginForm() {
         tone: "success",
       });
       router.push(dashboardPathFor(result.user.role, searchParams.get("next")));
-    } catch {
-      setError("Invalid credentials. Please check and try again.");
+    } catch (error) {
+      // The server's detail covers rate limits and outages; an unknown error
+      // keeps the classic credential message.
+      setError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Invalid credentials. Please check and try again.",
+      );
     } finally {
       setLoading(false);
     }

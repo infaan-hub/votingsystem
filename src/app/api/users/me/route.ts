@@ -2,6 +2,7 @@ import { json, makeRoute } from "@/src/lib/api";
 import { ApiError, fieldErrors } from "@/src/lib/http";
 import { Collector, emailField, isValidPhone, strField } from "@/src/lib/fields";
 import { prisma } from "@/src/lib/db";
+import { hashPassword, verifyPassword } from "@/src/lib/password";
 import { readPayload } from "@/src/lib/request";
 import { requireStateUser, USER_INCLUDE } from "@/src/lib/auth";
 import { emailTakenIexact } from "@/src/lib/queries";
@@ -69,6 +70,19 @@ export const PATCH = makeRoute({
             maxLength: 25,
           })
         : undefined;
+      const currentPassword = has("current_password")
+        ? strField(c, payload, "current_password", { required: false })
+        : undefined;
+      const newPassword = has("password")
+        ? strField(c, payload, "password", {
+            required: false,
+            minLength: 8,
+            maxLength: 128,
+          })
+        : undefined;
+      const confirmPassword = has("confirm_password")
+        ? strField(c, payload, "confirm_password", { required: false })
+        : undefined;
       c.throwIfAny();
 
       if (phoneNumber !== undefined) {
@@ -81,6 +95,34 @@ export const PATCH = makeRoute({
       }
       if (email !== undefined && email && (await emailTakenIexact(email, user.id))) {
         throw fieldErrors({ email: "This email is already in use." });
+      }
+
+      // Changing the address on the account, or its password, is a
+      // take-over-grade action: prove possession of the current password
+      // first. A password already on file proves nothing about a new one, so
+      // it must also differ from the current one.
+      const emailChanging =
+        email !== undefined && email.toLowerCase() !== (user.email || "").toLowerCase();
+      if (emailChanging || newPassword !== undefined) {
+        if (!currentPassword || !verifyPassword(currentPassword, user.password)) {
+          throw fieldErrors({
+            current_password: emailChanging
+              ? "Enter your current password to change your email address."
+              : "That password is incorrect.",
+          });
+        }
+      }
+      let passwordHash: string | undefined;
+      if (newPassword !== undefined) {
+        if (newPassword !== (confirmPassword ?? "")) {
+          throw fieldErrors({ confirm_password: "Passwords do not match." });
+        }
+        if (verifyPassword(newPassword, user.password)) {
+          throw fieldErrors({
+            password: "Choose a password you have not used for this account.",
+          });
+        }
+        passwordHash = hashPassword(newPassword);
       }
 
       // The same account rules creation uses, checked against the merged
@@ -109,6 +151,7 @@ export const PATCH = makeRoute({
       if (lastName !== undefined) updates.lastName = lastName;
       if (email !== undefined) updates.email = email.toLowerCase();
       if (phoneNumber !== undefined) updates.phoneNumber = phoneNumber.trim();
+      if (passwordHash) updates.password = passwordHash;
 
       const updated =
         Object.keys(updates).length === 0

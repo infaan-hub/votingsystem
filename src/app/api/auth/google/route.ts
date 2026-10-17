@@ -130,19 +130,22 @@ export const POST = makeRoute({
       }
 
       if (existing) {
+        if (!existing.isActive) {
+          throw forbidden("This account has been deactivated. Contact an administrator.");
+        }
         if (existing.googleId && existing.googleId !== googleId) {
           throw badRequest({
             detail: "This email is already linked to a different Google account.",
           });
         }
-        if (requested === "admin" && existing.role !== "admin") {
-          throw forbidden("This Google account does not have admin access.");
-        }
-        if (requested === "voter" && existing.role === "admin") {
-          throw forbidden("Admin accounts must use the admin portal.");
-        }
-        if (requested === "candidate" && existing.role === "admin") {
-          throw forbidden("Admin accounts must use the admin portal.");
+        if (!existing.googleId && existing.authProvider !== "google") {
+          // Linking a Google identity onto a password account proves nothing
+          // about who owns it: whoever pre-registered the address would keep
+          // their password and keep access. The owner signs in with the
+          // password first; linking from a signed-in profile comes later.
+          throw forbidden(
+            "An account with this email already exists. Sign in with your username and password instead.",
+          );
         }
 
         const { firstName, lastName } = splitFullName(fullName);
@@ -152,8 +155,9 @@ export const POST = makeRoute({
             data: {
               googleId,
               authProvider: "google",
+              lastLogin: new Date(),
               ...(existing.firstName === "" && firstName ? { firstName } : {}),
-              ...(existing.firstName === "" && firstName ? { lastName } : {}),
+              ...(existing.lastName === "" && lastName ? { lastName } : {}),
             },
           });
         } catch (error) {
@@ -180,6 +184,7 @@ export const POST = makeRoute({
             role: "voter",
             googleId,
             authProvider: "google",
+            lastLogin: new Date(),
             isSuperuser: false,
             isStaff: false,
             isActive: true,

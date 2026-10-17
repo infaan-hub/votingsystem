@@ -3,6 +3,7 @@ import { ApiError, fieldErrors } from "@/src/lib/http";
 import { Collector, emailField, strField } from "@/src/lib/fields";
 import { modelUsernameField } from "@/src/lib/registration";
 import { prisma } from "@/src/lib/db";
+import { emailTakenIexact, usernameTakenIexact } from "@/src/lib/queries";
 import { hashPassword } from "@/src/lib/password";
 import { readPayload } from "@/src/lib/request";
 import { ValidationError, validationErrorBody, validateUser } from "@/src/lib/validation";
@@ -18,7 +19,7 @@ export const POST = makeRoute({
 
       const c = new Collector();
       const username = await modelUsernameField(c, payload);
-      const email = emailField(c, payload, "email", { required: false, maxLength: 254 });
+      const email = emailField(c, payload, "email", { required: true, maxLength: 254 });
       const firstName = strField(c, payload, "first_name", { maxLength: 150 });
       const lastName = strField(c, payload, "last_name", { maxLength: 150 });
       const password = strField(c, payload, "password", { minLength: 8 });
@@ -27,6 +28,12 @@ export const POST = makeRoute({
 
       if (password !== confirmPassword) {
         throw fieldErrors({ confirm_password: "Passwords do not match." });
+      }
+
+      // Addresses are one account each, case-insensitively: recovery and
+      // Google sign-in both resolve an account by email.
+      if (await emailTakenIexact(email)) {
+        throw fieldErrors({ email: "A user with that email already exists." });
       }
 
       try {
@@ -42,11 +49,7 @@ export const POST = makeRoute({
           },
           async (field, value) => {
             if (field === "username") {
-              const row = await prisma.user.findUnique({
-                where: { username: value },
-                select: { id: true },
-              });
-              return row !== null;
+              return usernameTakenIexact(value, undefined);
             }
             return false;
           },

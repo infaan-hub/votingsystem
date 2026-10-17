@@ -105,7 +105,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error("Request failed. Please try again.");
     }
-    throw new Error("Election Hub is not reachable right now. Please try again shortly.");
+    throw new Error("The server is not reachable right now. Please try again shortly.");
   } finally {
     window.clearTimeout(timeoutId);
   }
@@ -130,7 +130,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       getErrorMessage(
         data,
         response.status >= 500
-          ? "Election Hub is experiencing a server error. Please try again shortly."
+          ? "The server is having trouble right now. Please try again shortly."
           : "Request failed.",
       ),
     );

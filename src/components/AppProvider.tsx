@@ -85,18 +85,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     let ignore = false;
+    const currentToken = token;
     lastUserCheckRef.current = Date.now();
-    fetchCurrentUser(token)
-      .then((response) => {
-        if (!ignore) setUser(response);
-      })
-      .catch(() => {
-        if (!ignore) {
-          window.localStorage.removeItem(TOKEN_KEY);
-          setToken("");
+
+    // A rejected token signs the user out; a transient network or server
+    // failure must not. One quiet retry covers a cold start or a flaky hop.
+    function attempt(retriesLeft: number) {
+      fetchCurrentUser(currentToken)
+        .then((response) => {
+          if (!ignore) setUser(response);
+        })
+        .catch((error: unknown) => {
+          if (ignore) return;
+          const status = (error as { status?: number } | null)?.status;
+          if (status === 401) {
+            window.localStorage.removeItem(TOKEN_KEY);
+            setToken("");
+            setUser(null);
+            return;
+          }
+          if (retriesLeft > 0) {
+            window.setTimeout(() => attempt(retriesLeft - 1), 1500);
+            return;
+          }
           setUser(null);
-        }
-      });
+        });
+    }
+
+    attempt(1);
     return () => { ignore = true; };
   }, [token]);
 

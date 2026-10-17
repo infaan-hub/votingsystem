@@ -10,6 +10,17 @@ export const POST = makeRoute({
           .delete({ where: { key: state.tokenKey } })
           .catch(() => undefined);
       }
+      // A signed-out browser stops being the holder of any pending sign-in
+      // code: leaving the challenge live would let a shoulder-surfed id be
+      // spent after logout.
+      if (state.user) {
+        await prisma.otpChallenge
+          .updateMany({
+            where: { userId: state.user.id, consumedAt: null },
+            data: { consumedAt: new Date() },
+          })
+          .catch(() => undefined);
+      }
       return noContent();
     },
   },

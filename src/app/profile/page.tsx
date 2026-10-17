@@ -45,7 +45,14 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [emailValue, setEmailValue] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordCurrent, setPasswordCurrent] = useState("");
+  const [passwordNext, setPasswordNext] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,6 +70,7 @@ export default function ProfilePage() {
     setFirstName(user?.first_name ?? "");
     setLastName(user?.last_name ?? "");
     setEmailValue(user?.email ?? "");
+    setCurrentPassword("");
     setEditOpen(true);
   }
 
@@ -80,18 +88,26 @@ export default function ProfilePage() {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           email: emailValue.trim(),
+          // Only sent when the user typed one; the server demands it for an
+          // email edit and otherwise never sees the field.
+          ...(currentPassword ? { current_password: currentPassword } : {}),
         }),
       });
       const data = (await response.json().catch(() => null)) as {
         email?: string[] | string;
         first_name?: string[] | string;
         last_name?: string[] | string;
+        current_password?: string[] | string;
         role?: string[] | string;
         detail?: string;
       } | null;
       if (!response.ok) {
         const fieldError =
-          data?.email ?? data?.first_name ?? data?.last_name ?? data?.role;
+          data?.email ??
+          data?.current_password ??
+          data?.first_name ??
+          data?.last_name ??
+          data?.role;
         throw new Error(
           (Array.isArray(fieldError) ? fieldError[0] : fieldError) ||
             data?.detail ||
@@ -109,6 +125,60 @@ export default function ProfilePage() {
       });
     } finally {
       setProfileSaving(false);
+    }
+  }
+
+  async function onSavePassword() {
+    if (!token || passwordSaving) return;
+    setPasswordError("");
+    if (passwordNext !== passwordConfirm) {
+      setPasswordError("The new passwords do not match.");
+      return;
+    }
+    if (passwordNext.length < 8) {
+      setPasswordError("Use at least 8 characters.");
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      const response = await fetch("/api/users/me/", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          current_password: passwordCurrent,
+          password: passwordNext,
+          confirm_password: passwordConfirm,
+        }),
+      });
+      const data = (await response.json().catch(() => null)) as {
+        current_password?: string[] | string;
+        password?: string[] | string;
+        confirm_password?: string[] | string;
+        detail?: string;
+      } | null;
+      if (!response.ok) {
+        const fieldError =
+          data?.current_password ?? data?.password ?? data?.confirm_password;
+        throw new Error(
+          (Array.isArray(fieldError) ? fieldError[0] : fieldError) ||
+            data?.detail ||
+            "Could not change the password.",
+        );
+      }
+      toast({ title: "Password changed", tone: "success" });
+      setPasswordOpen(false);
+      setPasswordCurrent("");
+      setPasswordNext("");
+      setPasswordConfirm("");
+    } catch (error) {
+      setPasswordError(
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setPasswordSaving(false);
     }
   }
 
@@ -358,6 +428,26 @@ export default function ProfilePage() {
         </section>
       ) : null}
 
+      {/* ---------------- Password ---------------- */}
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[13.5px] font-semibold text-nv-ink">Password</p>
+            <p className="mt-0.5 text-[12.5px] text-nv-muted">
+              Change the password you use to sign in. You will need your current
+              one to confirm.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="w-auto"
+            onClick={() => setPasswordOpen(true)}
+          >
+            Change password
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* ---------------- Notifications ---------------- */}
       <NotificationSettings />
 
@@ -444,6 +534,19 @@ export default function ProfilePage() {
               onChange={(event) => setEmailValue(event.target.value)}
             />
           </div>
+          {emailValue.trim().toLowerCase() !== (user.email ?? "").toLowerCase() ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-current-password">Current password</Label>
+              <Input
+                id="profile-current-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Confirm with your password to change the email"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
+            </div>
+          ) : null}
           <div className="rounded-nv-md border border-nv-line bg-white/70 px-3 py-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.4px] text-nv-muted">
               Role
@@ -452,6 +555,78 @@ export default function ProfilePage() {
             <p className="mt-0.5 text-[12px] text-nv-muted">
               Roles are changed by an administrator only.
             </p>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* ---------------- Change password ---------------- */}
+      <Dialog
+        open={passwordOpen}
+        onOpenChange={(open) => {
+          if (!passwordSaving) setPasswordOpen(open);
+        }}
+        title="Change password"
+        description="Choose a new password of at least 8 characters. You will need your current one to confirm."
+        footer={
+          <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+            <Button
+              variant="outline"
+              size="dense"
+              className="w-auto"
+              disabled={passwordSaving}
+              onClick={() => setPasswordOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="dense"
+              className="w-auto"
+              disabled={passwordSaving}
+              onClick={() => void onSavePassword()}
+            >
+              {passwordSaving ? "Saving…" : "Update password"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 pb-2">
+          {passwordError ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-nv-danger/40 bg-nv-danger/10 px-3 py-2.5 text-[13px] text-nv-danger"
+            >
+              {passwordError}
+            </p>
+          ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="password-current">Current password</Label>
+            <Input
+              id="password-current"
+              type="password"
+              autoComplete="current-password"
+              value={passwordCurrent}
+              onChange={(event) => setPasswordCurrent(event.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password-next">New password</Label>
+            <Input
+              id="password-next"
+              type="password"
+              autoComplete="new-password"
+              value={passwordNext}
+              onChange={(event) => setPasswordNext(event.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password-confirm">Confirm new password</Label>
+            <Input
+              id="password-confirm"
+              type="password"
+              autoComplete="new-password"
+              value={passwordConfirm}
+              onChange={(event) => setPasswordConfirm(event.target.value)}
+            />
           </div>
         </div>
       </Dialog>

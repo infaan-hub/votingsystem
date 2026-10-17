@@ -1,7 +1,8 @@
 import { json, makeRoute } from "@/src/lib/api";
-import { badRequest, serviceUnavailable } from "@/src/lib/http";
+import { badRequest, serviceUnavailable, tooManyRequests } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
-import { verifyPassword } from "@/src/lib/password";
+import { hashPassword, verifyPassword } from "@/src/lib/password";
+import { createAttemptLimiter } from "@/src/lib/rate-limit";
 import {
   hasActivePushSubscription,
   issueLoginOtp,
@@ -16,20 +17,18 @@ import {
   tryParseSubscription,
 } from "@/src/lib/notifications/subscription";
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 60_000;
+/** Only failed attempts count, so a shared address cannot lock out its users. */
+const loginLimiter = createAttemptLimiter({ max: 5, windowMs: 60_000 });
 
-function rateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = attempts.get(key);
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= MAX_ATTEMPTS) return false;
-  entry.count++;
-  return true;
+/**
+ * Hash used to equalize timing for unknown usernames: verifying against it
+ * costs the same as verifying a real account, so response time does not leak
+ * whether the username exists.
+ */
+let dummyPasswordHash: string | null = null;
+function dummyHash(): string {
+  dummyPasswordHash ??= hashPassword("not-a-real-password");
+  return dummyPasswordHash;
 }
 
 function asString(value: unknown): string {
@@ -43,9 +42,9 @@ function asString(value: unknown): string {
 export const POST = makeRoute({
   handlers: {
     POST: async (req) => {
-      const ip = req.headers.get("x-forwarded-for") || "unknown";
-      if (!rateLimit(ip)) {
-        throw serviceUnavailable("Too many login attempts. Please try again later.");
+      const ip = clientIp(req);
+      if (loginLimiter.limited(ip)) {
+        throw tooManyRequests("Too many failed sign-ins. Please wait a minute and try again.");
       }
 
       const payload = await readPayload(req);
@@ -66,9 +65,16 @@ export const POST = makeRoute({
         },
       });
 
-      if (!user || !user.isActive || !verifyPassword(password, user.password)) {
+      const passwordOk = verifyPassword(password, user?.password || dummyHash());
+      if (!user || !user.isActive || !passwordOk) {
+        loginLimiter.record(ip);
         throw badRequest({ detail: "Invalid username or password." });
       }
+      loginLimiter.clear(ip);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() },
+      });
 
       // Step-up verification: a 6-digit login code is required when it can
       // actually reach the user. This runs for every role. When the account

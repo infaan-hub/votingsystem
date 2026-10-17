@@ -1,27 +1,16 @@
 import { json, makeRoute } from "@/src/lib/api";
-import { ApiError, badRequest, serviceUnavailable } from "@/src/lib/http";
+import { ApiError, badRequest, tooManyRequests } from "@/src/lib/http";
+import { clientIp } from "@/src/lib/audit";
 import {
   OTP_RESEND_COOLDOWN_MS,
   resendLoginOtp,
   type OtpResendFailure,
 } from "@/src/lib/otp";
 import { readPayload } from "@/src/lib/request";
+import { createAttemptLimiter } from "@/src/lib/rate-limit";
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 60_000;
-
-function rateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = attempts.get(key);
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= MAX_ATTEMPTS) return false;
-  entry.count++;
-  return true;
-}
+/** Every resend counts: the budget itself is the guard against floods. */
+const resendLimiter = createAttemptLimiter({ max: 5, windowMs: 60_000 });
 
 function asString(value: unknown): string {
   if (typeof value === "string") return value;
@@ -42,10 +31,11 @@ const FAILURE_DETAIL: Record<OtpResendFailure, string> = {
 export const POST = makeRoute({
   handlers: {
     POST: async (req) => {
-      const ip = req.headers.get("x-forwarded-for") || "unknown";
-      if (!rateLimit(ip)) {
-        throw serviceUnavailable("Too many requests. Please try again later.");
+      const ip = clientIp(req);
+      if (resendLimiter.limited(ip)) {
+        throw tooManyRequests("Too many code requests. Please wait a minute and try again.");
       }
+      resendLimiter.record(ip);
 
       const payload = await readPayload(req);
       const challengeId = Number(asString(payload.challenge_id));

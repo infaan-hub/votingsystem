@@ -3,6 +3,7 @@ import { Collector, emailField, strField } from "@/src/lib/fields";
 import { hashPassword } from "@/src/lib/password";
 import type { Payload } from "@/src/lib/request";
 import { prisma } from "@/src/lib/db";
+import { emailTakenIexact, usernameTakenIexact } from "@/src/lib/queries";
 import { ValidationError, validateUser } from "@/src/lib/validation";
 import { getOrCreateToken } from "@/src/lib/tokens";
 import { USER_INCLUDE } from "@/src/lib/auth";
@@ -28,11 +29,10 @@ export async function modelUsernameField(c: Collector, payload: Payload): Promis
     );
     return username;
   }
-  const existing = await prisma.user.findUnique({
-    where: { username },
-    select: { id: true },
-  });
-  if (existing) {
+  // Usernames are unique case-insensitively: sign-in resolves exactly one
+  // account, never an arbitrary one of several lookalikes (the database
+  // constraint alone is case-sensitive).
+  if (await usernameTakenIexact(username)) {
     c.field("username", "A user with that username already exists.");
     return username;
   }
@@ -54,9 +54,9 @@ export async function runRegistration(
   const c = new Collector();
 
   const username = await modelUsernameField(c, payload);
-  const email = emailField(c, payload, "email", { required: false, maxLength: 254 });
-  const password = strField(c, payload, "password", { minLength: 8 });
-  const confirmPassword = strField(c, payload, "confirm_password", { minLength: 8 });
+  const email = emailField(c, payload, "email", { required: true, maxLength: 254 });
+  const password = strField(c, payload, "password", { minLength: 8, maxLength: 128 });
+  const confirmPassword = strField(c, payload, "confirm_password", { minLength: 8, maxLength: 128 });
   // A single "full name" is accepted for every role; when first/last are not
   // sent separately it is split below (first word = first name, rest = last).
   const fullName = strField(c, payload, "full_name", { required: false, allowBlank: true });
@@ -107,6 +107,13 @@ export async function runRegistration(
     throw fieldErrors({ last_name: "Last name is required." });
   }
 
+  // Addresses are one account each, case-insensitively: Google sign-in and
+  // password recovery both resolve an account by email, so an ambiguous
+  // address would silently pick one of them.
+  if (await emailTakenIexact(email)) {
+    throw fieldErrors({ email: "A user with that email already exists." });
+  }
+
   // Model-level validation, then save.
   try {
     await validateUser(
@@ -122,11 +129,7 @@ export async function runRegistration(
       },
       async (field, value) => {
         if (field === "username") {
-          const row = await prisma.user.findUnique({
-            where: { username: value },
-            select: { id: true },
-          });
-          return row !== null;
+          return usernameTakenIexact(value);
         }
         if (field === "google_id" && value) {
           const row = await prisma.user.findFirst({

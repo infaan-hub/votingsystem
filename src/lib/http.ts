@@ -54,6 +54,10 @@ export function serviceUnavailable(detail: string): ApiError {
  * Mirrors `serializers.ValidationError` raised from a serializer's `validate()`
  * with a plain string: `{"non_field_errors": ["msg"]}`.
  */
+export function tooManyRequests(detail: string): ApiError {
+  return new ApiError(429, { detail });
+}
+
 export function nonFieldError(detail: string): ApiError {
   return new ApiError(400, { non_field_errors: [detail] });
 }

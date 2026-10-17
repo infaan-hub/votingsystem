@@ -1,4 +1,5 @@
 import { ApiError } from "@/src/lib/http";
+import { MAX_IMAGE_BYTES } from "@/src/lib/media";
 import { DATETIME_FORMAT_ERROR, parseDateTime } from "@/src/lib/time";
 import { type Payload } from "@/src/lib/request";
 
@@ -361,6 +362,10 @@ export async function validateImageFile(
   key: string,
   file: File,
 ): Promise<Uint8Array | null> {
+  if (file.size > MAX_IMAGE_BYTES) {
+    c.field(key, `Keep images under ${MAX_IMAGE_BYTES / (1024 * 1024)} MB.`);
+    return null;
+  }
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!bytes.length) {
     c.field(key, "The submitted file is empty.");

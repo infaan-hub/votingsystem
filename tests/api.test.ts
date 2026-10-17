@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/src/lib/db";
-import { hashPassword } from "@/src/lib/password";
+import { hashPassword, verifyPassword } from "@/src/lib/password";
 import { GoogleNetworkError, verifyGoogleIdentity } from "@/src/lib/google";
 import {
   call,
@@ -503,6 +503,44 @@ describe("VotingApiTests", () => {
     expect(created?.email).toBe("amara@example.com");
   });
 
+  it("rejects a duplicate email at registration, case-insensitively", async () => {
+    await seedApi();
+    const first = await call(
+      registerVoterPOST,
+      jsonRequest("/api/auth/register/voter/", {
+        method: "POST",
+        body: {
+          first_name: "First",
+          last_name: "Owner",
+          username: "first_owner",
+          email: "Owner@Example.com",
+          password: "VotePass123!",
+          confirm_password: "VotePass123!",
+        },
+      }),
+    );
+    expect(first.status).toBe(201);
+
+    const duplicate = await call(
+      registerVoterPOST,
+      jsonRequest("/api/auth/register/voter/", {
+        method: "POST",
+        body: {
+          first_name: "Second",
+          last_name: "Owner",
+          username: "second_owner",
+          email: "owner@example.com",
+          password: "VotePass123!",
+          confirm_password: "VotePass123!",
+        },
+      }),
+    );
+    expect(duplicate.status).toBe(400);
+    expect((await readJson(duplicate)).email).toEqual([
+      "A user with that email already exists.",
+    ]);
+  });
+
   it("lets a signed-in user save their WhatsApp phone number", async () => {
     const { voter } = await seedApi();
     const token = await createTokenFor(voter.id);
@@ -557,6 +595,21 @@ describe("VotingApiTests", () => {
     );
     expect(saved.status).toBe(200);
 
+    // Changing the address needs the current password; without it the account
+    // keeps the old one.
+    const unconfirmed = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: { email: "moved@example.com" },
+      }),
+    );
+    expect(unconfirmed.status).toBe(400);
+    expect((await readJson(unconfirmed)).current_password).toEqual([
+      "Enter your current password to change your email address.",
+    ]);
+
     const edited = await call(
       meProfilePATCH,
       jsonRequest("/api/users/me/", {
@@ -566,6 +619,7 @@ describe("VotingApiTests", () => {
           first_name: "Asha",
           last_name: "Mwinyi",
           email: "Asha.Mwinyi@Example.com",
+          current_password: "Pass1234!",
         },
       }),
     );
@@ -600,6 +654,63 @@ describe("VotingApiTests", () => {
     const unchanged = await prisma.user.findUnique({ where: { id: voter.id } });
     expect(unchanged?.role).toBe("voter");
     expect(unchanged?.isActive).toBe(true);
+  });
+
+  it("changes the password only with the current one and requires a fresh choice", async () => {
+    const { voter } = await seedApi();
+    const token = await createTokenFor(voter.id);
+
+    // Wrong current password → refused, and the stored credential is untouched.
+    const wrong = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: {
+          current_password: "WrongPass123!",
+          password: "NewPass123!",
+          confirm_password: "NewPass123!",
+        },
+      }),
+    );
+    expect(wrong.status).toBe(400);
+    expect((await readJson(wrong)).current_password).toEqual(["That password is incorrect."]);
+
+    // Reusing the current password as the new one is refused too.
+    const reuse = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: {
+          current_password: "Pass1234!",
+          password: "Pass1234!",
+          confirm_password: "Pass1234!",
+        },
+      }),
+    );
+    expect(reuse.status).toBe(400);
+    expect((await readJson(reuse)).password).toEqual([
+      "Choose a password you have not used for this account.",
+    ]);
+
+    // The successful change swaps the credential used to sign in.
+    const changed = await call(
+      meProfilePATCH,
+      jsonRequest("/api/users/me/", {
+        method: "PATCH",
+        token,
+        body: {
+          current_password: "Pass1234!",
+          password: "NewPass123!",
+          confirm_password: "NewPass123!",
+        },
+      }),
+    );
+    expect(changed.status).toBe(200);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: voter.id } });
+    expect(verifyPassword("NewPass123!", row.password)).toBe(true);
+    expect(verifyPassword("Pass1234!", row.password)).toBe(false);
   });
 
   it("rejects a profile email another account already uses", async () => {
@@ -687,7 +798,7 @@ describe("VotingApiTests", () => {
     expect(user.email).toBe("popupvoter@example.com");
   });
 
-  it("links an existing candidate by email through Google", async () => {
+  it("refuses to silently link an existing password account by email", async () => {
     const { candidateUser } = await seedApi();
     await prisma.user.update({
       where: { id: candidateUser.id },
@@ -701,6 +812,8 @@ describe("VotingApiTests", () => {
       name: "Juma Ali",
     });
 
+    // Whoever pre-registered the address would keep their password, so the
+    // Google identity is never attached without proving account ownership.
     const response = await call(
       googlePOST,
       jsonRequest("/api/auth/google/", {
@@ -708,12 +821,12 @@ describe("VotingApiTests", () => {
         body: { credential: "google-token", role: "candidate" },
       }),
     );
-    expect(response.status).toBe(200);
-    const payload = await readJson(response);
-    const user = payload.user as Record<string, unknown>;
-    expect(user.id).toBe(candidateUser.id);
-    const updated = await prisma.user.findUnique({ where: { id: candidateUser.id } });
-    expect(updated?.googleId).toBe("candidate-google-id");
+    expect(response.status).toBe(403);
+    expect(String((await readJson(response)).detail).toLowerCase()).toContain(
+      "sign in with your username and password",
+    );
+    const unchanged = await prisma.user.findUnique({ where: { id: candidateUser.id } });
+    expect(unchanged?.googleId).toBeNull();
   });
 
   it("rejects creating a new admin through Google", async () => {
@@ -737,7 +850,7 @@ describe("VotingApiTests", () => {
     expect(String((await readJson(response)).detail).toLowerCase()).toContain("not linked");
   });
 
-  it("rejects an admin signing in on the voter portal", async () => {
+  it("refuses an unlinked admin email, then signs the admin in once linked", async () => {
     const { adminUser } = await seedApi();
     await prisma.user.update({
       where: { id: adminUser.id },
@@ -751,15 +864,31 @@ describe("VotingApiTests", () => {
       name: "System Admin",
     });
 
-    const response = await call(
+    const unlinked = await call(
       googlePOST,
       jsonRequest("/api/auth/google/", {
         method: "POST",
         body: { credential: "google-token", role: "voter" },
       }),
     );
-    expect(response.status).toBe(403);
-    expect(String((await readJson(response)).detail).toLowerCase()).toContain("admin portal");
+    expect(unlinked.status).toBe(403);
+
+    await prisma.user.update({
+      where: { id: adminUser.id },
+      data: { googleId: "admin-google-id", authProvider: "google" },
+    });
+    const linked = await call(
+      googlePOST,
+      jsonRequest("/api/auth/google/", {
+        method: "POST",
+        body: { credential: "google-token", role: "voter" },
+      }),
+    );
+    expect(linked.status).toBe(200);
+    const payload = await readJson(linked);
+    expect((payload.user as Record<string, unknown>).role).toBe("admin");
+    const row = await prisma.user.findUnique({ where: { id: adminUser.id } });
+    expect(row?.lastLogin).not.toBeNull();
   });
 
   it("handles Google token exchange failures", async () => {

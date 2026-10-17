@@ -1,26 +1,15 @@
 import { json, makeRoute } from "@/src/lib/api";
-import { badRequest, serviceUnavailable } from "@/src/lib/http";
+import { badRequest, tooManyRequests } from "@/src/lib/http";
 import { prisma } from "@/src/lib/db";
+import { clientIp } from "@/src/lib/audit";
 import { consumeLoginOtp, OTP_LENGTH, type OtpVerifyFailure } from "@/src/lib/otp";
 import { readPayload } from "@/src/lib/request";
 import { serializeUserSummary } from "@/src/lib/serializers";
 import { getOrCreateToken } from "@/src/lib/tokens";
+import { createAttemptLimiter } from "@/src/lib/rate-limit";
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 60_000;
-
-function rateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = attempts.get(key);
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= MAX_ATTEMPTS) return false;
-  entry.count++;
-  return true;
-}
+/** Failures only: a successful verification clears the window. */
+const otpLimiter = createAttemptLimiter({ max: 10, windowMs: 60_000 });
 
 function asString(value: unknown): string {
   if (typeof value === "string") return value;
@@ -41,9 +30,9 @@ const FAILURE_DETAIL: Record<OtpVerifyFailure, string> = {
 export const POST = makeRoute({
   handlers: {
     POST: async (req) => {
-      const ip = req.headers.get("x-forwarded-for") || "unknown";
-      if (!rateLimit(ip)) {
-        throw serviceUnavailable("Too many verification attempts. Please try again later.");
+      const ip = clientIp(req);
+      if (otpLimiter.limited(ip)) {
+        throw tooManyRequests("Too many verification attempts. Please wait a minute and try again.");
       }
 
       const payload = await readPayload(req);
@@ -59,6 +48,7 @@ export const POST = makeRoute({
 
       const result = await consumeLoginOtp(challengeId, code);
       if (!result.ok) {
+        otpLimiter.record(ip);
         throw badRequest({
           detail: FAILURE_DETAIL[result.reason],
           attempts_remaining:
@@ -76,6 +66,12 @@ export const POST = makeRoute({
       if (!user || !user.isActive) {
         throw badRequest({ detail: "This account is no longer active." });
       }
+
+      otpLimiter.clear(ip);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() },
+      });
 
       const token = await getOrCreateToken(user.id);
       return json({ token: token.key, user: serializeUserSummary(user) });

@@ -110,7 +110,13 @@ describe("ProfilePage", () => {
     expect(screen.queryByRole("combobox")).toBeNull();
 
     fireEvent.change(last, { target: { value: "Mwinyi" } });
+    // Changing the address reveals the confirmation field; the server refuses
+    // an email edit without the current password.
+    expect(screen.queryByLabelText("Current password")).toBeNull();
     fireEvent.change(email, { target: { value: "asha.mwinyi@example.com" } });
+    fireEvent.change(screen.getByLabelText("Current password"), {
+      target: { value: "Pass1234!" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => expect(appState.current.refreshUser).toHaveBeenCalledTimes(1));
@@ -121,6 +127,7 @@ describe("ProfilePage", () => {
       first_name: "Asha",
       last_name: "Mwinyi",
       email: "asha.mwinyi@example.com",
+      current_password: "Pass1234!",
     });
     expect(String(init.body)).not.toContain("role");
   });
@@ -147,6 +154,62 @@ describe("ProfilePage", () => {
     expect(appState.current.refreshUser).not.toHaveBeenCalled();
     // The dialog stays open so the address can be corrected.
     expect(screen.getByLabelText("Email")).toBeTruthy();
+  });
+
+  it("changes the password through the profile dialog", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ...baseUser }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Change password" }));
+
+    fireEvent.change(screen.getByLabelText("Current password"), {
+      target: { value: "Pass1234!" },
+    });
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "NewPass123!" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm new password"), {
+      target: { value: "NewPass123!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("/api/users/me/");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(String(init.body))).toEqual({
+      current_password: "Pass1234!",
+      password: "NewPass123!",
+      confirm_password: "NewPass123!",
+    });
+  });
+
+  it("keeps a mistyped confirmation local instead of calling the server", async () => {
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Change password" }));
+    fireEvent.change(screen.getByLabelText("Current password"), {
+      target: { value: "Pass1234!" },
+    });
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "NewPass123!" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm new password"), {
+      target: { value: "NewPass999!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+
+    expect(await screen.findByText("The new passwords do not match.")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("keeps the WhatsApp sending number on officer profiles", () => {
